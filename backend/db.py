@@ -37,7 +37,17 @@ def init_db() -> None:
                 created_at  TEXT NOT NULL
             );
 
+            CREATE TABLE IF NOT EXISTS reset_tokens (
+                id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                email       TEXT NOT NULL,
+                token       TEXT NOT NULL UNIQUE,
+                expires_at  TEXT NOT NULL,
+                used        INTEGER DEFAULT 0,
+                created_at  TEXT NOT NULL DEFAULT (datetime('now'))
+            );
+
             CREATE INDEX IF NOT EXISTS idx_msg_agent  ON messages(agent_slug);
             CREATE INDEX IF NOT EXISTS idx_log_level  ON logs(level);
             CREATE INDEX IF NOT EXISTS idx_log_agent  ON logs(agent_slug);
+            CREATE INDEX IF NOT EXISTS idx_reset_token ON reset_tokens(token);
         """)

@@ -12,6 +12,8 @@ import { GrowData } from './pages/GrowData'
 import { LIFE } from './pages/LIFE'
 import { Finance } from './pages/Finance'
 import { Login } from './pages/Login'
+import { ForgotPassword } from './pages/ForgotPassword'
+import { ResetPassword } from './pages/ResetPassword'
 import { ToastProvider } from './components/Toast'
 import { AuthProvider } from './context/AuthContext'
 import { ProtectedRoute } from './components/ProtectedRoute'
@@ -110,6 +112,8 @@ export default function App() {
       <Routes>
         {/* Login público */}
         <Route path="/login" element={<Login />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
 
         {/* Rutas protegidas con Layout */}
         <Route element={<Layout />}>
