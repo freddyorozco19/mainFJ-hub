@@ -68,16 +68,18 @@ def append_row(tab: str, data: dict) -> bool:
 
 
 def update_row(tab: str, row_index: int, data: dict) -> bool:
-    """Actualiza una fila existente (1-based index, fila 1 = headers)."""
+    """Actualiza una fila existente. row_index es 0-based del array de datos (fila 2 del Sheet = índice 0)."""
     ws = get_sheet(tab)
     cols = COLUMNS[tab]
     row_values = [data.get(col, "") for col in cols]
-    ws.update(f"A{row_index + 1}", [row_values], value_input_option="USER_ENTERED")
+    # +2 porque get_all_records() omite la fila 1 (headers); índice 0 → fila 2
+    ws.update(f"A{row_index + 2}", [row_values], value_input_option="USER_ENTERED")
     return True
 
 
 def delete_row(tab: str, row_index: int) -> bool:
-    """Elimina una fila (1-based index, fila 1 = headers)."""
+    """Elimina una fila. row_index es 0-based del array de datos."""
     ws = get_sheet(tab)
-    ws.delete_rows(row_index + 1)
+    # +2 porque get_all_records() omite la fila 1 (headers); índice 0 → fila 2
+    ws.delete_rows(row_index + 2)
     return True
