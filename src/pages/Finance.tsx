@@ -21,6 +21,15 @@ const TABS_CONFIG = [
   { key: 'wishlist',   label: 'Wishlist',   colorVar: 'primary', hex: '#A78BFA' },
 ]
 
+const TAB_COLUMNS: Record<TabKey, string[]> = {
+  essentials: ['SERVICIO', 'MONEDA', 'VALOR', 'FECHA', 'MODO', 'BANCO'],
+  ahorro:     ['CONCEPTO', 'MONEDA', 'VALOR', 'FECHA', 'MODO', 'SALDO'],
+  basket:     ['PRODUCTO', 'MONEDA', 'VALOR', 'FECHA', 'CANTIDAD', 'CADUCIDAD'],
+  shops:      ['PRODUCTO', 'MONEDA', 'VALOR', 'FECHA', 'TIENDA', 'MOTIVO'],
+  wishlist:   ['PRODUCTO', 'MONEDA', 'VALOR', 'FECHA', 'PRIORIDAD', 'ESTADO'],
+  debts:      ['CONCEPTO', 'MONEDA', 'VALOR', 'FECHA', 'ESTADO', 'ACREEDOR'],
+}
+
 type SubPageKey = 'dashboard' | 'registros'
 type TabKey = 'shops' | 'basket' | 'essentials' | 'ahorro' | 'debts' | 'wishlist'
 type Summary = Record<TabKey, { count: number; total_cop: number; error?: string }>
@@ -76,6 +85,7 @@ export function Finance() {
   const [editingIndex, setEditingIndex]       = useState<number | null>(null)
   const [recordForm, setRecordForm]           = useState<Record<string, string | number>>({})
   const [crudTab, setCrudTab]                 = useState<TabKey>('shops')
+  const [createStep, setCreateStep]           = useState<'select-tab' | 'form'>('select-tab')
 
   useEffect(() => { loadSummary() }, [])
   useEffect(() => {
@@ -126,6 +136,7 @@ export function Finance() {
   }
 
   function openCreateModal() {
+    setCreateStep('select-tab')
     setCrudTab(activeTab)
     setRecordForm({})
     setEditingIndex(null)
@@ -133,6 +144,7 @@ export function Finance() {
   }
 
   function openEditModal(index: number) {
+    setCreateStep('form')
     setRecordForm({ ...records[index] })
     setEditingIndex(index)
     setShowRecordModal(true)
@@ -635,29 +647,83 @@ export function Finance() {
       {showRecordModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
           <div className="bg-card border border-border rounded-2xl w-full max-w-lg shadow-2xl p-6 space-y-4">
-            <h3 className="text-lg font-bold text-white">{editingIndex !== null ? 'Editar Registro' : 'Nuevo Registro'}</h3>
-            <p className="text-xs text-slate-500">Pestaña: {TABS_CONFIG.find(t => t.key === crudTab)?.label}</p>
-            
-            <div className="space-y-3 max-h-[60vh] overflow-y-auto">
-              {Object.keys(records[0] || { PRODUCTO: '', VALOR: 0, FECHA: '' }).map(col => (
-                <div key={col}>
-                  <label className="text-xs text-slate-400 mb-1 block">{col}</label>
-                  <input
-                    type="text"
-                    value={String(recordForm[col] ?? '')}
-                    onChange={e => setRecordForm(prev => ({ ...prev, [col]: e.target.value }))}
-                    className="w-full bg-surface border border-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-primary/50"
-                  />
-                </div>
-              ))}
-            </div>
+            <h3 className="text-lg font-bold text-white">
+              {editingIndex !== null ? 'Editar Registro' : (createStep === 'select-tab' ? 'Nuevo Registro — Seleccionar Categoría' : 'Nuevo Registro')}
+            </h3>
+            {!(editingIndex === null && createStep === 'select-tab') && (
+              <p className="text-xs text-slate-500">Pestaña: {TABS_CONFIG.find(t => t.key === crudTab)?.label}</p>
+            )}
 
-            <div className="flex gap-3 pt-2 border-t border-border">
-              <button onClick={() => setShowRecordModal(false)} className="flex-1 py-2 text-sm text-slate-400 hover:text-white border border-border rounded-lg hover:bg-white/5 transition-colors">Cancelar</button>
-              <button onClick={editingIndex !== null ? handleUpdateRecord : handleCreateRecord} className="flex-1 py-2 text-sm bg-primary hover:bg-primary/80 text-white rounded-lg font-medium transition-colors">
-                {editingIndex !== null ? 'Guardar Cambios' : 'Crear Registro'}
-              </button>
-            </div>
+            {/* Step 1: Select category */}
+            {editingIndex === null && createStep === 'select-tab' && (
+              <div className="space-y-3">
+                <p className="text-sm text-slate-400 mb-3">Selecciona la categoría donde deseas agregar el registro:</p>
+                <div className="grid grid-cols-2 gap-3">
+                  {TABS_CONFIG.map(tab => (
+                    <button
+                      key={tab.key}
+                      onClick={() => {
+                        setCrudTab(tab.key as TabKey)
+                        setCreateStep('form')
+                      }}
+                      className={`p-4 rounded-xl border text-left transition-all hover:scale-[1.02] active:scale-[0.98] ${
+                        crudTab === tab.key
+                          ? 'bg-primary/10 border-primary/40 text-primary'
+                          : 'bg-surface border-border text-slate-300 hover:border-primary/30'
+                      }`}
+                    >
+                      <div className="text-sm font-semibold">{tab.label}</div>
+                      <div className="text-[10px] text-slate-500 mt-1 uppercase tracking-wider">
+                        {TAB_COLUMNS[tab.key as TabKey].join(' · ')}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Step 2: Form */}
+            {(editingIndex !== null || createStep === 'form') && (
+              <>
+                <div className="space-y-3 max-h-[60vh] overflow-y-auto">
+                  {(editingIndex !== null
+                    ? Object.keys(records[0] || {})
+                    : TAB_COLUMNS[crudTab]
+                  ).map(col => (
+                    <div key={col}>
+                      <label className="text-xs text-slate-400 mb-1 block">{col}</label>
+                      <input
+                        type="text"
+                        value={String(recordForm[col] ?? '')}
+                        onChange={e => setRecordForm(prev => ({ ...prev, [col]: e.target.value }))}
+                        className="w-full bg-surface border border-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-primary/50"
+                      />
+                    </div>
+                  ))}
+                </div>
+
+                <div className="flex gap-3 pt-2 border-t border-border">
+                  {editingIndex === null && (
+                    <button
+                      onClick={() => setCreateStep('select-tab')}
+                      className="py-2 px-4 text-sm text-slate-400 hover:text-white border border-border rounded-lg hover:bg-white/5 transition-colors"
+                    >
+                      ← Volver
+                    </button>
+                  )}
+                  <button onClick={() => setShowRecordModal(false)} className="flex-1 py-2 text-sm text-slate-400 hover:text-white border border-border rounded-lg hover:bg-white/5 transition-colors">Cancelar</button>
+                  <button onClick={editingIndex !== null ? handleUpdateRecord : handleCreateRecord} className="flex-1 py-2 text-sm bg-primary hover:bg-primary/80 text-white rounded-lg font-medium transition-colors">
+                    {editingIndex !== null ? 'Guardar Cambios' : 'Crear Registro'}
+                  </button>
+                </div>
+              </>
+            )}
+
+            {editingIndex === null && createStep === 'select-tab' && (
+              <div className="flex gap-3 pt-2 border-t border-border">
+                <button onClick={() => setShowRecordModal(false)} className="flex-1 py-2 text-sm text-slate-400 hover:text-white border border-border rounded-lg hover:bg-white/5 transition-colors">Cancelar</button>
+              </div>
+            )}
           </div>
         </div>
       )}
