@@ -1,4 +1,4 @@
-import { Bot, MessageSquare, Trophy, Zap, TrendingUp } from 'lucide-react'
+import { Bot, MessageSquare, Trophy, TrendingUp } from 'lucide-react'
 
 export function Home() {
   const systems = [

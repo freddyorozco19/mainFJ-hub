@@ -1,4 +1,4 @@
-import { Database, BarChart3, TrendingUp, Target, Clock, Zap, AlertCircle, CheckCircle } from 'lucide-react'
+import { Database, BarChart3, TrendingUp, Target, Clock, Zap } from 'lucide-react'
 
 export function GrowData() {
   const metrics = [

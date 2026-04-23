@@ -1,7 +1,7 @@
-import { useState, useEffect, KeyboardEvent } from 'react'
+import { useState, useEffect } from 'react'
 import {
-  DollarSign, TrendingUp, ShoppingCart, CreditCard,
-  Heart, Send, Loader2, Bot, Search, PiggyBank,
+  DollarSign, ShoppingCart,
+  Send, Loader2, Bot, Search, PiggyBank,
   AlertCircle, RefreshCw, Sparkles, ChevronDown,
 } from 'lucide-react'
 
