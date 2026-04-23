@@ -237,7 +237,7 @@ export function Finance() {
       {/* ── Header ─────────────────────────────────────────────────────────── */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white">Finanzas</h1>
+          <h1 className="text-2xl font-bold text-white">Finance</h1>
           <p className="text-sm text-slate-500 mt-1">Gestión financiera personal · Google Sheets sync</p>
         </div>
         <div className="flex items-center gap-2">
