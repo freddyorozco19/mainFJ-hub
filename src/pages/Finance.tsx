@@ -5,7 +5,7 @@ import {
   AlertCircle, RefreshCw, Sparkles, ChevronDown,
 } from 'lucide-react'
 
-const API = 'http://localhost:8001'
+const API = import.meta.env.VITE_API_URL || 'http://localhost:8001'
 
 const SUBPAGES = [
   { key: 'dashboard', label: 'Dashboard', hex: '#7C3AED' },

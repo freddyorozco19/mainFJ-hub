@@ -3,7 +3,7 @@ import { Send, Bot, ChevronDown, Paperclip, X, File, Upload } from 'lucide-react
 import { useDashboard } from '../store/dashboardStore'
 import type { ChatMessage } from '../store/dashboardStore'
 
-const API = 'http://localhost:8001'
+const API = import.meta.env.VITE_API_URL || 'http://localhost:8001'
 
 interface AttachedFile {
   id: string
