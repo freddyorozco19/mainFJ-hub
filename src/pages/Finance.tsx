@@ -22,12 +22,12 @@ const TABS_CONFIG = [
 ]
 
 const TAB_COLUMNS: Record<TabKey, string[]> = {
-  essentials: ['SERVICIO', 'MONEDA', 'VALOR', 'FECHA', 'MODO', 'BANCO'],
-  ahorro:     ['CONCEPTO', 'MONEDA', 'VALOR', 'FECHA', 'MODO', 'SALDO'],
-  basket:     ['PRODUCTO', 'MONEDA', 'VALOR', 'FECHA', 'CANTIDAD', 'CADUCIDAD'],
-  shops:      ['PRODUCTO', 'MONEDA', 'VALOR', 'FECHA', 'TIENDA', 'MOTIVO'],
-  wishlist:   ['PRODUCTO', 'MONEDA', 'VALOR', 'FECHA', 'PRIORIDAD', 'ESTADO'],
-  debts:      ['CONCEPTO', 'MONEDA', 'VALOR', 'FECHA', 'ESTADO', 'ACREEDOR'],
+  essentials: ['PRODUCTO', 'DESCRIPCIÓN', 'MONEDA', 'VALOR', 'MEDIO PAGO', 'MODO'],
+  ahorro:     ['NOMBRE', 'MEDIO PAGO', 'FECHA', 'VALOR'],
+  basket:     ['PRODUCTO', 'DESCRIPCIÓN', 'CATEGORÍA', 'MONEDA', 'VALOR', 'CANTIDAD'],
+  shops:      ['PRODUCTO', 'DESCRIPCIÓN', 'CATEGORÍA', 'MEDIO PAGO', 'TIENDA', 'VALOR', 'FECHA'],
+  wishlist:   ['PRODUCTO', 'DESCRIPCIÓN', 'MONEDA', 'VALOR', 'TIENDA', 'MEDIO', 'SOURCE'],
+  debts:      ['PRODUCTO', 'DESCRIPCIÓN', 'MONEDA', 'VALOR', 'RESPONSABLE', 'ESTADO', 'FECHA'],
 }
 
 type SubPageKey = 'dashboard' | 'registros'
@@ -237,8 +237,8 @@ export function Finance() {
       {/* ── Header ─────────────────────────────────────────────────────────── */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white">Finanzas</h1>
-          <p className="text-sm text-slate-500 mt-1">Gestión financiera personal · Google Sheets sync</p>
+          <h1 className="text-2xl font-bold text-white">Finance</h1>
+          <p className="text-sm text-slate-500 mt-1">Gestión financ · Google Sheets sync</p>
         </div>
         <div className="flex items-center gap-2">
           {SUBPAGES.map(sp => (
