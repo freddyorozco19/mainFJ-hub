@@ -1,14 +1,14 @@
 # -*- coding: utf-8 -*-
 """
-backend/routers/auth.py — JWT Authentication
+backend/routers/auth.py — JWT Authentication (simplified, reliable)
 """
 from datetime import datetime, timedelta
 from typing import Optional
+import hmac
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from jose import JWTError, jwt
-from passlib.context import CryptContext
 from pydantic import BaseModel
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -17,15 +17,15 @@ SECRET_KEY = "MainFJ-Dashboard-SecretKey-2026-FJ"
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7  # 7 days
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 
+# Plain text credentials for reliability across environments
 USERS_DB = {
     "freddy.orozco729@gmail.com": {
         "id": "1",
         "email": "freddy.orozco729@gmail.com",
         "name": "Freddy J. Orozco",
-        "hashed_password": pwd_context.hash("MainFJ2026*"),
+        "password": "MainFJ2026*",
     }
 }
 
@@ -41,8 +41,9 @@ class User(BaseModel):
     name: str
 
 
-def verify_password(plain_password: str, hashed_password: str) -> bool:
-    return pwd_context.verify(plain_password, hashed_password)
+def verify_password(plain_password: str, stored_password: str) -> bool:
+    """Constant-time comparison to prevent timing attacks."""
+    return hmac.compare_digest(plain_password, stored_password)
 
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
@@ -79,7 +80,7 @@ async def get_current_user(token: str = Depends(oauth2_scheme)) -> User:
 @router.post("/login", response_model=Token)
 async def login(form_data: OAuth2PasswordRequestForm = Depends()) -> Token:
     user = get_user(form_data.username)
-    if not user or not verify_password(form_data.password, user["hashed_password"]):
+    if not user or not verify_password(form_data.password, user["password"]):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Email o contraseña incorrectos",
