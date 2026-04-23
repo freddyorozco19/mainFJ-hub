@@ -13,11 +13,11 @@ const SUBPAGES = [
 ]
 
 const TABS_CONFIG = [
-  { key: 'shops',      label: 'Compras',    colorVar: 'primary', hex: '#7C3AED' },
-  { key: 'basket',     label: 'Canasta',    colorVar: 'accent',  hex: '#06B6D4' },
-  { key: 'essentials', label: 'Esenciales', colorVar: 'warning', hex: '#FBBF24' },
-  { key: 'ahorro',     label: 'Ahorro',     colorVar: 'success', hex: '#4ADE80' },
-  { key: 'debts',      label: 'Deudas',     colorVar: 'danger',  hex: '#F87171' },
+  { key: 'shops',      label: 'Shops',    colorVar: 'primary', hex: '#7C3AED' },
+  { key: 'basket',     label: 'Basket',    colorVar: 'accent',  hex: '#06B6D4' },
+  { key: 'essentials', label: 'Essentials', colorVar: 'warning', hex: '#FBBF24' },
+  { key: 'ahorro',     label: 'Salvings',     colorVar: 'success', hex: '#4ADE80' },
+  { key: 'debts',      label: 'Debt',     colorVar: 'danger',  hex: '#F87171' },
   { key: 'wishlist',   label: 'Wishlist',   colorVar: 'primary', hex: '#A78BFA' },
 ]
 
