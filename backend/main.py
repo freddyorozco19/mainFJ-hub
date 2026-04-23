@@ -22,7 +22,7 @@ app = FastAPI(title="MainFJ Dashboard API", version="0.1.0")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5175", "http://localhost:5176", "http://localhost:5177", "http://localhost:4175"],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
