@@ -2,6 +2,9 @@
 """Módulo de conexión a Google Sheets — fuente de verdad financiera."""
 from __future__ import annotations
 from pathlib import Path
+import os
+import json
+import tempfile
 import gspread
 from google.oauth2.service_account import Credentials
 
@@ -31,6 +34,15 @@ COLUMNS = {
 
 
 def _client() -> gspread.Client:
+    """Crea cliente de Google Sheets desde archivo o variable de entorno."""
+    # Intentar desde variable de entorno primero (para producción en Render)
+    creds_json = os.getenv("GOOGLE_CREDENTIALS_JSON", "")
+    if creds_json:
+        creds_info = json.loads(creds_json)
+        creds = Credentials.from_service_account_info(creds_info, scopes=SCOPES)
+        return gspread.authorize(creds)
+    
+    # Fallback a archivo local (para desarrollo)
     creds = Credentials.from_service_account_file(str(CREDS_PATH), scopes=SCOPES)
     return gspread.authorize(creds)
 
