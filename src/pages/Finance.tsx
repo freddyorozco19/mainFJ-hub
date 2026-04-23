@@ -203,11 +203,11 @@ export function Finance() {
     }
   }
 
-  function onInputKey(e: KeyboardEvent<HTMLInputElement>) {
+  function onInputKey(e: KeyboardEvent) {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleWrite() }
   }
 
-  function onAnalysisKey(e: KeyboardEvent<HTMLTextAreaElement>) {
+  function onAnalysisKey(e: KeyboardEvent) {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleAnalyze() }
   }
 
