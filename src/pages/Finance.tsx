@@ -49,6 +49,117 @@ function formatCOPFull(value: number): string {
   }).format(value)
 }
 
+function renderFormField(col: string, value: string | number, onChange: (val: string) => void) {
+  const baseClass = "w-full bg-surface border border-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-primary/50"
+
+  if (col === 'VALOR' || col === 'CANTIDAD' || col === 'PAGO') {
+    return (
+      <input
+        type="number"
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        className={baseClass}
+        placeholder="0"
+      />
+    )
+  }
+
+  if (col === 'FECHA' || col === 'MES' || col === 'CADUCIDAD') {
+    return (
+      <input
+        type="date"
+        value={String(value).split('/').reverse().join('-') || ''}
+        onChange={e => {
+          const [y, m, d] = e.target.value.split('-')
+          onChange(`${d}/${m}/${y}`)
+        }}
+        className={baseClass}
+      />
+    )
+  }
+
+  if (col === 'MONEDA') {
+    return (
+      <select value={value} onChange={e => onChange(e.target.value)} className={baseClass + ' appearance-none cursor-pointer'}>
+        <option value="">Seleccionar...</option>
+        <option value="COP">COP</option>
+        <option value="USD">USD</option>
+      </select>
+    )
+  }
+
+  if (col === 'ESTADO') {
+    return (
+      <select value={value} onChange={e => onChange(e.target.value)} className={baseClass + ' appearance-none cursor-pointer'}>
+        <option value="">Seleccionar...</option>
+        <option value="PENDIENTE">PENDIENTE</option>
+        <option value="PAGADO">PAGADO</option>
+        <option value="PARCIAL">PARCIAL</option>
+      </select>
+    )
+  }
+
+  if (col === 'MODO') {
+    return (
+      <select value={value} onChange={e => onChange(e.target.value)} className={baseClass + ' appearance-none cursor-pointer'}>
+        <option value="">Seleccionar...</option>
+        <option value="MENSUAL">MENSUAL</option>
+        <option value="BIMENSUAL">BIMENSUAL</option>
+        <option value="SEMESTRAL">SEMESTRAL</option>
+        <option value="ANUAL">ANUAL</option>
+        <option value="ÚNICO">ÚNICO</option>
+      </select>
+    )
+  }
+
+  if (col === 'CATEGORIA' || col === 'CATEGORÍA') {
+    return (
+      <select value={value} onChange={e => onChange(e.target.value)} className={baseClass + ' appearance-none cursor-pointer'}>
+        <option value="">Seleccionar...</option>
+        <option value="Comida">Comida</option>
+        <option value="Hogar">Hogar</option>
+        <option value="Tecnología">Tecnología</option>
+        <option value="Salud">Salud</option>
+        <option value="Entretenimiento">Entretenimiento</option>
+        <option value="Otro">Otro</option>
+      </select>
+    )
+  }
+
+  if (col === 'PRIORIDAD') {
+    return (
+      <select value={value} onChange={e => onChange(e.target.value)} className={baseClass + ' appearance-none cursor-pointer'}>
+        <option value="">Seleccionar...</option>
+        <option value="Alta">Alta</option>
+        <option value="Media">Media</option>
+        <option value="Baja">Baja</option>
+      </select>
+    )
+  }
+
+  if (col === 'MEDIO PAGO' || col === 'MEDIO') {
+    return (
+      <select value={value} onChange={e => onChange(e.target.value)} className={baseClass + ' appearance-none cursor-pointer'}>
+        <option value="">Seleccionar...</option>
+        <option value="Efectivo">Efectivo</option>
+        <option value="Tarjeta">Tarjeta</option>
+        <option value="Transferencia">Transferencia</option>
+        <option value="Nequi">Nequi</option>
+        <option value="Daviplata">Daviplata</option>
+      </select>
+    )
+  }
+
+  return (
+    <input
+      type="text"
+      value={value}
+      onChange={e => onChange(e.target.value)}
+      className={baseClass}
+    />
+  )
+}
+
 const SUMMARY_CARDS = [
   { key: 'shops'  as TabKey, label: 'Compras',    Icon: ShoppingCart, color: 'text-primary', bg: 'bg-primary/10',  border: 'border-primary/20'  },
   { key: 'basket' as TabKey, label: 'Canasta',    Icon: ShoppingCart, color: 'text-accent',  bg: 'bg-accent/10',   border: 'border-accent/20'   },
@@ -676,12 +787,7 @@ export function Finance() {
               ).map(col => (
                 <div key={col}>
                   <label className="text-xs text-slate-400 mb-1 block">{col}</label>
-                  <input
-                    type="text"
-                    value={String(recordForm[col] ?? '')}
-                    onChange={e => setRecordForm(prev => ({ ...prev, [col]: e.target.value }))}
-                    className="w-full bg-surface border border-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-primary/50"
-                  />
+                  {renderFormField(col, recordForm[col] ?? '', (val) => setRecordForm(prev => ({ ...prev, [col]: val })))}
                 </div>
               ))}
             </div>

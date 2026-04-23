@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { NavLink } from 'react-router-dom'
-import { Bot, MessageSquare, BarChart3, ScrollText, Wifi, WifiOff, PanelLeftClose, PanelLeft, Home, Trophy, Brain, TrendingUp, Heart, Wallet, LogOut } from 'lucide-react'
+import { Bot, MessageSquare, BarChart3, ScrollText, Wifi, WifiOff, PanelLeftClose, PanelLeft, Home, Trophy, Brain, TrendingUp, Heart, Wallet, LogOut, X, Menu, User } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:8001'
@@ -24,9 +24,11 @@ const SYSTEMS_NAV = [
 interface SidebarProps {
   collapsed: boolean
   onToggle: () => void
+  mobileOpen: boolean
+  onMobileClose: () => void
 }
 
-export function Sidebar({ collapsed, onToggle }: SidebarProps) {
+function SidebarContent({ collapsed, onToggle }: { collapsed: boolean; onToggle: () => void }) {
   const [sseConnected, setSseConnected] = useState(false)
   const { user, logout } = useAuth()
 
@@ -38,7 +40,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   }, [])
 
   return (
-    <aside className={`fixed left-0 top-0 h-screen bg-surface border-r border-border flex flex-col z-40 transition-all duration-300 ${collapsed ? 'w-16' : 'w-56'}`}>
+    <>
       {/* Logo */}
       <div className={`flex items-center border-b border-border ${collapsed ? 'justify-center px-2 py-4' : 'gap-2.5 px-5 py-5'}`}>
         {!collapsed && (
@@ -101,6 +103,28 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
         ))}
       </nav>
 
+      {/* Profile link */}
+      {!collapsed && (
+        <div className="px-5 pt-4 pb-1">
+          <span className="text-[10px] text-slate-600 uppercase tracking-widest">Cuenta</span>
+        </div>
+      )}
+      <nav className={`py-2 space-y-1 ${collapsed ? 'px-2' : 'px-3'}`}>
+        <NavLink
+          to="/profile"
+          className={({ isActive }) =>
+            `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 ${
+              isActive
+                ? 'bg-success/15 text-success border border-success/20'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
+            } ${collapsed ? 'justify-center' : ''}`
+          }
+        >
+          <User size={16} />
+          {!collapsed && <span>Perfil</span>}
+        </NavLink>
+      </nav>
+
       {/* Toggle button & Logout */}
       <div className="flex flex-col gap-1 mt-auto border-t border-border">
         {user && (
@@ -115,7 +139,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
         )}
         <button
           onClick={onToggle}
-          className={`flex items-center gap-2 px-3 py-3 text-slate-500 hover:text-slate-300 hover:bg-white/5 transition-colors ${collapsed ? 'justify-center' : ''}`}
+          className={`hidden md:flex items-center gap-2 px-3 py-3 text-slate-500 hover:text-slate-300 hover:bg-white/5 transition-colors ${collapsed ? 'justify-center' : ''}`}
           title={collapsed ? 'Expandir sidebar' : 'Colapsar sidebar'}
         >
           {collapsed ? <PanelLeft size={16} /> : <><PanelLeftClose size={16} /><span className="text-xs">Colapsar</span></>}
@@ -125,7 +149,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
       {/* Footer */}
       <div className={`px-5 py-4 border-t border-border ${collapsed ? 'px-2' : ''}`}>
         <div className="flex items-center justify-between">
-          {!collapsed && <div className="text-[10px] text-slate-600 tracking-widest uppercase">FJ · v0.2.0</div>}
+          {!collapsed && <div className="text-[10px] text-slate-600 tracking-widest uppercase">FJ · v0.3.0</div>}
           <div className="flex items-center gap-1" title={sseConnected ? 'SSE conectado' : 'SSE desconectado'}>
             {sseConnected
               ? <Wifi size={10} className="text-success animate-pulse" />
@@ -134,6 +158,48 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
           </div>
         </div>
       </div>
-    </aside>
+    </>
+  )
+}
+
+export function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose }: SidebarProps) {
+  return (
+    <>
+      {/* Desktop sidebar */}
+      <aside className={`hidden md:flex fixed left-0 top-0 h-screen bg-surface border-r border-border flex-col z-40 transition-all duration-300 ${collapsed ? 'w-16' : 'w-56'}`}>
+        <SidebarContent collapsed={collapsed} onToggle={onToggle} />
+      </aside>
+
+      {/* Mobile overlay */}
+      {mobileOpen && (
+        <>
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 md:hidden" onClick={onMobileClose} />
+          <aside className="fixed left-0 top-0 h-screen w-64 bg-surface border-r border-border flex-col z-50 md:hidden animate-slide-in">
+            <div className="flex items-center justify-between px-4 py-4 border-b border-border">
+              <div>
+                <div className="text-lg font-bold text-white tracking-wide">OPEN</div>
+                <div className="text-[10px] text-slate-500 tracking-widest uppercase">Orchestrator</div>
+              </div>
+              <button onClick={onMobileClose} className="p-2 text-slate-400 hover:text-white">
+                <X size={20} />
+              </button>
+            </div>
+            <SidebarContent collapsed={false} onToggle={() => { onToggle(); onMobileClose(); }} />
+          </aside>
+        </>
+      )}
+    </>
+  )
+}
+
+export function MobileMenuButton({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      className="md:hidden p-2 text-slate-400 hover:text-white rounded-lg hover:bg-white/5 transition-colors"
+      aria-label="Abrir menú"
+    >
+      <Menu size={20} />
+    </button>
   )
 }

@@ -11,6 +11,7 @@ import { ExpertIA } from './pages/ExpertIA'
 import { GrowData } from './pages/GrowData'
 import { LIFE } from './pages/LIFE'
 import { Finance } from './pages/Finance'
+import { Profile } from './pages/Profile'
 import { Login } from './pages/Login'
 import { ForgotPassword } from './pages/ForgotPassword'
 import { ResetPassword } from './pages/ResetPassword'
@@ -129,6 +130,7 @@ export default function App() {
             <Route path="/growdata" element={<GrowData />} />
             <Route path="/life"    element={<LIFE />}    />
             <Route path="/finance" element={<Finance />} />
+            <Route path="/profile" element={<Profile />} />
           </Route>
         </Route>
 

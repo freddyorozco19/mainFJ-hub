@@ -1,13 +1,14 @@
 import { useState, useEffect } from 'react'
 import { Outlet } from 'react-router-dom'
-import { Sidebar } from './Sidebar'
-import { WifiOff, Wifi, Moon, Sun, PanelLeft, PanelLeftClose } from 'lucide-react'
+import { Sidebar, MobileMenuButton } from './Sidebar'
+import { WifiOff, Wifi, Moon, Sun } from 'lucide-react'
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:8001'
 
 export function Layout() {
   const [connected, setConnected] = useState<boolean | null>(null)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [darkMode, setDarkMode] = useState(() => {
     const saved = localStorage.getItem('darkMode')
     return saved ? JSON.parse(saved) : false
@@ -48,29 +49,28 @@ export function Layout() {
 
   return (
     <div className={`min-h-screen flex ${darkMode ? 'bg-gray-900' : 'bg-[#07070F]'}`}>
-      <Sidebar collapsed={sidebarCollapsed} onToggle={toggleSidebar} />
-      <main className={`flex-1 min-h-screen flex flex-col transition-all duration-300 ${sidebarCollapsed ? 'ml-16' : 'ml-56'}`}>
+      <Sidebar
+        collapsed={sidebarCollapsed}
+        onToggle={toggleSidebar}
+        mobileOpen={mobileMenuOpen}
+        onMobileClose={() => setMobileMenuOpen(false)}
+      />
+      <main className={`flex-1 min-h-screen flex flex-col transition-all duration-300 ${sidebarCollapsed ? 'md:ml-16' : 'md:ml-56'}`}>
         <div className={`flex items-center justify-between px-4 py-2 border-b ${darkMode ? 'border-gray-700 bg-gray-800' : 'border-white/10 bg-white/5'}`}>
           <div className="flex items-center gap-3">
-            <button
-              onClick={toggleSidebar}
-              className={`p-1.5 rounded-md transition-colors ${darkMode ? 'hover:bg-gray-700 text-gray-400' : 'hover:bg-white/10 text-white/60'}`}
-              title={sidebarCollapsed ? 'Expandir sidebar' : 'Colapsar sidebar'}
-            >
-              {sidebarCollapsed ? <PanelLeft size={18} /> : <PanelLeftClose size={18} />}
-            </button>
-            <div className={`flex items-center gap-2 text-xs ${connected === false ? 'text-red-400' : darkMode ? 'text-gray-400' : 'text-white/60'}`}>
+            <MobileMenuButton onClick={() => setMobileMenuOpen(true)} />
+            <div className={`hidden md:flex items-center gap-2 text-xs ${connected === false ? 'text-red-400' : darkMode ? 'text-gray-400' : 'text-white/60'}`}>
               {connected === null ? (
                 <span className="animate-pulse">verificando...</span>
               ) : connected ? (
                 <>
                   <Wifi className="w-3 h-3" />
-                  <span>Conectado a {API}</span>
+                  <span>Conectado</span>
                 </>
               ) : (
                 <>
                   <WifiOff className="w-3 h-3" />
-                  <span>Sin conexión — SSE desconectado</span>
+                  <span>Sin conexión</span>
                 </>
               )}
             </div>
