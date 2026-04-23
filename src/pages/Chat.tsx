@@ -1,9 +1,23 @@
-import { useState, useRef, useEffect } from 'react'
-import { Send, Bot, ChevronDown } from 'lucide-react'
+import { useState, useRef, useEffect, useCallback } from 'react'
+import { Send, Bot, ChevronDown, Paperclip, X, File, Upload } from 'lucide-react'
 import { useDashboard } from '../store/dashboardStore'
 import type { ChatMessage } from '../store/dashboardStore'
 
 const API = 'http://localhost:8001'
+
+interface AttachedFile {
+  id: string
+  name: string
+  size: number
+  type: string
+  file: File
+}
+
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+}
 
 function Message({ msg }: { msg: ChatMessage }) {
   const isUser = msg.role === 'user'
@@ -33,8 +47,11 @@ export function Chat() {
   const { agents, activeAgentSlug, chatHistories, isTyping, setActiveAgent, addMessage, setTyping } = useDashboard()
   const [input, setInput] = useState('')
   const [showPicker, setShowPicker] = useState(false)
+  const [attachedFiles, setAttachedFiles] = useState<AttachedFile[]>([])
+  const [isDragging, setIsDragging] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
   const inputRef  = useRef<HTMLTextAreaElement>(null)
+  const dropZoneRef = useRef<HTMLDivElement>(null)
 
   const enabledAgents = agents.filter(a => a.enabled)
   const activeAgent   = agents.find(a => a.slug === activeAgentSlug)
@@ -44,45 +61,74 @@ export function Chat() {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, isTyping])
 
+  const handleFiles = useCallback((files: FileList | File[]) => {
+    const newFiles: AttachedFile[] = Array.from(files).map(file => ({
+      id: crypto.randomUUID(),
+      name: file.name,
+      size: file.size,
+      type: file.type,
+      file,
+    }))
+    setAttachedFiles(prev => [...prev, ...newFiles])
+  }, [])
+
+  const removeFile = (id: string) => {
+    setAttachedFiles(prev => prev.filter(f => f.id !== id))
+  }
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    setIsDragging(true)
+  }, [])
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    if (!dropZoneRef.current?.contains(e.relatedTarget as Node)) {
+      setIsDragging(false)
+    }
+  }, [])
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    setIsDragging(false)
+    if (e.dataTransfer.files.length > 0) {
+      handleFiles(e.dataTransfer.files)
+    }
+  }, [handleFiles])
+
   const send = async () => {
-    if (!input.trim() || !activeAgentSlug) return
+    if ((!input.trim() && attachedFiles.length === 0) || !activeAgentSlug) return
     const text = input.trim()
     setInput('')
 
     const userMsg: ChatMessage = {
       id: crypto.randomUUID(),
       role: 'user',
-      content: text,
+      content: text || (attachedFiles.length > 0 ? `[Archivos adjuntos: ${attachedFiles.map(f => f.name).join(', ')}]` : ''),
       agentSlug: activeAgentSlug,
       timestamp: new Date().toISOString(),
     }
     addMessage(userMsg)
     setTyping(true)
 
+    const formData = new FormData()
+    formData.append('text', text)
+    attachedFiles.forEach(f => formData.append('files', f.file))
+
     try {
-      const res = await fetch(`${API}/chat/${activeAgentSlug}`, {
+      await fetch(`${API}/chat/${activeAgentSlug}`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text }),
+        body: formData,
       })
-      const data = await res.json() as { text: string; output_tokens: number }
-      addMessage({
-        id: crypto.randomUUID(),
-        role: 'assistant',
-        content: data.text,
-        agentSlug: activeAgentSlug,
-        timestamp: new Date().toISOString(),
-        tokens: data.output_tokens,
-      })
+      setAttachedFiles([])
     } catch {
       addMessage({
         id: crypto.randomUUID(),
         role: 'assistant',
-        content: '⚠️ No se pudo conectar al backend. Asegúrate de que el servidor esté corriendo en :8001',
+        content: 'No se pudo conectar al backend. Asegurate de que el servidor este corriendo en :8001',
         agentSlug: activeAgentSlug,
         timestamp: new Date().toISOString(),
       })
-    } finally {
       setTyping(false)
     }
   }
@@ -129,11 +175,27 @@ export function Chat() {
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-6 py-6 space-y-5">
+      <div 
+        ref={dropZoneRef}
+        className={`flex-1 overflow-y-auto px-6 py-6 space-y-5 transition-colors ${isDragging ? 'bg-primary/5' : ''}`}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+      >
+        {isDragging && (
+          <div className="absolute inset-0 flex items-center justify-center bg-primary/10 border-2 border-dashed border-primary rounded-lg z-10 pointer-events-none">
+            <div className="flex flex-col items-center gap-2 text-primary">
+              <Upload size={40} />
+              <span className="text-sm font-medium">Suelta los archivos aquí</span>
+            </div>
+          </div>
+        )}
+
         {!activeAgentSlug && (
           <div className="flex flex-col items-center justify-center h-full text-slate-600 gap-3">
             <Bot size={48} className="opacity-20" />
             <p className="text-sm">Selecciona un agente para empezar a chatear</p>
+            <p className="text-xs text-slate-700 mt-2">También puedes arrastrar archivos al chat</p>
           </div>
         )}
 
@@ -142,6 +204,7 @@ export function Chat() {
             <span className="text-4xl">{activeAgent?.icon}</span>
             <p className="text-sm font-medium text-slate-400">{activeAgent?.name}</p>
             <p className="text-xs text-slate-600">¿En qué te puedo ayudar?</p>
+            <p className="text-xs text-slate-700 mt-2">Arrastra archivos aquí para adjuntarlos</p>
           </div>
         )}
 
@@ -162,9 +225,37 @@ export function Chat() {
         <div ref={bottomRef} />
       </div>
 
+      {/* Attached files */}
+      {attachedFiles.length > 0 && (
+        <div className="px-6 py-2 border-t border-border bg-surface/30">
+          <div className="flex flex-wrap gap-2">
+            {attachedFiles.map(f => (
+              <div key={f.id} className="flex items-center gap-2 bg-card border border-border rounded-lg px-3 py-1.5">
+                <File size={12} className="text-primary" />
+                <span className="text-xs text-slate-300 max-w-32 truncate">{f.name}</span>
+                <span className="text-[10px] text-slate-600">{formatFileSize(f.size)}</span>
+                <button onClick={() => removeFile(f.id)} className="text-slate-500 hover:text-danger transition-colors">
+                  <X size={12} />
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Input */}
       <div className="px-6 py-4 border-t border-border">
         <div className="flex gap-3 items-end bg-card border border-border rounded-2xl px-4 py-3 focus-within:border-primary/40 transition-colors">
+          <label className="cursor-pointer text-slate-500 hover:text-primary transition-colors p-1">
+            <Paperclip size={16} />
+            <input
+              type="file"
+              multiple
+              className="hidden"
+              onChange={(e) => e.target.files && handleFiles(e.target.files)}
+              disabled={!activeAgentSlug}
+            />
+          </label>
           <textarea
             ref={inputRef}
             rows={1}
@@ -177,13 +268,13 @@ export function Chat() {
           />
           <button
             onClick={send}
-            disabled={!input.trim() || !activeAgentSlug || isTyping}
+            disabled={(!input.trim() && attachedFiles.length === 0) || !activeAgentSlug || isTyping}
             className="p-1.5 rounded-lg bg-primary hover:bg-violet-500 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
           >
             <Send size={14} className="text-white" />
           </button>
         </div>
-        <p className="text-[10px] text-slate-700 mt-1.5 text-center">Enter para enviar · Shift+Enter para nueva línea</p>
+        <p className="text-[10px] text-slate-700 mt-1.5 text-center">Enter para enviar · Shift+Enter para nueva línea · Arrastra archivos</p>
       </div>
     </div>
   )

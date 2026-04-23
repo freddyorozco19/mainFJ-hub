@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { Bot, Power, Settings, Cpu, TrendingUp, Clock } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { Bot, Power, Settings, Cpu, TrendingUp, Clock, X, DollarSign, Calendar, Zap } from 'lucide-react'
 import { useDashboard } from '../store/dashboardStore'
 import type { Agent } from '../store/dashboardStore'
 
@@ -20,18 +20,127 @@ const CATEGORY_COLOR: Record<string, string> = {
   Work: 'text-success border-success/30 bg-success/10',
 }
 
-const STATUS_DOT: Record<string, string> = {
-  online:  'bg-success',
-  busy:    'bg-warning animate-pulse',
-  offline: 'bg-slate-600',
-  error:   'bg-danger',
+const STATUS_COLOR: Record<string, { bg: string; text: string; label: string }> = {
+  online:  { bg: 'bg-success/15', text: 'text-success', label: 'En línea' },
+  busy:    { bg: 'bg-warning/15', text: 'text-warning', label: 'Ocupado' },
+  offline: { bg: 'bg-slate-500/15', text: 'text-slate-400', label: 'Desconectado' },
+  error:   { bg: 'bg-danger/15', text: 'text-danger', label: 'Error' },
 }
 
-function AgentCard({ agent, onToggle }: { agent: Agent; onToggle: () => void }) {
+function AgentModal({ agent, onClose, onToggle }: { agent: Agent; onClose: () => void; onToggle: () => void }) {
+  const status = STATUS_COLOR[agent.status] ?? STATUS_COLOR.offline
+  
   return (
-    <div className={`bg-card border rounded-xl p-4 flex flex-col gap-3 transition-all duration-200 ${
-      agent.enabled ? 'border-border hover:border-primary/40' : 'border-border/50 opacity-60'
-    }`}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative bg-card border border-border rounded-2xl w-full max-w-lg shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+        {/* Header */}
+        <div className="flex items-start justify-between p-6 border-b border-border">
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 rounded-2xl bg-surface flex items-center justify-center text-3xl">
+              {agent.icon}
+            </div>
+            <div>
+              <h2 className="text-lg font-bold text-white">{agent.name}</h2>
+              <div className="flex items-center gap-2 mt-1">
+                <span className={`inline-flex items-center gap-1.5 text-xs font-medium px-2 py-0.5 rounded border ${CATEGORY_COLOR[agent.category] ?? 'text-slate-400'}`}>
+                  {agent.category}
+                </span>
+                <span className={`inline-flex items-center gap-1.5 text-xs font-medium px-2 py-0.5 rounded ${status.bg} ${status.text}`}>
+                  <span className={`w-1.5 h-1.5 rounded-full ${agent.status === 'online' ? 'bg-success' : agent.status === 'busy' ? 'bg-warning animate-pulse' : agent.status === 'error' ? 'bg-danger' : 'bg-slate-500'}`} />
+                  {status.label}
+                </span>
+              </div>
+            </div>
+          </div>
+          <button onClick={onClose} className="p-2 text-slate-500 hover:text-white hover:bg-white/5 rounded-lg transition-colors">
+            <X size={18} />
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="p-6 space-y-5">
+          {/* Description */}
+          <div>
+            <h3 className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-2">Descripción</h3>
+            <p className="text-sm text-slate-300 leading-relaxed">{agent.description}</p>
+          </div>
+
+          {/* Stats */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="bg-surface rounded-xl p-4 border border-border">
+              <div className="flex items-center gap-2 text-slate-500 mb-1">
+                <Cpu size={12} />
+                <span className="text-[10px] uppercase tracking-wider">Modelo</span>
+              </div>
+              <p className="text-sm font-mono text-white">{agent.model.replace('claude-', '')}</p>
+            </div>
+            <div className="bg-surface rounded-xl p-4 border border-border">
+              <div className="flex items-center gap-2 text-slate-500 mb-1">
+                <TrendingUp size={12} />
+                <span className="text-[10px] uppercase tracking-wider">Tokens</span>
+              </div>
+              <p className="text-sm font-mono text-white">{agent.totalTokens.toLocaleString()}</p>
+            </div>
+            <div className="bg-surface rounded-xl p-4 border border-border">
+              <div className="flex items-center gap-2 text-slate-500 mb-1">
+                <DollarSign size={12} />
+                <span className="text-[10px] uppercase tracking-wider">Costo</span>
+              </div>
+              <p className="text-sm font-mono text-white">${agent.totalCost.toFixed(4)}</p>
+            </div>
+            <div className="bg-surface rounded-xl p-4 border border-border">
+              <div className="flex items-center gap-2 text-slate-500 mb-1">
+                <Calendar size={12} />
+                <span className="text-[10px] uppercase tracking-wider">Última vez</span>
+              </div>
+              <p className="text-sm text-white">{agent.lastActive ?? 'Nunca'}</p>
+            </div>
+          </div>
+
+          {/* Slug */}
+          <div className="bg-surface rounded-xl p-4 border border-border">
+            <div className="flex items-center gap-2 text-slate-500 mb-1">
+              <Zap size={12} />
+              <span className="text-[10px] uppercase tracking-wider">Slug</span>
+            </div>
+            <p className="text-sm font-mono text-primary">{agent.slug}</p>
+          </div>
+        </div>
+
+        {/* Actions */}
+        <div className="flex items-center gap-3 p-6 border-t border-border">
+          <button
+            onClick={onToggle}
+            className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm transition-colors ${
+              agent.enabled
+                ? 'bg-danger/15 text-danger hover:bg-danger/25 border border-danger/30'
+                : 'bg-success/15 text-success hover:bg-success/25 border border-success/30'
+            }`}
+          >
+            <Power size={14} />
+            {agent.enabled ? 'Desactivar' : 'Activar'}
+          </button>
+          <button
+            onClick={onClose}
+            className="flex-1 px-4 py-2.5 bg-primary text-white rounded-xl font-medium text-sm hover:bg-violet-500 transition-colors"
+          >
+            Ir al chat
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function AgentCard({ agent, onToggle, onClick }: { agent: Agent; onToggle: () => void; onClick: () => void }) {
+  return (
+    <div 
+      className={`bg-card border rounded-xl p-4 flex flex-col gap-3 transition-all duration-200 cursor-pointer hover:border-primary/40 ${
+        agent.enabled ? 'border-border hover:shadow-lg hover:shadow-primary/5' : 'border-border/50 opacity-60'
+      }`}
+      onClick={onClick}
+    >
       {/* Header */}
       <div className="flex items-start justify-between">
         <div className="flex items-center gap-3">
@@ -44,9 +153,9 @@ function AgentCard({ agent, onToggle }: { agent: Agent; onToggle: () => void }) 
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <div className={`w-2 h-2 rounded-full ${STATUS_DOT[agent.status]}`} title={agent.status} />
+          <div className={`w-2 h-2 rounded-full ${agent.status === 'online' ? 'bg-success' : agent.status === 'busy' ? 'bg-warning animate-pulse' : agent.status === 'error' ? 'bg-danger' : 'bg-slate-600'}`} title={agent.status} />
           <button
-            onClick={onToggle}
+            onClick={(e) => { e.stopPropagation(); onToggle() }}
             className={`p-1.5 rounded-lg transition-colors ${
               agent.enabled
                 ? 'text-primary bg-primary/10 hover:bg-primary/20'
@@ -59,7 +168,7 @@ function AgentCard({ agent, onToggle }: { agent: Agent; onToggle: () => void }) 
       </div>
 
       {/* Description */}
-      <p className="text-xs text-slate-500 leading-relaxed">{agent.description}</p>
+      <p className="text-xs text-slate-500 leading-relaxed line-clamp-2">{agent.description}</p>
 
       {/* Footer stats */}
       <div className="flex items-center gap-3 pt-1 border-t border-border/60">
@@ -83,14 +192,24 @@ function AgentCard({ agent, onToggle }: { agent: Agent; onToggle: () => void }) 
 export function Agents() {
   const { agents, setAgents, toggleAgent } = useDashboard()
   const [filter, setFilter] = useState<string>('Todos')
+  const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null)
 
-  // Init with demo data if empty
+  useEffect(() => {
+    if (agents.length === 0) setAgents(DEMO_AGENTS)
+  }, [])
+
   const list = agents.length > 0 ? agents : DEMO_AGENTS
-  if (agents.length === 0) setAgents(DEMO_AGENTS)
 
   const categories = ['Todos', ...Array.from(new Set(list.map(a => a.category)))]
   const filtered = filter === 'Todos' ? list : list.filter(a => a.category === filter)
   const enabled  = list.filter(a => a.enabled).length
+
+  const handleToggle = (agentId: string) => {
+    toggleAgent(agentId)
+    if (selectedAgent?.id === agentId) {
+      setSelectedAgent(prev => prev ? { ...prev, enabled: !prev.enabled } : null)
+    }
+  }
 
   return (
     <div className="flex-1 p-6 space-y-6">
@@ -129,7 +248,8 @@ export function Agents() {
           <AgentCard
             key={agent.id}
             agent={agent}
-            onToggle={() => toggleAgent(agent.id)}
+            onToggle={() => handleToggle(agent.id)}
+            onClick={() => setSelectedAgent(agent)}
           />
         ))}
       </div>
@@ -140,6 +260,15 @@ export function Agents() {
           <Bot size={40} className="mb-3 opacity-30" />
           <p className="text-sm">No hay agentes en esta categoría</p>
         </div>
+      )}
+
+      {/* Agent Modal */}
+      {selectedAgent && (
+        <AgentModal
+          agent={selectedAgent}
+          onClose={() => setSelectedAgent(null)}
+          onToggle={() => handleToggle(selectedAgent.id)}
+        />
       )}
     </div>
   )

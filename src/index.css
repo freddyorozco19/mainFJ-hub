@@ -15,3 +15,11 @@ body {
 ::-webkit-scrollbar-track { background: #0F0F1A; }
 ::-webkit-scrollbar-thumb { background: #2D2D4A; border-radius: 99px; }
 ::-webkit-scrollbar-thumb:hover { background: #7C3AED; }
+
+@keyframes slide-in-right {
+  from { transform: translateX(100%); opacity: 0; }
+  to   { transform: translateX(0);    opacity: 1; }
+}
+.animate-in.slide-in-from-right {
+  animation: slide-in-right 0.25s ease-out;
+}

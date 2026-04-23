@@ -106,7 +106,7 @@ export const useDashboard = create<DashboardState>((set) => ({
         totalTokens:   s.globalMetrics.totalTokens   + entry.tokens,
         totalCost:     s.globalMetrics.totalCost     + entry.cost,
         totalRequests: s.globalMetrics.totalRequests + entry.requests,
-        activeAgents:  s.globalMetrics.activeAgents,
+        activeAgents:  s.agents.filter(a => a.enabled).length,
       },
     })),
 

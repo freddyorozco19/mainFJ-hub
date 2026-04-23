@@ -4,30 +4,36 @@ backend/main.py — MainFJ Dashboard API
 Run: uvicorn backend.main:app --reload --port 8001
 """
 from __future__ import annotations
+import asyncio
+import json
 import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 
-from backend.routers import chat, agents, metrics, logs
+from backend.routers import chat, agents, metrics, logs, finance, auth
 from backend.db import init_db
+from backend.events import event_manager
 
 app = FastAPI(title="MainFJ Dashboard API", version="0.1.0")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5175", "http://localhost:4175"],
+    allow_origins=["http://localhost:5175", "http://localhost:5176", "http://localhost:5177", "http://localhost:4175"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
+app.include_router(auth.router)
 app.include_router(agents.router)
 app.include_router(chat.router)
 app.include_router(metrics.router)
 app.include_router(logs.router)
+app.include_router(finance.router)
 
 
 @app.on_event("startup")
@@ -38,3 +44,32 @@ async def startup():
 @app.get("/")
 def root():
     return {"status": "ok", "service": "MainFJ Dashboard API v0.1"}
+
+
+@app.get("/health")
+def health():
+    return {"status": "ok"}
+
+
+@app.get("/events")
+async def events(request: Request):
+    """SSE endpoint — streams real-time events to the client."""
+    queue = await event_manager.subscribe()
+    try:
+        async def event_stream():
+            # Send initial connection confirmation
+            yield 'event: connected\ndata: {"status": "ok"}\n\n'
+            while True:
+                if await request.is_disconnected():
+                    break
+                try:
+                    payload = await asyncio.wait_for(queue.get(), timeout=30)
+                    data = json.loads(payload)
+                    event_type = data.get("event", "message")
+                    yield f"event: {event_type}\ndata: {payload}\n\n"
+                except asyncio.TimeoutError:
+                    # Send keepalive
+                    yield ": keepalive\n\n"
+        return StreamingResponse(event_stream(), media_type="text/event-stream")
+    finally:
+        event_manager.unsubscribe(queue)
