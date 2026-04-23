@@ -103,14 +103,15 @@ function SSEListener() {
 }
 
 export default function App() {
-  const authEnabled = import.meta.env.VITE_AUTH_ENABLED === 'true'
-
   return (
     <AuthProvider>
       <SSEListener />
       <ToastProvider />
       <Routes>
-        {authEnabled && <Route path="/login" element={<Login />} />}
+        {/* Login público */}
+        <Route path="/login" element={<Login />} />
+
+        {/* Rutas protegidas con Layout */}
         <Route element={<Layout />}>
           <Route element={<ProtectedRoute />}>
             <Route index element={<Navigate to="/home" replace />} />
@@ -126,7 +127,9 @@ export default function App() {
             <Route path="/finance" element={<Finance />} />
           </Route>
         </Route>
-        <Route path="*" element={<Navigate to="/home" replace />} />
+
+        {/* Cualquier otra ruta → login */}
+        <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     </AuthProvider>
   )

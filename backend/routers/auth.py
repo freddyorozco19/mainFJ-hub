@@ -21,9 +21,9 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 
 USERS_DB = {
-    "freddy-orozco29@hotmail.com": {
+    "freddy.orozco729@gmail.com": {
         "id": "1",
-        "email": "freddy-orozco29@hotmail.com",
+        "email": "freddy.orozco729@gmail.com",
         "name": "Freddy J. Orozco",
         "hashed_password": pwd_context.hash("MainFJ2026*"),
     }

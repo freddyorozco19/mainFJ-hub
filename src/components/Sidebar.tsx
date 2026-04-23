@@ -29,7 +29,6 @@ interface SidebarProps {
 export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const [sseConnected, setSseConnected] = useState(false)
   const { user, logout } = useAuth()
-  const authEnabled = import.meta.env.VITE_AUTH_ENABLED === 'true'
 
   useEffect(() => {
     const es = new EventSource(`${API}/events`)
@@ -104,7 +103,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
 
       {/* Toggle button & Logout */}
       <div className="flex flex-col gap-1 mt-auto border-t border-border">
-        {authEnabled && user && (
+        {user && (
           <button
             onClick={logout}
             className={`flex items-center gap-2 px-3 py-3 text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors ${collapsed ? 'justify-center' : ''}`}
