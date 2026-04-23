@@ -22,14 +22,14 @@ TABS = {
     "debts":      "Debts",
 }
 
-# Columnas por pestaña (orden exacto del Sheet)
+# Columnas por pestaña (orden EXACTO del Google Sheet)
 COLUMNS = {
     "essentials": ["PRODUCTO", "DESCRIPCIÓN", "MONEDA", "VALOR", "MEDIO PAGO", "MODO"],
-    "ahorro":     ["NOMBRE", "MEDIO PAGO", "FECHA", "VALOR"],
-    "basket":     ["PRODUCTO", "DESCRIPCIÓN", "CATEGORÍA", "MONEDA", "VALOR", "CANTIDAD"],
-    "shops":      ["PRODUCTO", "DESCRIPCIÓN", "CATEGORÍA", "MEDIO PAGO", "TIENDA", "TIENDA2", "VALOR", "FECHA"],
+    "ahorro":     ["NOMBRE", "MEDIO", "MES", "VALOR"],
+    "basket":     ["PRODUCTO", "DESCRIPCIÓN", "CATEGORIA", "MONEDA", "VALOR", "CANTIDAD"],
+    "shops":      ["PRODUCTO", "DESCRIPCIÓN", "CATEGORIA", "TIENDA", "TIENDA2", "VALOR", "MEDIO PAGO", "FECHA"],
     "wishlist":   ["PRODUCTO", "DESCRIPCIÓN", "MONEDA", "VALOR", "TIENDA", "MEDIO", "SOURCE"],
-    "debts":      ["PRODUCTO", "DESCRIPCIÓN", "MONEDA", "VALOR", "RESPONSABLE", "ESTADO", "FECHA"],
+    "debts":      ["PRODUCTO", "DESCRIPCIÓN", "MONEDA", "VALOR", "PAGO", "ESTADO", "FECHA"],
 }
 
 
