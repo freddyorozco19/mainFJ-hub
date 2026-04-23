@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, type KeyboardEvent } from 'react'
 import {
   DollarSign, ShoppingCart,
   Send, Loader2, Bot, Search, PiggyBank,
@@ -203,11 +203,11 @@ export function Finance() {
     }
   }
 
-  function onInputKey(e: KeyboardEvent) {
+  function onInputKey(e: KeyboardEvent<HTMLInputElement>) {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleWrite() }
   }
 
-  function onAnalysisKey(e: KeyboardEvent) {
+  function onAnalysisKey(e: KeyboardEvent<HTMLTextAreaElement>) {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleAnalyze() }
   }
 
