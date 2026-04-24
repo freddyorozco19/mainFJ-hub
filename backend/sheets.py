@@ -28,7 +28,7 @@ COLUMNS = {
     "essentials": ["PRODUCTO", "DESCRIPCION", "MONEDA", "VALOR", "MEDIO PAGO", "MODO"],
     "ahorro":     ["NOMBRE", "MEDIO", "MES", "VALOR"],
     "basket":     ["PRODUCTO", "DESCRIPCION", "CATEGORIA", "MONEDA", "VALOR", "CANTIDAD"],
-    "shops":      ["PRODUCTO", "DESCRIPCION", "CATEGORIA", "MEDIO PAGO", "TIENDA", "TIENDA2", "VALOR", "FECHA"],
+    "shops":      ["PRODUCT", "DESCRIPTION", "CATEGORY", "STORE", "STORE2", "VALUE", "PAY", "DATE"],
     "wishlist":   ["PRODUCTO", "DESCRIPCION", "MONEDA", "VALOR", "TIENDA", "MEDIO", "SOURCE"],
     "debts":      ["PRODUCTO", "DESCRIPCION", "MONEDA", "VALOR", "PAGO", "ESTADO", "FECHA"],
 }

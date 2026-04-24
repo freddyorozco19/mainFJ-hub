@@ -25,7 +25,7 @@ const TAB_COLUMNS: Record<TabKey, string[]> = {
   essentials: ['PRODUCTO', 'DESCRIPCION', 'MONEDA', 'VALOR', 'MEDIO PAGO', 'MODO'],
   ahorro:     ['NOMBRE', 'MEDIO', 'MES', 'VALOR'],
   basket:     ['PRODUCTO', 'DESCRIPCION', 'CATEGORIA', 'MONEDA', 'VALOR', 'CANTIDAD'],
-  shops:      ['PRODUCTO', 'DESCRIPCION', 'CATEGORIA', 'MEDIO PAGO', 'TIENDA', 'TIENDA2', 'VALOR', 'FECHA'],
+  shops:      ['PRODUCT', 'DESCRIPTION', 'CATEGORY', 'STORE', 'STORE2', 'VALUE', 'PAY', 'DATE'],
   wishlist:   ['PRODUCTO', 'DESCRIPCION', 'MONEDA', 'VALOR', 'TIENDA', 'MEDIO', 'SOURCE'],
   debts:      ['PRODUCTO', 'DESCRIPCION', 'MONEDA', 'VALOR', 'PAGO', 'ESTADO', 'FECHA'],
 }
@@ -52,7 +52,7 @@ function formatCOPFull(value: number): string {
 function renderFormField(col: string, value: string | number, onChange: (val: string) => void) {
   const baseClass = "w-full bg-surface border border-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-primary/50"
 
-  if (col === 'VALOR' || col === 'CANTIDAD' || col === 'PAGO') {
+  if (col === 'VALOR' || col === 'VALUE' || col === 'CANTIDAD' || col === 'PAGO') {
     return (
       <input
         type="number"
@@ -64,7 +64,7 @@ function renderFormField(col: string, value: string | number, onChange: (val: st
     )
   }
 
-  if (col === 'FECHA' || col === 'MES' || col === 'CADUCIDAD') {
+  if (col === 'FECHA' || col === 'DATE' || col === 'MES' || col === 'CADUCIDAD') {
     return (
       <input
         type="date"
@@ -112,7 +112,7 @@ function renderFormField(col: string, value: string | number, onChange: (val: st
     )
   }
 
-  if (col === 'CATEGORIA') {
+  if (col === 'CATEGORIA' || col === 'CATEGORY') {
     return (
       <select value={value} onChange={e => onChange(e.target.value)} className={baseClass + ' appearance-none cursor-pointer'}>
         <option value="">Seleccionar...</option>
@@ -137,7 +137,7 @@ function renderFormField(col: string, value: string | number, onChange: (val: st
     )
   }
 
-  if (col === 'MEDIO PAGO' || col === 'MEDIO') {
+  if (col === 'MEDIO PAGO' || col === 'MEDIO' || col === 'PAY') {
     return (
       <select value={value} onChange={e => onChange(e.target.value)} className={baseClass + ' appearance-none cursor-pointer'}>
         <option value="">Seleccionar...</option>
