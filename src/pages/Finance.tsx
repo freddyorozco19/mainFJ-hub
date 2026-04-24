@@ -25,7 +25,7 @@ const TAB_COLUMNS: Record<TabKey, string[]> = {
   essentials: ['PRODUCTO', 'DESCRIPCION', 'MONEDA', 'VALOR', 'MEDIO PAGO', 'MODO'],
   ahorro:     ['NOMBRE', 'MEDIO', 'MES', 'VALOR'],
   basket:     ['PRODUCTO', 'DESCRIPCION', 'CATEGORIA', 'MONEDA', 'VALOR', 'CANTIDAD'],
-  shops:      ['PRODUCT', 'DESCRIPTION', 'CATEGORY', 'STORE', 'STORE2', 'VALUE', 'PAY', 'DATE'],
+  shops:      ['PRODUCT', 'DESCRIPTION', 'BRAND', 'CATEGORY', 'STORE', 'STORE2', 'COIN', 'VALUE', 'PAYMENT', 'ACCOUNT', 'DATE'],
   wishlist:   ['PRODUCTO', 'DESCRIPCION', 'MONEDA', 'VALOR', 'TIENDA', 'MEDIO', 'SOURCE'],
   debts:      ['PRODUCTO', 'DESCRIPCION', 'MONEDA', 'VALOR', 'PAGO', 'ESTADO', 'FECHA'],
 }
@@ -78,7 +78,7 @@ function renderFormField(col: string, value: string | number, onChange: (val: st
     )
   }
 
-  if (col === 'MONEDA') {
+  if (col === 'MONEDA' || col === 'COIN') {
     return (
       <select value={value} onChange={e => onChange(e.target.value)} className={baseClass + ' appearance-none cursor-pointer'}>
         <option value="">Seleccionar...</option>
@@ -137,7 +137,7 @@ function renderFormField(col: string, value: string | number, onChange: (val: st
     )
   }
 
-  if (col === 'MEDIO PAGO' || col === 'MEDIO' || col === 'PAY') {
+  if (col === 'MEDIO PAGO' || col === 'MEDIO' || col === 'PAYMENT') {
     return (
       <select value={value} onChange={e => onChange(e.target.value)} className={baseClass + ' appearance-none cursor-pointer'}>
         <option value="">Seleccionar...</option>
