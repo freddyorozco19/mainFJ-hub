@@ -196,6 +196,8 @@ export function Finance() {
   const [editingIndex, setEditingIndex]       = useState<number | null>(null)
   const [recordForm, setRecordForm]           = useState<Record<string, string | number>>({})
   const [crudTab, setCrudTab]                 = useState<TabKey>('shops')
+  const [saving, setSaving]                   = useState(false)
+  const [saveError, setSaveError]             = useState('')
 
   useEffect(() => { loadSummary() }, [])
   useEffect(() => {
@@ -213,36 +215,72 @@ export function Finance() {
 
   // ── CRUD Functions ─────────────────────────────────────────────────────────
   async function handleCreateRecord() {
-    await fetch(`${API}/finance/records`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ tab: crudTab, data: recordForm }),
-    })
-    loadRecords(crudTab)
-    setShowRecordModal(false)
-    setRecordForm({})
+    setSaving(true)
+    setSaveError('')
+    try {
+      const res = await fetch(`${API}/finance/records`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tab: crudTab, data: recordForm }),
+      })
+      if (!res.ok) {
+        const err = await res.json()
+        throw new Error(err.detail || 'Error al crear el registro')
+      }
+      await loadRecords(crudTab)
+      setShowRecordModal(false)
+      setRecordForm({})
+    } catch (e: any) {
+      setSaveError(e.message || 'Error de conexión')
+      console.error('Create error:', e)
+    } finally {
+      setSaving(false)
+    }
   }
 
   async function handleUpdateRecord() {
     if (editingIndex === null) return
-    await fetch(`${API}/finance/records`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ tab: crudTab, row_index: editingIndex, data: recordForm }),
-    })
-    loadRecords(crudTab)
-    setShowRecordModal(false)
-    setEditingIndex(null)
+    setSaving(true)
+    setSaveError('')
+    try {
+      const res = await fetch(`${API}/finance/records`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tab: crudTab, row_index: editingIndex, data: recordForm }),
+      })
+      if (!res.ok) {
+        const err = await res.json()
+        throw new Error(err.detail || 'Error al actualizar el registro')
+      }
+      await loadRecords(crudTab)
+      setShowRecordModal(false)
+      setEditingIndex(null)
+      setRecordForm({})
+    } catch (e: any) {
+      setSaveError(e.message || 'Error de conexión')
+      console.error('Update error:', e)
+    } finally {
+      setSaving(false)
+    }
   }
 
   async function handleDeleteRecord(index: number) {
     if (!confirm('¿Eliminar este registro?')) return
-    await fetch(`${API}/finance/records`, {
-      method: 'DELETE',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ tab: crudTab, row_index: index }),
-    })
-    loadRecords(crudTab)
+    try {
+      const res = await fetch(`${API}/finance/records`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tab: crudTab, row_index: index }),
+      })
+      if (!res.ok) {
+        const err = await res.json()
+        throw new Error(err.detail || 'Error al eliminar')
+      }
+      await loadRecords(crudTab)
+    } catch (e: any) {
+      alert('Error al eliminar: ' + (e.message || 'Error de conexión'))
+      console.error('Delete error:', e)
+    }
   }
 
   function openCreateModal() {
@@ -792,10 +830,26 @@ export function Finance() {
               ))}
             </div>
 
+            {saveError && (
+              <div className="p-3 bg-danger/10 border border-danger/20 rounded-lg">
+                <p className="text-sm text-danger">{saveError}</p>
+              </div>
+            )}
+
             <div className="flex gap-3 pt-2 border-t border-border">
-              <button onClick={() => setShowRecordModal(false)} className="flex-1 py-2 text-sm text-slate-400 hover:text-white border border-border rounded-lg hover:bg-white/5 transition-colors">Cancelar</button>
-              <button onClick={editingIndex !== null ? handleUpdateRecord : handleCreateRecord} className="flex-1 py-2 text-sm bg-primary hover:bg-primary/80 text-white rounded-lg font-medium transition-colors">
-                {editingIndex !== null ? 'Guardar Cambios' : 'Crear Registro'}
+              <button 
+                onClick={() => { setShowRecordModal(false); setSaveError('') }} 
+                disabled={saving}
+                className="flex-1 py-2 text-sm text-slate-400 hover:text-white border border-border rounded-lg hover:bg-white/5 transition-colors disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+              <button 
+                onClick={editingIndex !== null ? handleUpdateRecord : handleCreateRecord} 
+                disabled={saving}
+                className="flex-1 py-2 text-sm bg-primary hover:bg-primary/80 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {saving ? 'Guardando...' : (editingIndex !== null ? 'Guardar Cambios' : 'Crear Registro')}
               </button>
             </div>
           </div>
