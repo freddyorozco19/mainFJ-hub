@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { Bot, MessageSquare, Trophy, TrendingUp, DollarSign, PiggyBank, AlertCircle, ShoppingCart, Activity, ChevronRight, Loader2 } from 'lucide-react'
+import { Bot, MessageSquare, TrendingUp, DollarSign, PiggyBank, AlertCircle, ShoppingCart, Activity, ChevronRight, Loader2 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { useDashboard } from '../store/dashboardStore'
 
