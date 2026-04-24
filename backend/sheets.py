@@ -6,6 +6,7 @@ import os
 import json
 import tempfile
 import gspread
+import unicodedata
 from google.oauth2.service_account import Credentials
 
 SHEET_ID     = "1lVFrvgoT2N2Wdx-Vz-9qSTYQ0tM6r4JKdgAbtxU5870"
@@ -24,12 +25,12 @@ TABS = {
 
 # Columnas por pestaña (orden EXACTO del Google Sheet)
 COLUMNS = {
-    "essentials": ["PRODUCTO", "DESCRIPCIÓN", "MONEDA", "VALOR", "MEDIO PAGO", "MODO"],
+    "essentials": ["PRODUCTO", "DESCRIPCION", "MONEDA", "VALOR", "MEDIO PAGO", "MODO"],
     "ahorro":     ["NOMBRE", "MEDIO", "MES", "VALOR"],
-    "basket":     ["PRODUCTO", "DESCRIPCIÓN", "CATEGORIA", "MONEDA", "VALOR", "CANTIDAD"],
-    "shops":      ["PRODUCTO", "DESCRIPCIÓN", "CATEGORIA", "TIENDA", "TIENDA2", "VALOR", "MEDIO PAGO", "FECHA"],
-    "wishlist":   ["PRODUCTO", "DESCRIPCIÓN", "MONEDA", "VALOR", "TIENDA", "MEDIO", "SOURCE"],
-    "debts":      ["PRODUCTO", "DESCRIPCIÓN", "MONEDA", "VALOR", "PAGO", "ESTADO", "FECHA"],
+    "basket":     ["PRODUCTO", "DESCRIPCION", "CATEGORIA", "MONEDA", "VALOR", "CANTIDAD"],
+    "shops":      ["PRODUCTO", "DESCRIPCION", "CATEGORIA", "MEDIO PAGO", "TIENDA", "TIENDA2", "VALOR", "FECHA"],
+    "wishlist":   ["PRODUCTO", "DESCRIPCION", "MONEDA", "VALOR", "TIENDA", "MEDIO", "SOURCE"],
+    "debts":      ["PRODUCTO", "DESCRIPCION", "MONEDA", "VALOR", "PAGO", "ESTADO", "FECHA"],
 }
 
 
@@ -47,6 +48,21 @@ def _client() -> gspread.Client:
     return gspread.authorize(creds)
 
 
+def _normalize_key(key: str) -> str:
+    """Normaliza un nombre de columna: NFC + elimina tildes para compatibilidad."""
+    # Normaliza a NFC primero
+    normalized = unicodedata.normalize('NFC', key)
+    # Reemplaza caracteres acentuados comunes por sus versiones sin tilde
+    replacements = {
+        'Á': 'A', 'É': 'E', 'Í': 'I', 'Ó': 'O', 'Ú': 'U',
+        'á': 'a', 'é': 'e', 'í': 'i', 'ó': 'o', 'ú': 'u',
+        'Ñ': 'N', 'ñ': 'n',
+    }
+    for old, new in replacements.items():
+        normalized = normalized.replace(old, new)
+    return normalized
+
+
 def get_sheet(tab: str) -> gspread.Worksheet:
     gc = _client()
     sh = gc.open_by_key(SHEET_ID)
@@ -54,9 +70,17 @@ def get_sheet(tab: str) -> gspread.Worksheet:
 
 
 def read_tab(tab: str) -> list[dict]:
-    """Devuelve todos los registros de una pestaña como lista de dicts."""
+    """Devuelve todos los registros de una pestaña como lista de dicts con keys normalizadas."""
     ws = get_sheet(tab)
-    return ws.get_all_records()
+    records = ws.get_all_records()
+    # Normaliza las claves para evitar problemas de encoding con tildes
+    normalized = []
+    for row in records:
+        new_row = {}
+        for key, value in row.items():
+            new_row[_normalize_key(key)] = value
+        normalized.append(new_row)
+    return normalized
 
 
 def append_row(tab: str, data: dict) -> bool:

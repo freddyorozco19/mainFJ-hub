@@ -22,12 +22,12 @@ const TABS_CONFIG = [
 ]
 
 const TAB_COLUMNS: Record<TabKey, string[]> = {
-  essentials: ['PRODUCTO', 'DESCRIPCIÓN', 'MONEDA', 'VALOR', 'MEDIO PAGO', 'MODO'],
+  essentials: ['PRODUCTO', 'DESCRIPCION', 'MONEDA', 'VALOR', 'MEDIO PAGO', 'MODO'],
   ahorro:     ['NOMBRE', 'MEDIO', 'MES', 'VALOR'],
-  basket:     ['PRODUCTO', 'DESCRIPCIÓN', 'CATEGORIA', 'MONEDA', 'VALOR', 'CANTIDAD'],
-  shops:      ['PRODUCTO', 'DESCRIPCIÓN', 'CATEGORIA', 'TIENDA', 'TIENDA2', 'VALOR', 'MEDIO PAGO', 'FECHA'],
-  wishlist:   ['PRODUCTO', 'DESCRIPCIÓN', 'MONEDA', 'VALOR', 'TIENDA', 'MEDIO', 'SOURCE'],
-  debts:      ['PRODUCTO', 'DESCRIPCIÓN', 'MONEDA', 'VALOR', 'PAGO', 'ESTADO', 'FECHA'],
+  basket:     ['PRODUCTO', 'DESCRIPCION', 'CATEGORIA', 'MONEDA', 'VALOR', 'CANTIDAD'],
+  shops:      ['PRODUCTO', 'DESCRIPCION', 'CATEGORIA', 'MEDIO PAGO', 'TIENDA', 'TIENDA2', 'VALOR', 'FECHA'],
+  wishlist:   ['PRODUCTO', 'DESCRIPCION', 'MONEDA', 'VALOR', 'TIENDA', 'MEDIO', 'SOURCE'],
+  debts:      ['PRODUCTO', 'DESCRIPCION', 'MONEDA', 'VALOR', 'PAGO', 'ESTADO', 'FECHA'],
 }
 
 type SubPageKey = 'dashboard' | 'registros'
@@ -112,7 +112,7 @@ function renderFormField(col: string, value: string | number, onChange: (val: st
     )
   }
 
-  if (col === 'CATEGORIA' || col === 'CATEGORÍA') {
+  if (col === 'CATEGORIA') {
     return (
       <select value={value} onChange={e => onChange(e.target.value)} className={baseClass + ' appearance-none cursor-pointer'}>
         <option value="">Seleccionar...</option>
