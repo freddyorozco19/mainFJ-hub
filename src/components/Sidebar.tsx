@@ -41,14 +41,21 @@ function SidebarContent({ collapsed, onToggle }: { collapsed: boolean; onToggle:
 
   return (
     <>
-      {/* Logo */}
+      {/* Logo + Collapse button */}
       <div className={`flex items-center border-b border-border ${collapsed ? 'justify-center px-2 py-4' : 'gap-2.5 px-5 py-5'}`}>
         {!collapsed && (
-          <div>
+          <div className="flex-1">
             <div className="text-lg font-bold text-white tracking-wide">OPEN</div>
             <div className="text-[10px] text-slate-500 tracking-widest uppercase">Orchestrator</div>
           </div>
         )}
+        <button
+          onClick={onToggle}
+          className="flex items-center justify-center p-1.5 text-slate-500 hover:text-slate-300 hover:bg-white/5 rounded-lg transition-colors"
+          title={collapsed ? 'Expandir sidebar' : 'Colapsar sidebar'}
+        >
+          {collapsed ? <PanelLeft size={16} /> : <PanelLeftClose size={16} />}
+        </button>
       </div>
 
       {/* MainFJ Section */}
@@ -125,26 +132,19 @@ function SidebarContent({ collapsed, onToggle }: { collapsed: boolean; onToggle:
         </NavLink>
       </nav>
 
-      {/* Toggle button & Logout */}
-      <div className="flex flex-col gap-1 mt-auto border-t border-border">
-        {user && (
+      {/* Logout */}
+      {user && (
+        <div className="mt-auto border-t border-border">
           <button
             onClick={logout}
-            className={`flex items-center gap-2 px-3 py-3 text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors ${collapsed ? 'justify-center' : ''}`}
+            className={`flex items-center gap-2 w-full px-3 py-3 text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors ${collapsed ? 'justify-center' : ''}`}
             title="Cerrar sesión"
           >
             <LogOut size={16} />
             {!collapsed && <span className="text-xs">Salir</span>}
           </button>
-        )}
-        <button
-          onClick={onToggle}
-          className={`hidden md:flex items-center gap-2 px-3 py-3 text-slate-500 hover:text-slate-300 hover:bg-white/5 transition-colors ${collapsed ? 'justify-center' : ''}`}
-          title={collapsed ? 'Expandir sidebar' : 'Colapsar sidebar'}
-        >
-          {collapsed ? <PanelLeft size={16} /> : <><PanelLeftClose size={16} /><span className="text-xs">Colapsar</span></>}
-        </button>
-      </div>
+        </div>
+      )}
 
       {/* Footer */}
       <div className={`px-5 py-4 border-t border-border ${collapsed ? 'px-2' : ''}`}>

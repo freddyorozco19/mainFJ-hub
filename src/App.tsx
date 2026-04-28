@@ -92,11 +92,6 @@ function SSEListener() {
 
     es.onerror = () => {
       es.close()
-      setTimeout(() => {
-        if (esRef.current?.readyState === EventSource.CLOSED) {
-          window.location.reload()
-        }
-      }, 3000)
     }
 
     return () => { es.close() }
