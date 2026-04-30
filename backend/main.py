@@ -18,7 +18,6 @@ from backend.routers import chat, agents, metrics, logs, finance, auth
 from backend.db import init_db
 from backend.events import event_manager
 
-app = FastAPI(title="MainFJ Dashboard API", version="0.1.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -36,20 +35,14 @@ app.include_router(logs.router)
 app.include_router(finance.router)
 
 
-@app.on_event("startup")
-async def startup():
-    init_db()
-
 
 @app.get("/")
 def root():
     return {"status": "ok", "service": "MainFJ Dashboard API v0.1"}
 
-
 @app.get("/health")
 def health():
     return {"status": "ok"}
-
 
 @app.get("/events")
 async def events(request: Request, token: str = ""):
