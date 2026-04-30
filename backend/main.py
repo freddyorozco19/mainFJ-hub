@@ -18,6 +18,14 @@ from backend.routers import chat, agents, metrics, logs, finance, auth
 from backend.db import init_db
 from backend.events import event_manager
 
+from contextlib import asynccontextmanager
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    init_db()
+    yield
+
+app = FastAPI(title="MainFJ Dashboard API", version="0.1.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
