@@ -6,7 +6,8 @@ from backend.routers.auth import get_current_user
 router = APIRouter(prefix="/logs", tags=["logs"])
 
 
-@router.get("/")&#10;def get_logs(current_user = Depends(get_current_user), limit: int = Query(100, le=500), level: str | None = None, agent: str | None = None):
+@router.get("/")
+def get_logs(current_user = Depends(get_current_user), limit: int = Query(100, le=500), level: str | None = None, agent: str | None = None):
     query  = "SELECT * FROM logs WHERE 1=1"
     params: list = []
     if level: query += " AND level=?";       params.append(level)
@@ -20,7 +21,8 @@ router = APIRouter(prefix="/logs", tags=["logs"])
     return [dict(r) for r in rows]
 
 
-@router.delete("/")&#10;def clear_logs(current_user = Depends(get_current_user)):
+@router.delete("/")
+def clear_logs(current_user = Depends(get_current_user)):
     with get_conn() as conn:
         conn.execute("DELETE FROM logs")
     return {"deleted": True}
