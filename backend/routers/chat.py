@@ -13,7 +13,8 @@ from pydantic import BaseModel
 from dotenv import load_dotenv
 
 from backend.db import get_conn
-from backend.routers.auth import get_current_user&#10;from backend.routers.agents import CATALOG, MODEL_RATES
+from backend.routers.auth import get_current_user
+from backend.routers.agents import CATALOG, MODEL_RATES
 from backend.events import event_manager
 
 load_dotenv(Path(__file__).resolve().parent.parent / ".env", override=True)
@@ -104,7 +105,8 @@ def _log(slug: str, action: str, detail: str, level: str = "info", ms: int | Non
         )
 
 
-@router.post("/{slug}", response_model=ChatResponse)&#10;async def chat(slug: str, req: ChatRequest, current_user = Depends(get_current_user)):
+@router.post("/{slug}", response_model=ChatResponse)
+async def chat(slug: str, req: ChatRequest, current_user = Depends(get_current_user)):
     if slug not in CATALOG:
         raise HTTPException(404, f"Agente '{slug}' no registrado")
 
