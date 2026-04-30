@@ -1,13 +1,12 @@
 # -*- coding: utf-8 -*-
 """GET /metrics — consumo agregado por agente y global."""
-from fastapi import APIRouter
-from backend.db import get_conn
+from fastapi import APIRouter, Depends
+from backend.routers.auth import get_current_user
 
 router = APIRouter(prefix="/metrics", tags=["metrics"])
 
 
-@router.get("/")
-def global_metrics():
+@router.get("/")&#10;def global_metrics(current_user = Depends(get_current_user)):
     with get_conn() as conn:
         row = conn.execute(
             "SELECT SUM(tokens_in+tokens_out) as tokens, SUM(cost_usd) as cost, COUNT(*)/2 as requests FROM messages"
@@ -19,8 +18,7 @@ def global_metrics():
     }
 
 
-@router.get("/by-agent")
-def by_agent():
+@router.get("/by-agent")&#10;def by_agent(current_user = Depends(get_current_user)):
     with get_conn() as conn:
         rows = conn.execute(
             """SELECT agent_slug,
