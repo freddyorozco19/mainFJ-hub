@@ -1,13 +1,12 @@
 # -*- coding: utf-8 -*-
 """GET /logs — historial de actividad del sistema."""
-from fastapi import APIRouter, Query
-from backend.db import get_conn
+from fastapi import APIRouter, Depends, Query
+from backend.routers.auth import get_current_user
 
 router = APIRouter(prefix="/logs", tags=["logs"])
 
 
-@router.get("/")
-def get_logs(limit: int = Query(100, le=500), level: str | None = None, agent: str | None = None):
+@router.get("/")&#10;def get_logs(current_user = Depends(get_current_user), limit: int = Query(100, le=500), level: str | None = None, agent: str | None = None):
     query  = "SELECT * FROM logs WHERE 1=1"
     params: list = []
     if level: query += " AND level=?";       params.append(level)
@@ -21,8 +20,7 @@ def get_logs(limit: int = Query(100, le=500), level: str | None = None, agent: s
     return [dict(r) for r in rows]
 
 
-@router.delete("/")
-def clear_logs():
+@router.delete("/")&#10;def clear_logs(current_user = Depends(get_current_user)):
     with get_conn() as conn:
         conn.execute("DELETE FROM logs")
     return {"deleted": True}
