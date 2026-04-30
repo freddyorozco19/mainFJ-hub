@@ -18,6 +18,7 @@ import { ResetPassword } from './pages/ResetPassword'
 import { ToastProvider } from './components/Toast'
 import { AuthProvider } from './context/AuthContext'
 import { ProtectedRoute } from './components/ProtectedRoute'
+import { getToken } from './api'
 import { useDashboard } from './store/dashboardStore'
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:8001'
@@ -90,8 +91,57 @@ function SSEListener() {
       })
     })
 
+    let retries = 0
     es.onerror = () => {
       es.close()
+      const delay = Math.min(1000 * Math.pow(2, retries), 30000)
+      retries++
+      setTimeout(() => {
+        const t = getToken()
+        const url = t ? ${API}/events?token=${encodeURIComponent(t)} : ${API}/events
+        const newEs = new EventSource(url)
+        esRef.current = newEs
+        const { updateAgentStatus, addMessage, setTyping, pushLog } = useDashboard.getState()
+        newEs.addEventListener('agent:status', (e) => {
+          const { slug, status } = JSON.parse(e.data)
+          updateAgentStatus(slug, status)
+        })
+        newEs.addEventListener('chat:message', (e) => {
+          const { agent_slug, role, content, tokens } = JSON.parse(e.data)
+          addMessage({ id: crypto.randomUUID(), role: role as 'user' | 'assistant', content, agentSlug: agent_slug, timestamp: new Date().toISOString(), tokens })
+          if (role === 'assistant') setTyping(false)
+        })
+        newEs.addEventListener('chat:typing', (e) => {
+          const { is_typing } = JSON.parse(e.data)
+          setTyping(is_typing)
+        })
+        newEs.addEventListener('log:new', (e) => {
+          const { level, agent_slug, action, detail, duration_ms } = JSON.parse(e.data)
+          pushLog({ id: crypto.randomUUID(), timestamp: new Date().toISOString(), level: level as 'info' | 'warn' | 'error' | 'success', agentSlug: agent_slug, action, detail, durationMs: duration_ms })
+        })
+        newEs.addEventListener('alert:cost', (e) => {
+          const { agent_slug, cost, threshold } = JSON.parse(e.data)
+          ;(window as any).__addToast?.({ message: ${agent_slug}: $ (umbral $), type: 'warn' })
+        })
+        newEs.addEventListener('finance:written', (e) => {
+          const { tab, confirmation } = JSON.parse(e.data)
+          ;(window as any).__addToast?.({ message: Finanzas: ${confirmation} → ${tab}, type: 'success' })
+        })
+        newEs.addEventListener('system', (e) => {
+          const { message, level } = JSON.parse(e.data)
+          ;(window as any).__addToast?.({ message, type: (level as 'info' | 'success' | 'warn' | 'error') || 'info' })
+        })
+        newEs.onerror = () => {
+          newEs.close()
+          const d = Math.min(1000 * Math.pow(2, retries), 30000)
+          retries++
+          setTimeout(() => {
+            const t2 = getToken()
+            const u = t2 ? ${API}/events?token=${encodeURIComponent(t2)} : ${API}/events
+            esRef.current = new EventSource(u)
+          }, d)
+        }
+      }, delay)
     }
 
     return () => { es.close() }
