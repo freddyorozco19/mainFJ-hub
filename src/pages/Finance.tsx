@@ -116,10 +116,10 @@ function renderFormField(col: string, value: string | number, onChange: (val: st
     return (
       <select value={value} onChange={e => onChange(e.target.value)} className={baseClass + ' appearance-none cursor-pointer'}>
         <option value="">Seleccionar...</option>
+        <option value="Ropa">Ropa</option>
         <option value="Comida">Comida</option>
         <option value="Hogar">Hogar</option>
         <option value="Tecnología">Tecnología</option>
-        <option value="Salud">Salud</option>
         <option value="Entretenimiento">Entretenimiento</option>
         <option value="Otro">Otro</option>
       </select>
