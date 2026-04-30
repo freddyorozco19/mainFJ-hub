@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """GET /agents — catálogo de agentes disponibles."""
 from fastapi import APIRouter, Depends
+from backend.routers.auth import get_current_user
 
 router = APIRouter(prefix="/agents", tags=["agents"])
 
