@@ -13,7 +13,8 @@ from fastapi import APIRouter, Depends, HTTPException, File, UploadFile, Form
 from pydantic import BaseModel
 from dotenv import load_dotenv
 
-from backend.routers.auth import get_current_user&#10;from backend.sheets import read_tab, append_row, update_row, delete_row, COLUMNS
+from backend.routers.auth import get_current_user
+from backend.sheets import read_tab, append_row, update_row, delete_row, COLUMNS
 from backend.events import event_manager
 import pytesseract
 from PIL import Image
