@@ -220,10 +220,9 @@ export function Finance() {
     setSaving(true)
     setSaveError('')
     try {
-      const res = await fetch(`${API}/finance/records`, {
+      const res = await api('/finance/records`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tab: crudTab, data: recordForm }),
+        body: { tab: crudTab, data: recordForm },
       })
       if (!res.ok) {
         const err = await res.json()
@@ -253,7 +252,7 @@ export function Finance() {
       const form = new FormData()
       form.append('file', file)
       form.append('tab', crudTab)
-      const res = await fetch(`${API}/finance/ocr`, { method: 'POST', body: form })
+      const res = await api('/finance/ocr`, { method: 'POST', body: form })
       if (!res.ok) throw new Error('Error en OCR')
       const { extracted } = await res.json()
       if (extracted) setRecordForm(prev => ({ ...prev, ...extracted }))
@@ -269,10 +268,9 @@ export function Finance() {
     setSaving(true)
     setSaveError('')
     try {
-      const res = await fetch(`${API}/finance/records`, {
+      const res = await api('/finance/records`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tab: crudTab, row_index: editingIndex, data: recordForm }),
+        body: { tab: crudTab, row_index: editingIndex, data: recordForm },
       })
       if (!res.ok) {
         const err = await res.json()
@@ -293,10 +291,9 @@ export function Finance() {
   async function handleDeleteRecord(index: number) {
     if (!confirm('¿Eliminar este registro?')) return
     try {
-      const res = await fetch(`${API}/finance/records`, {
+      const res = await api('/finance/records`, {
         method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tab: crudTab, row_index: index }),
+        body: { tab: crudTab, row_index: index },
       })
       if (!res.ok) {
         const err = await res.json()
@@ -325,7 +322,7 @@ export function Finance() {
   async function loadSummary() {
     setSummaryLoading(true)
     try {
-      const res = await fetch(`${API}/finance/summary`)
+      const res = await api('/finance/summary`)
       setSummary(await res.json())
     } catch (e: any) { console.error('Error cargando resumen:', e) }
     finally { setSummaryLoading(false) }
@@ -337,7 +334,7 @@ export function Finance() {
     setRecords([])
     setSearch('')
     try {
-      const res = await fetch(`${API}/finance/data/${tab}`)
+      const res = await api('/finance/data/${tab}`)
       const data = await res.json()
       setRecords(data.records ?? [])
     } catch (e: any) { console.error('Error cargando registros:', e) }
@@ -349,10 +346,9 @@ export function Finance() {
     setWriting(true)
     setWriteResult(null)
     try {
-      const res = await fetch(`${API}/finance/write`, {
+      const res = await api('/finance/write`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: input.trim() }),
+        body: { text: input.trim() },
       })
       const data = await res.json()
       setWriteResult(data)
@@ -373,10 +369,9 @@ export function Finance() {
     setAnalyzing(true)
     setAnalysisResult('')
     try {
-      const res = await fetch(`${API}/finance/analyze`, {
+      const res = await api('/finance/analyze`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: analysisText.trim(), tab: analysisTab }),
+        body: { text: analysisText.trim(), tab: analysisTab },
       })
       const data = await res.json()
       setAnalysisResult(data.text ?? '')
