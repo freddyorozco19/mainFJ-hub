@@ -52,8 +52,16 @@ def health():
 
 
 @app.get("/events")
-async def events(request: Request):
+async def events(request: Request, token: str = ""):
     """SSE endpoint — streams real-time events to the client."""
+    # Validate token
+    from jose import JWTError, jwt
+    try:
+        payload = jwt.decode(token, "MainFJ-Dashboard-SecretKey-2026-FJ", algorithms=["HS256"])
+    except (JWTError, AttributeError):
+        from fastapi.responses import JSONResponse
+        return JSONResponse(status_code=401, content={"detail": "Token invalido"})
+
     queue = await event_manager.subscribe()
     try:
         async def event_stream():
