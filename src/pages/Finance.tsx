@@ -407,7 +407,7 @@ export function Finance() {
   const tableColumns = records.length > 0 ? Object.keys(records[0]) : []
 
   return (
-    <div className="flex-1 p-6 space-y-6 overflow-auto">
+    <div className="flex-1 p-6 space-y-6 overflow-auto max-w-6xl mx-auto w-full">
 
       {/* ── Header ─────────────────────────────────────────────────────────── */}
       <div className="flex items-center justify-between">
