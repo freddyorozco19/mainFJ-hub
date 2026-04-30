@@ -220,7 +220,7 @@ export function Finance() {
     setSaving(true)
     setSaveError('')
     try {
-      const res = await api('/finance/records`, {
+      const res = await api(''/finance/records', {
         method: 'POST',
         body: { tab: crudTab, data: recordForm },
       })
@@ -252,7 +252,7 @@ export function Finance() {
       const form = new FormData()
       form.append('file', file)
       form.append('tab', crudTab)
-      const res = await api('/finance/ocr`, { method: 'POST', body: form })
+      const res = await api(''/finance/ocr', { method: 'POST', body: form })
       if (!res.ok) throw new Error('Error en OCR')
       const { extracted } = await res.json()
       if (extracted) setRecordForm(prev => ({ ...prev, ...extracted }))
@@ -268,7 +268,7 @@ export function Finance() {
     setSaving(true)
     setSaveError('')
     try {
-      const res = await api('/finance/records`, {
+      const res = await api(''/finance/records', {
         method: 'PUT',
         body: { tab: crudTab, row_index: editingIndex, data: recordForm },
       })
@@ -291,7 +291,7 @@ export function Finance() {
   async function handleDeleteRecord(index: number) {
     if (!confirm('¿Eliminar este registro?')) return
     try {
-      const res = await api('/finance/records`, {
+      const res = await api(''/finance/records', {
         method: 'DELETE',
         body: { tab: crudTab, row_index: index },
       })
@@ -322,7 +322,7 @@ export function Finance() {
   async function loadSummary() {
     setSummaryLoading(true)
     try {
-      const res = await api('/finance/summary`)
+      const res = await api(''/finance/summary')
       setSummary(await res.json())
     } catch (e: any) { console.error('Error cargando resumen:', e) }
     finally { setSummaryLoading(false) }
@@ -346,7 +346,7 @@ export function Finance() {
     setWriting(true)
     setWriteResult(null)
     try {
-      const res = await api('/finance/write`, {
+      const res = await api(''/finance/write', {
         method: 'POST',
         body: { text: input.trim() },
       })
@@ -369,7 +369,7 @@ export function Finance() {
     setAnalyzing(true)
     setAnalysisResult('')
     try {
-      const res = await api('/finance/analyze`, {
+      const res = await api(''/finance/analyze', {
         method: 'POST',
         body: { text: analysisText.trim(), tab: analysisTab },
       })
