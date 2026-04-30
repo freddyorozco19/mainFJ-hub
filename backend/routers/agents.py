@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """GET /agents — catálogo de agentes disponibles."""
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 
 router = APIRouter(prefix="/agents", tags=["agents"])
 
@@ -83,13 +83,11 @@ MODEL_RATES: dict[str, tuple[float, float]] = {
 }
 
 
-@router.get("/")
-def list_agents():
+@router.get("/")&#10;def list_agents(current_user = Depends(get_current_user)):
     return CATALOG
 
 
-@router.get("/{slug}")
-def get_agent(slug: str):
+@router.get("/{slug}")&#10;def get_agent(slug: str, current_user = Depends(get_current_user)):
     if slug not in CATALOG:
         from fastapi import HTTPException
         raise HTTPException(404, f"Agente '{slug}' no encontrado")
