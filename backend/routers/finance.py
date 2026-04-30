@@ -1,18 +1,22 @@
 # -*- coding: utf-8 -*-
 """Rutas financieras — lectura de Sheets + Finance Writer Agent (OpenRouter)."""
 from __future__ import annotations
+import io
 import json
+import re
 import os
 from datetime import datetime
 from pathlib import Path
 
 from openai import OpenAI
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, File, UploadFile, Form
 from pydantic import BaseModel
 from dotenv import load_dotenv
 
 from backend.sheets import read_tab, append_row, update_row, delete_row, COLUMNS
 from backend.events import event_manager
+import pytesseract
+from PIL import Image
 
 load_dotenv(Path(__file__).resolve().parent.parent / ".env", override=True)
 
@@ -279,3 +283,66 @@ def delete_record(req: RecordDelete):
         return {"status": "deleted", "tab": req.tab, "row_index": req.row_index}
     except Exception as e:
         raise HTTPException(500, str(e))
+
+
+# ── OCR Helper ─────────────────────────────────────────────────────────────
+def _parse_invoice_text(text: str, tab: str) -> dict:
+    lines = [l.strip() for l in text.splitlines() if l.strip()]
+    text_upper = text.upper()
+
+    date_match = re.search(r'(\d{1,2})[/\-.](\d{1,2})[/\-.](\d{2,4})', text)
+    if date_match:
+        d, m, y = date_match.groups()
+        y = ('20' + y) if len(y) == 2 else y
+        date_str = f"{d.zfill(2)}/{m.zfill(2)}/{y}"
+    else:
+        date_str = datetime.now().strftime("%d/%m/%Y")
+
+    total_match = re.search(
+        r'(?:TOTAL|SUBTOTAL|VALOR|IMPORTE|A PAGAR)[^\d]*(\d[\d.,]+)', text_upper
+    )
+    if total_match:
+        raw = total_match.group(1).replace('.', '').replace(',', '')
+        value = str(int(float(raw)))
+    else:
+        amounts = re.findall(r'\b\d{3,}(?:[.,]\d{3})*\b', text)
+        if amounts:
+            value = max(amounts, key=lambda a: int(a.replace('.', '').replace(',', '')))
+            value = value.replace('.', '').replace(',', '')
+        else:
+            value = ''
+
+    store = ''
+    for line in lines[:6]:
+        if not re.match(r'^[\d\s.,+\-*%$#@/:NIT]+$', line, re.I) and len(line) > 2:
+            store = line
+            break
+
+    mapping = {
+        'shops':      {'DATE': date_str, 'VALUE': value, 'STORE': store, 'COIN': 'COP'},
+        'basket':     {'VALOR': value, 'MONEDA': 'COP', 'PRODUCTO': store},
+        'essentials': {'VALOR': value, 'MONEDA': 'COP', 'PRODUCTO': store},
+        'debts':      {'FECHA': date_str, 'VALOR': value, 'MONEDA': 'COP', 'PRODUCTO': store},
+        'wishlist':   {'VALOR': value, 'MONEDA': 'COP', 'PRODUCTO': store},
+        'ahorro':     {'VALOR': value},
+    }
+    return mapping.get(tab, {'VALOR': value})
+
+
+# ── OCR: Extraer datos de factura ──────────────────────────────────────────
+@router.post("/ocr")
+async def ocr_invoice(
+    file: UploadFile = File(...),
+    tab: str = Form(...)
+):
+    """Procesa imagen de factura con OCR y retorna campos pre-llenados."""
+    if tab not in COLUMNS:
+        raise HTTPException(400, f"Tab '{tab}' no valido")
+    try:
+        image_bytes = await file.read()
+        image = Image.open(io.BytesIO(image_bytes)).convert('L')
+        text = pytesseract.image_to_string(image, lang='spa+eng', config='--psm 6')
+    except Exception as e:
+        raise HTTPException(500, f"Error procesando imagen: {e}")
+    extracted = _parse_invoice_text(text, tab)
+    return {"extracted": extracted}
