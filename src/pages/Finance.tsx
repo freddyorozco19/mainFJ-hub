@@ -5,7 +5,7 @@ import {
   AlertCircle, RefreshCw, Sparkles, ChevronDown,
 } from 'lucide-react'
 
-const API = import.meta.env.VITE_API_URL || 'http://localhost:8001'
+import { api } from '../api'
 
 const SUBPAGES = [
   { key: 'dashboard', label: 'Dashboard', hex: '#7C3AED' },
@@ -327,7 +327,7 @@ export function Finance() {
     try {
       const res = await fetch(`${API}/finance/summary`)
       setSummary(await res.json())
-    } catch { /* backend offline */ }
+    } catch (e: any) { console.error('Error cargando resumen:', e) }
     finally { setSummaryLoading(false) }
   }
 
@@ -340,7 +340,7 @@ export function Finance() {
       const res = await fetch(`${API}/finance/data/${tab}`)
       const data = await res.json()
       setRecords(data.records ?? [])
-    } catch { /* backend offline */ }
+    } catch (e: any) { console.error('Error cargando registros:', e) }
     finally { setRecordsLoading(false) }
   }
 
