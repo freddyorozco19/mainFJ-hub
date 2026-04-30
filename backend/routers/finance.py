@@ -16,8 +16,14 @@ from dotenv import load_dotenv
 from backend.routers.auth import get_current_user
 from backend.sheets import read_tab, append_row, update_row, delete_row, COLUMNS
 from backend.events import event_manager
-import pytesseract
-from PIL import Image
+try:
+    import pytesseract
+    from PIL import Image
+    _OCR_AVAILABLE = True
+except ImportError:
+    _OCR_AVAILABLE = False
+    pytesseract = None  # type: ignore
+    Image = None  # type: ignore
 
 load_dotenv(Path(__file__).resolve().parent.parent / ".env", override=True)
 
@@ -337,6 +343,8 @@ async def ocr_invoice(current_user = Depends(get_current_user),
     tab: str = Form(...)
 ):
     """Procesa imagen de factura con OCR y retorna campos pre-llenados."""
+    if not _OCR_AVAILABLE:
+        raise HTTPException(503, "OCR no disponible. Instala tesseract-ocr en el servidor.")
     if tab not in COLUMNS:
         raise HTTPException(400, f"Tab '{tab}' no valido")
     try:
