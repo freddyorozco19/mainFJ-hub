@@ -334,7 +334,7 @@ export function Finance() {
     setRecords([])
     setSearch('')
     try {
-      const res = await api('/finance/data/${tab}`)
+      const res = await api(`/finance/data/${tab}`)
       const data = await res.json()
       setRecords(data.records ?? [])
     } catch (e: any) { console.error('Error cargando registros:', e) }
