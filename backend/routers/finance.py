@@ -123,7 +123,7 @@ class RecordDelete(BaseModel):
 
 # ── Finance Writer ─────────────────────────────────────────────────────────────
 @router.post("/write")
-async def finance_write(req: WriteRequest):
+async def finance_write(req: WriteRequest, current_user = Depends(get_current_user)):
     """Interpreta lenguaje natural e inserta registro en el Sheet."""
     client = _get_client()
     await event_manager.agent_status("finance", "busy", "Finanzas")
@@ -166,7 +166,7 @@ async def finance_write(req: WriteRequest):
 
 # ── Análisis por pestaña ───────────────────────────────────────────────────────
 @router.post("/analyze")
-async def finance_analyze(req: AnalysisRequest):
+async def finance_analyze(req: AnalysisRequest, current_user = Depends(get_current_user)):
     """Agente de análisis para una pestaña específica."""
     if req.tab not in ANALYSIS_PROMPTS:
         raise HTTPException(400, f"Tab '{req.tab}' no válido")
@@ -203,7 +203,7 @@ async def finance_analyze(req: AnalysisRequest):
 
 # ── Resumen agregado de todas las pestañas ─────────────────────────────────────
 @router.get("/summary")
-def get_summary():
+def get_summary(current_user = Depends(get_current_user)):
     """Devuelve totales y conteos por pestaña para el dashboard de finanzas."""
     tabs   = ["essentials", "ahorro", "basket", "shops", "wishlist", "debts"]
     result = {}
@@ -234,7 +234,7 @@ def get_summary():
 
 # ── Lectura directa de pestañas ────────────────────────────────────────────────
 @router.get("/data/{tab}")
-def get_tab_data(tab: str):
+def get_tab_data(tab: str, current_user = Depends(get_current_user)):
     """Devuelve todos los registros de una pestaña."""
     valid_tabs = ["essentials", "ahorro", "basket", "shops", "wishlist", "debts"]
     if tab not in valid_tabs:
@@ -248,7 +248,7 @@ def get_tab_data(tab: str):
 
 # ── CRUD: Crear registro ─────────────────────────────────────────────────────
 @router.post("/records")
-def create_record(req: RecordCreate):
+def create_record(req: RecordCreate, current_user = Depends(get_current_user)):
     """Crea un nuevo registro en una pestaña."""
     if req.tab not in COLUMNS:
         raise HTTPException(400, f"Tab '{req.tab}' no válido")
@@ -261,7 +261,7 @@ def create_record(req: RecordCreate):
 
 # ── CRUD: Actualizar registro ─────────────────────────────────────────────────
 @router.put("/records")
-def update_record(req: RecordUpdate):
+def update_record(req: RecordUpdate, current_user = Depends(get_current_user)):
     """Actualiza un registro existente por índice de fila."""
     if req.tab not in COLUMNS:
         raise HTTPException(400, f"Tab '{req.tab}' no válido")
@@ -274,7 +274,7 @@ def update_record(req: RecordUpdate):
 
 # ── CRUD: Eliminar registro ───────────────────────────────────────────────────
 @router.delete("/records")
-def delete_record(req: RecordDelete):
+def delete_record(req: RecordDelete, current_user = Depends(get_current_user)):
     """Elimina un registro por índice de fila."""
     if req.tab not in COLUMNS:
         raise HTTPException(400, f"Tab '{req.tab}' no válido")
@@ -331,7 +331,7 @@ def _parse_invoice_text(text: str, tab: str) -> dict:
 
 # ── OCR: Extraer datos de factura ──────────────────────────────────────────
 @router.post("/ocr")
-async def ocr_invoice(
+async def ocr_invoice(current_user = Depends(get_current_user), 
     file: UploadFile = File(...),
     tab: str = Form(...)
 ):
