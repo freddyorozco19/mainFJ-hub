@@ -84,11 +84,13 @@ MODEL_RATES: dict[str, tuple[float, float]] = {
 }
 
 
-@router.get("/")&#10;def list_agents(current_user = Depends(get_current_user)):
+@router.get("/")
+def list_agents(current_user = Depends(get_current_user)):
     return CATALOG
 
 
-@router.get("/{slug}")&#10;def get_agent(slug: str, current_user = Depends(get_current_user)):
+@router.get("/{slug}")
+def get_agent(slug: str, current_user = Depends(get_current_user)):
     if slug not in CATALOG:
         from fastapi import HTTPException
         raise HTTPException(404, f"Agente '{slug}' no encontrado")
