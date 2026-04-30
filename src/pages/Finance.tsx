@@ -198,6 +198,8 @@ export function Finance() {
   const [crudTab, setCrudTab]                 = useState<TabKey>('shops')
   const [saving, setSaving]                   = useState(false)
   const [saveError, setSaveError]             = useState('')
+  const [ocrImage, setOcrImage]               = useState<string | null>(null)
+  const [ocrLoading, setOcrLoading]           = useState(false)
 
   useEffect(() => { loadSummary() }, [])
   useEffect(() => {
@@ -230,11 +232,35 @@ export function Finance() {
       await loadRecords(crudTab)
       setShowRecordModal(false)
       setRecordForm({})
+      setOcrImage(null)
     } catch (e: any) {
       setSaveError(e.message || 'Error de conexión')
       console.error('Create error:', e)
     } finally {
       setSaving(false)
+    }
+  }
+
+  async function handleOcrUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = () => setOcrImage(reader.result as string)
+    reader.readAsDataURL(file)
+    setOcrLoading(true)
+    setSaveError('')
+    try {
+      const form = new FormData()
+      form.append('file', file)
+      form.append('tab', crudTab)
+      const res = await fetch(`${API}/finance/ocr`, { method: 'POST', body: form })
+      if (!res.ok) throw new Error('Error en OCR')
+      const { extracted } = await res.json()
+      if (extracted) setRecordForm(prev => ({ ...prev, ...extracted }))
+    } catch {
+      setSaveError('No se pudo leer la factura, completa los campos manualmente.')
+    } finally {
+      setOcrLoading(false)
     }
   }
 
@@ -818,7 +844,41 @@ export function Finance() {
                 </div>
               )}
 
-              {/* Form fields */}
+              {editingIndex === null && (
+          <div>
+            <label className="text-xs text-slate-400 mb-1 block font-medium">
+              Factura (opcional — OCR)
+            </label>
+            <label className="flex flex-col items-center justify-center w-full h-28 border-2 border-dashed border-border rounded-lg cursor-pointer hover:border-primary/50 transition-colors bg-surface/50 overflow-hidden">
+              {ocrLoading ? (
+                <span className="text-xs text-slate-400 animate-pulse">Procesando imagen...</span>
+              ) : ocrImage ? (
+                <img src={ocrImage} alt="factura" className="h-full w-full object-contain" />
+              ) : (
+                <div className="text-center px-4">
+                  <svg className="w-6 h-6 text-slate-500 mx-auto mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                  </svg>
+                  <span className="text-xs text-slate-400">Sube o toma foto de la factura</span>
+                  <span className="text-xs text-slate-600 block mt-0.5">Los campos se llenarán automáticamente</span>
+                </div>
+              )}
+              <input
+                type="file"
+                accept="image/*"
+                capture="environment"
+                className="hidden"
+                onChange={handleOcrUpload}
+                disabled={ocrLoading}
+              />
+            </label>
+            {ocrImage && !ocrLoading && (
+              <p className="text-xs text-emerald-400 mt-1">Datos extraídos. Revisa y corrige si es necesario.</p>
+            )}
+          </div>
+        )}
+
+        {/* Form fields */}
               {(editingIndex !== null
                 ? Object.keys(records[0] || {})
                 : TAB_COLUMNS[crudTab]
@@ -838,7 +898,7 @@ export function Finance() {
 
             <div className="flex gap-3 pt-2 border-t border-border">
               <button 
-                onClick={() => { setShowRecordModal(false); setSaveError('') }} 
+                onClick={() => { setShowRecordModal(false); setSaveError(''); setOcrImage(null) }} 
                 disabled={saving}
                 className="flex-1 py-2 text-sm text-slate-400 hover:text-white border border-border rounded-lg hover:bg-white/5 transition-colors disabled:opacity-50"
               >
