@@ -410,8 +410,8 @@ function drawNode(node, dimmed) {
 
   // ── Node icon (eje sistema / KRONOS) ──
   if (r >= 22) {
-    const iSize = r * 0.58;
-    const iconAlpha = dimmed ? 0.2 : 0.85;
+    const iSize = r * 0.65;
+    const iconAlpha = dimmed ? 0.25 : 0.9;
     drawNodeIcon(ctx, node.id, iSize, iconAlpha);
   }
 
@@ -519,28 +519,28 @@ function roundRect(c, x, y, w, h, r) {
 function drawNodeIcon(ctx, id, s, alpha) {
   ctx.save();
   ctx.fillStyle = `rgba(255,255,255,${alpha})`;
-  ctx.strokeStyle = `rgba(255,255,255,${Math.min(alpha + 0.15, 1)})`;
-  ctx.lineWidth = 1.4;
+  ctx.strokeStyle = `rgba(255,255,255,${Math.min(alpha + 0.2, 1)})`;
+  ctx.lineWidth = 1.8;
   ctx.lineCap = 'round';
-  ctx.lineJoin = 'round';
 
-  // Universal node icon: circle hub + 3 radiating connections
-  // Central dot
+  // Universal node icon: central hub + 3 radiating arms with outer nodes
+  // Hub circle
   ctx.beginPath();
-  ctx.arc(0, 0, s * 0.24, 0, Math.PI * 2);
+  ctx.arc(0, 0, s * 0.34, 0, Math.PI * 2);
   ctx.fill();
 
-  // 3 radiating lines to outer dots
+  // 3 radiating arms + outer nodes
   for (let i = 0; i < 3; i++) {
     const angle = (i * Math.PI * 2) / 3 - Math.PI / 2;
-    const x = Math.cos(angle) * s * 0.78;
-    const y = Math.sin(angle) * s * 0.78;
+    const innerR = s * 0.42;
+    const outerR = s * 0.85;
     ctx.beginPath();
-    ctx.moveTo(Math.cos(angle) * s * 0.32, Math.sin(angle) * s * 0.32);
-    ctx.lineTo(x, y);
+    ctx.moveTo(Math.cos(angle) * innerR, Math.sin(angle) * innerR);
+    ctx.lineTo(Math.cos(angle) * outerR, Math.sin(angle) * outerR);
     ctx.stroke();
+    // Outer node
     ctx.beginPath();
-    ctx.arc(x, y, s * 0.14, 0, Math.PI * 2);
+    ctx.arc(Math.cos(angle) * outerR, Math.sin(angle) * outerR, s * 0.2, 0, Math.PI * 2);
     ctx.fill();
   }
 
