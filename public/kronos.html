@@ -412,7 +412,7 @@ function drawNode(node, dimmed) {
   ctx.shadowBlur = 0;
 
   // ── Node icon ──
-  const iSize = r >= 22 ? r * 0.65 : r * 0.72;
+  const iSize = r >= 22 ? r * 0.65 : r * 0.6;
   const iconAlpha = dimmed ? 0.25 : 0.9;
   drawNodeIcon(ctx, node.id, iSize, iconAlpha, r);
 
@@ -532,28 +532,53 @@ function drawNodeIcon(ctx, id, s, alpha, r) {
       ctx.fill();
     }
   } else {
-    // ── Folder icon for sectoriales ──
-    // Folder body
+    // ── 3D Folder icon for sectoriales ──
+    const foldH = s * 0.22;
+    const bodyW = s * 1.4;
+    const bodyH = s * 1.1;
+    const tabW = s * 0.6;
+
+    // 3D shadow/depth layer (offset bottom-right)
+    ctx.fillStyle = `rgba(255,255,255,${alpha * 0.3})`;
     ctx.beginPath();
-    ctx.moveTo(-s * 0.8, -s * 0.6);
-    ctx.lineTo(s * 0.7, -s * 0.6);
-    ctx.lineTo(s * 0.85, -s * 0.35);
-    ctx.lineTo(s * 0.85, s * 0.7);
-    ctx.lineTo(-s * 0.8, s * 0.7);
+    ctx.moveTo(-bodyW / 2 + 1.5, -bodyH / 2 + foldH - 1);
+    ctx.lineTo(-bodyW / 2 + tabW + 1.5, -bodyH / 2 + foldH - 1);
+    ctx.lineTo(-bodyW / 2 + tabW + foldH * 0.6 + 1.5, -bodyH / 2 - 0.5);
+    ctx.lineTo(bodyW / 2 + 1.5, -bodyH / 2 - 0.5);
+    ctx.lineTo(bodyW / 2 + 1.5, bodyH / 2 + 1.5);
+    ctx.lineTo(-bodyW / 2 + 1.5, bodyH / 2 + 1.5);
+    ctx.closePath();
+    ctx.fill();
+
+    // Main folder body
+    ctx.fillStyle = `rgba(255,255,255,${alpha})`;
+    ctx.strokeStyle = `rgba(255,255,255,${Math.min(alpha + 0.2, 1)})`;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(-bodyW / 2, -bodyH / 2 + foldH);
+    ctx.lineTo(-bodyW / 2 + tabW, -bodyH / 2 + foldH);
+    ctx.lineTo(-bodyW / 2 + tabW + foldH * 0.6, -bodyH / 2);
+    ctx.lineTo(bodyW / 2, -bodyH / 2);
+    ctx.lineTo(bodyW / 2, bodyH / 2);
+    ctx.lineTo(-bodyW / 2, bodyH / 2);
     ctx.closePath();
     ctx.fill();
     ctx.stroke();
 
-    // Folder tab (top-left fold)
+    // Tab fold highlight (top edge glow)
+    ctx.strokeStyle = `rgba(255,255,255,${Math.min(alpha + 0.3, 1)})`;
+    ctx.lineWidth = 1;
     ctx.beginPath();
-    ctx.moveTo(-s * 0.8, -s * 0.6);
-    ctx.lineTo(-s * 0.35, -s * 0.6);
-    ctx.lineTo(-s * 0.2, -s * 0.3);
-    ctx.lineTo(-s * 0.8, -s * 0.3);
-    ctx.closePath();
-    ctx.fillStyle = `rgba(255,255,255,${Math.min(alpha + 0.15, 1)})`;
-    ctx.fill();
-    ctx.strokeStyle = `rgba(255,255,255,${Math.min(alpha + 0.2, 1)})`;
+    ctx.moveTo(-bodyW / 2 + tabW, -bodyH / 2 + foldH);
+    ctx.lineTo(-bodyW / 2 + tabW + foldH * 0.6, -bodyH / 2);
+    ctx.stroke();
+
+    // Subtle inner line on folder body
+    ctx.strokeStyle = `rgba(255,255,255,${alpha * 0.3})`;
+    ctx.lineWidth = 0.6;
+    ctx.beginPath();
+    ctx.moveTo(-bodyW / 2, -bodyH / 2 + foldH);
+    ctx.lineTo(bodyW / 2 - 1, -bodyH / 2 + foldH);
     ctx.stroke();
   }
 
