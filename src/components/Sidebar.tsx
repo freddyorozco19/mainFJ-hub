@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { NavLink } from 'react-router-dom'
-import { Bot, MessageSquare, BarChart3, ScrollText, Wifi, WifiOff, PanelLeftClose, PanelLeft, Home, Trophy, Brain, TrendingUp, Heart, Wallet, LogOut, X, Menu, User } from 'lucide-react'
+import { Bot, MessageSquare, BarChart3, ScrollText, Wifi, WifiOff, PanelLeftClose, PanelLeft, Home, Trophy, Brain, TrendingUp, Heart, Wallet, LogOut, X, Menu, User, Network } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:8001'
@@ -15,6 +15,7 @@ const MAIN_FJ_NAV = [
 const SYSTEMS_NAV = [
   { to: '/home',       icon: Home,        label: 'Home'        },
   { to: '/finance',    icon: Wallet,      label: 'Finanzas'    },
+  { to: '/kronos',     icon: Network,     label: 'KRONOS'      },
   { to: '/winstats',   icon: Trophy,      label: 'WinStats'    },
   { to: '/expertia',   icon: Brain,       label: 'ArchiTechIA' },
   { to: '/growdata',   icon: TrendingUp,  label: 'Grow Data'   },
