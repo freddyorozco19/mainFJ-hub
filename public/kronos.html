@@ -21,11 +21,45 @@
   #tooltip .name { color: #fff; font-weight: bold; font-size: 12px; margin-bottom: 3px; }
   #tooltip .role { color: #8b8b9c; font-size: 10px; margin-bottom: 4px; }
   #tooltip .conn { color: #6b6b8c; font-size: 10px; }
+  #popup {
+    position: fixed; z-index: 200;
+    background: #0D0D1A; border: 1px solid; border-radius: 12px;
+    padding: 18px 20px; font-family: 'Inter', sans-serif;
+    display: none; min-width: 220px; max-width: 300px;
+    backdrop-filter: blur(12px);
+    box-shadow: 0 0 40px rgba(0,0,0,0.6);
+  }
+  #popup .popup-title { color: #fff; font-weight: 600; font-size: 14px; margin-bottom: 4px; }
+  #popup .popup-parent { color: #8b8b9c; font-size: 11px; margin-bottom: 10px; }
+  #popup .popup-desc { color: #94A3B8; font-size: 12px; margin-bottom: 14px; line-height: 1.5; }
+  #popup .popup-btn {
+    display: block; width: 100%; padding: 9px 0;
+    border-radius: 8px; font-family: 'Inter', sans-serif;
+    font-size: 12px; font-weight: 500; cursor: pointer;
+    text-align: center; text-decoration: none; border: none;
+    transition: opacity 0.15s;
+    color: #fff;
+  }
+  #popup .popup-btn:hover { opacity: 0.85; }
+  #popup .popup-close {
+    position: absolute; top: 10px; right: 12px;
+    background: none; border: none; color: #64748B;
+    font-size: 16px; cursor: pointer; padding: 2px 6px;
+    font-family: 'Inter', sans-serif;
+  }
+  #popup .popup-close:hover { color: #fff; }
 </style>
 </head>
 <body>
 <canvas id="c"></canvas>
 <div id="tooltip"></div>
+<div id="popup">
+  <button class="popup-close" id="popupClose">&times;</button>
+  <div class="popup-title" id="popupTitle"></div>
+  <div class="popup-parent" id="popupParent"></div>
+  <div class="popup-desc" id="popupDesc"></div>
+  <a class="popup-btn" id="popupBtn" target="_blank" rel="noopener"></a>
+</div>
 
 <script>
 // ── Configuration ───────────────────────────────────────────────────────────
@@ -46,35 +80,35 @@ const NODE_DEFS = [
 
   // ═══ WIN STATS ═══
   { id: 'winstats',  name: 'WIN STATS',  role: 'Eje Sistema',   layer: 'winstats',    fx: 0.16, fy: 0.18, r: 22 },
-  { id: 'ws-data',   name: 'DATA',        role: 'Métricas',      layer: 'winstats',    fx: 0.06, fy: 0.07, r: 14 },
-  { id: 'ws-finance',name: 'FINANCE',     role: 'Financiero',    layer: 'winstats',    fx: 0.14, fy: 0.05, r: 14 },
-  { id: 'ws-accounts',name:'ACCOUNTS',    role: 'Cuentas',       layer: 'winstats',    fx: 0.24, fy: 0.08, r: 14 },
+  { id: 'ws-data',   name: 'DATA',        role: 'Métricas',      layer: 'winstats',    fx: 0.06, fy: 0.07, r: 14, desc: 'Analíticas y datos de rendimiento', url: '#', btnText: 'Ver Data' },
+  { id: 'ws-finance',name: 'FINANCE',     role: 'Financiero',    layer: 'winstats',    fx: 0.14, fy: 0.05, r: 14, desc: 'Métricas financieras y reporting', url: '#', btnText: 'Ver Finance' },
+  { id: 'ws-accounts',name:'ACCOUNTS',    role: 'Cuentas',       layer: 'winstats',    fx: 0.24, fy: 0.08, r: 14, desc: 'Gestión de cuentas y balances', url: '#', btnText: 'Ver Accounts' },
 
   // ═══ ARCHITECHIA ═══
   { id: 'architechia',name:'ARCHITECHIA', role: 'Eje Sistema',   layer: 'architechia', fx: 0.50, fy: 0.14, r: 22 },
-  { id: 'at-products',name:'PRODUCTS',    role: 'Productos',     layer: 'architechia', fx: 0.40, fy: 0.04, r: 14 },
-  { id: 'at-finances',name:'FINANCES',    role: 'Portafolio',    layer: 'architechia', fx: 0.50, fy: 0.04, r: 14 },
-  { id: 'at-leads',   name:'LEADS',       role: 'Prospectos',    layer: 'architechia', fx: 0.60, fy: 0.04, r: 14 },
-  { id: 'at-accounts',name:'ACCOUNTS',    role: 'Cuentas',       layer: 'architechia', fx: 0.62, fy: 0.12, r: 14 },
+  { id: 'at-products',name:'PRODUCTS',    role: 'Productos',     layer: 'architechia', fx: 0.40, fy: 0.04, r: 14, desc: 'Portafolio de productos y servicios', url: '#', btnText: 'Ver Products' },
+  { id: 'at-finances',name:'FINANCES',    role: 'Portafolio',    layer: 'architechia', fx: 0.50, fy: 0.04, r: 14, desc: 'Gestión financiera y portafolio', url: '#', btnText: 'Ver Finances' },
+  { id: 'at-leads',   name:'LEADS',       role: 'Prospectos',    layer: 'architechia', fx: 0.60, fy: 0.04, r: 14, desc: 'Generación y gestión de prospectos', url: '#', btnText: 'Ver Leads' },
+  { id: 'at-accounts',name:'ACCOUNTS',    role: 'Cuentas',       layer: 'architechia', fx: 0.62, fy: 0.12, r: 14, desc: 'Cuentas y relaciones con clientes', url: '#', btnText: 'Ver Accounts' },
 
   // ═══ GROW DATA ═══
   { id: 'growdata',  name: 'GROW DATA',  role: 'Eje Sistema',   layer: 'growdata',    fx: 0.74, fy: 0.30, r: 22 },
-  { id: 'gd-presales',name:'PRESALES',    role: 'Pre-ventas',    layer: 'growdata',    fx: 0.88, fy: 0.20, r: 14 },
-  { id: 'gd-finance',name:'FINANCE',      role: 'Revenue Data',  layer: 'growdata',    fx: 0.88, fy: 0.30, r: 14 },
-  { id: 'gd-certs',  name:'CERTIFICATIONS',role:'Certificados',  layer: 'growdata',    fx: 0.88, fy: 0.40, r: 14 },
+  { id: 'gd-presales',name:'PRESALES',    role: 'Pre-ventas',    layer: 'growdata',    fx: 0.88, fy: 0.20, r: 14, desc: 'Pipeline de pre-ventas y leads', url: '#', btnText: 'Ver Presales' },
+  { id: 'gd-finance',name:'FINANCE',      role: 'Revenue Data',  layer: 'growdata',    fx: 0.88, fy: 0.30, r: 14, desc: 'Datos de revenue y crecimiento', url: '#', btnText: 'Ver Finance' },
+  { id: 'gd-certs',  name:'CERTIFICATIONS',role:'Certificados',  layer: 'growdata',    fx: 0.88, fy: 0.40, r: 14, desc: 'Certificaciones y cumplimiento', url: '#', btnText: 'Ver Certs' },
 
   // ═══ ACADEMIA ═══
   { id: 'academia',  name: 'ACADEMIA',   role: 'Eje Sistema',   layer: 'academia',    fx: 0.68, fy: 0.68, r: 22 },
-  { id: 'ac-tesis',  name: 'TESIS',       role: 'Investigación', layer: 'academia',    fx: 0.82, fy: 0.60, r: 14 },
-  { id: 'ac-certs',  name: 'CERTIFICATIONS',role:'Certificados', layer: 'academia',    fx: 0.82, fy: 0.70, r: 14 },
-  { id: 'ac-roadmaps',name:'ROADMAPS',    role: 'Planes',        layer: 'academia',    fx: 0.82, fy: 0.80, r: 14 },
+  { id: 'ac-tesis',  name: 'TESIS',       role: 'Investigación', layer: 'academia',    fx: 0.82, fy: 0.60, r: 14, desc: 'Proyectos de investigación y tesis', url: '#', btnText: 'Ver Tesis' },
+  { id: 'ac-certs',  name: 'CERTIFICATIONS',role:'Certificados', layer: 'academia',    fx: 0.82, fy: 0.70, r: 14, desc: 'Certificaciones académicas', url: '#', btnText: 'Ver Certs' },
+  { id: 'ac-roadmaps',name:'ROADMAPS',    role: 'Planes',        layer: 'academia',    fx: 0.82, fy: 0.80, r: 14, desc: 'Roadmaps y planes de estudio', url: '#', btnText: 'Ver Roadmaps' },
 
   // ═══ PERSONAL ═══
   { id: 'personal',  name: 'PERSONAL',   role: 'Eje Sistema',   layer: 'personal',    fx: 0.28, fy: 0.78, r: 22 },
-  { id: 'pe-finance',name:'FINANCE',      role: 'Finanzas Pers.',layer: 'personal',    fx: 0.14, fy: 0.72, r: 14 },
-  { id: 'pe-hubfj',  name: 'HUB FJ',      role: 'Hub Central',   layer: 'personal',    fx: 0.20, fy: 0.85, r: 14 },
-  { id: 'pe-health', name: 'HEALTH',      role: 'Salud',         layer: 'personal',    fx: 0.32, fy: 0.88, r: 14 },
-  { id: 'pe-sports', name: 'SPORTS',      role: 'Deportes',      layer: 'personal',    fx: 0.42, fy: 0.85, r: 14 },
+  { id: 'pe-finance',name:'FINANCE',      role: 'Finanzas Pers.',layer: 'personal',    fx: 0.14, fy: 0.72, r: 14, desc: 'Finanzas personales y presupuesto', url: '#', btnText: 'Ver Finance' },
+  { id: 'pe-hubfj',  name: 'HUB FJ',      role: 'Hub Central',   layer: 'personal',    fx: 0.20, fy: 0.85, r: 14, desc: 'Centro de operaciones personal', url: '#', btnText: 'Ver Hub FJ' },
+  { id: 'pe-health', name: 'HEALTH',      role: 'Salud',         layer: 'personal',    fx: 0.32, fy: 0.88, r: 14, desc: 'Seguimiento de salud y bienestar', url: '#', btnText: 'Ver Health' },
+  { id: 'pe-sports', name: 'SPORTS',      role: 'Deportes',      layer: 'personal',    fx: 0.42, fy: 0.85, r: 14, desc: 'Actividades deportivas y metas', url: '#', btnText: 'Ver Sports' },
 ];
 
 const EDGE_DEFS = [
@@ -272,6 +306,64 @@ let dragNode = null;
 let dragOffX = 0, dragOffY = 0;
 let time = 0;
 let tooltipNode = null;
+let popupNode = null;
+
+// ── Popup ───────────────────────────────────────────────────────────────────
+const popup = document.getElementById('popup');
+const popupTitle = document.getElementById('popupTitle');
+const popupParent = document.getElementById('popupParent');
+const popupDesc = document.getElementById('popupDesc');
+const popupBtn = document.getElementById('popupBtn');
+const popupClose = document.getElementById('popupClose');
+
+function showPopup(node, mx, my) {
+  popupNode = node;
+  const parent = getNode(
+    EDGE_DEFS.find(e => e.to === node.id || e.from === node.id)?.from || ''
+  );
+  popupTitle.textContent = node.name;
+  popupParent.textContent = parent ? `▸ ${parent.name}` : '';
+  popupDesc.textContent = node.desc || `${node.role} — ${node.layer.toUpperCase()}`;
+  popupBtn.textContent = node.btnText || 'Abrir';
+  popupBtn.href = node.url || '#';
+  popupBtn.style.background = COLORS[node.layer]?.fill || '#7B61FF';
+  popup.style.borderColor = COLORS[node.layer]?.fill || '#7B61FF';
+  popup.style.display = 'block';
+
+  // Position
+  const pw = popup.offsetWidth || 240;
+  const ph = popup.offsetHeight || 180;
+  let tx = mx + 18;
+  let ty = my - ph / 2;
+  if (tx + pw + 10 > W) tx = mx - pw - 18;
+  if (ty < 10) ty = 10;
+  if (ty + ph + 10 > H) ty = H - ph - 10;
+  popup.style.left = tx + 'px';
+  popup.style.top = ty + 'px';
+}
+
+function hidePopup() {
+  popupNode = null;
+  popup.style.display = 'none';
+}
+
+popupClose.addEventListener('click', (e) => {
+  e.stopPropagation();
+  hidePopup();
+});
+
+// Close popup on canvas click outside
+canvas.addEventListener('click', (e) => {
+  if (popupNode && e.target === canvas) {
+    const rect = canvas.getBoundingClientRect();
+    const mx = e.clientX - rect.left;
+    const my = e.clientY - rect.top;
+    const n = nodeAt(mx, my);
+    if (!n || n.id !== popupNode.id) {
+      hidePopup();
+    }
+  }
+});
 
 // ── Edge Rendering ──────────────────────────────────────────────────────────
 function drawEdge(from, to, dimmed, isMain) {
@@ -803,11 +895,20 @@ canvas.addEventListener('mousedown', e => {
   const my = e.clientY - rect.top;
   const n = nodeAt(mx, my);
   if (n) {
-    selectedNodeId = n.id;
-    dragNode = n;
-    dragOffX = mx - n.baseX;
-    dragOffY = my - n.baseY;
+    if (n.r < 22) {
+      // Sectorial: show popup
+      selectedNodeId = null;
+      showPopup(n, mx, my);
+    } else {
+      // Hub / KRONOS: select + drag
+      hidePopup();
+      selectedNodeId = n.id;
+      dragNode = n;
+      dragOffX = mx - n.baseX;
+      dragOffY = my - n.baseY;
+    }
   } else {
+    hidePopup();
     selectedNodeId = null;
   }
 });
