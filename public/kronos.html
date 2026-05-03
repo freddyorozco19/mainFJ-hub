@@ -80,7 +80,9 @@ const NODE_DEFS = [
 
   // ═══ WIN STATS ═══
   { id: 'winstats',  name: 'WIN STATS',  role: 'Eje Sistema',   layer: 'winstats',    fx: 0.16, fy: 0.18, r: 22 },
-  { id: 'ws-data',   name: 'DATA',        role: 'Métricas',      layer: 'winstats',    fx: 0.06, fy: 0.07, r: 14, desc: 'Analíticas y datos de rendimiento', url: '#', btnText: 'Ver Data' },
+  { id: 'ws-data',   name: 'DATA',        role: 'Métricas',      layer: 'winstats',    fx: 0.05, fy: 0.08, r: 20, desc: 'Analíticas y datos de rendimiento', url: '#', btnText: 'Ver Data' },
+  { id: 'ws-opf24',  name: 'OPF24',       role: 'Operación',     layer: 'winstats',    fx: 0.02, fy: 0.02, r: 12, desc: 'Operación F24', url: '#', btnText: 'Abrir' },
+  { id: 'ws-opf9',   name: 'OPF9',        role: 'Operación',     layer: 'winstats',    fx: 0.08, fy: 0.02, r: 12, desc: 'Operación F9', url: '#', btnText: 'Abrir' },
   { id: 'ws-finance',name: 'FINANCE',     role: 'Financiero',    layer: 'winstats',    fx: 0.14, fy: 0.05, r: 14, desc: 'Métricas financieras y reporting', url: 'https://main-fj-hub.vercel.app/finance', btnText: 'Ir a Finanzas' },
   { id: 'ws-accounts',name:'ACCOUNTS',    role: 'Cuentas',       layer: 'winstats',    fx: 0.24, fy: 0.08, r: 14, desc: 'Gestión de cuentas y balances', url: '#', btnText: 'Ver Accounts' },
 
@@ -121,6 +123,8 @@ const EDGE_DEFS = [
 
   // WIN STATS → Sectoriales
   { from: 'winstats', to: 'ws-data' },
+  { from: 'ws-data', to: 'ws-opf24' },
+  { from: 'ws-data', to: 'ws-opf9' },
   { from: 'winstats', to: 'ws-finance' },
   { from: 'winstats', to: 'ws-accounts' },
 
@@ -490,7 +494,7 @@ function drawNode(node, dimmed) {
   ctx.beginPath();
   ctx.arc(0, 0, r, 0, Math.PI * 2);
   ctx.strokeStyle = color.glow;
-  ctx.lineWidth = r >= 22 ? 2.5 : 1.8;
+  ctx.lineWidth = r >= 20 ? 2.5 : 1.8;
   ctx.stroke();
 
   // Second subtle border
@@ -504,7 +508,7 @@ function drawNode(node, dimmed) {
   ctx.shadowBlur = 0;
 
   // ── Node icon ──
-  const iSize = r >= 22 ? r * 0.65 : r * 0.6;
+  const iSize = r >= 20 ? r * 0.65 : r * 0.6;
   const iconAlpha = dimmed ? 0.25 : 0.9;
   drawNodeIcon(ctx, node.id, iSize, iconAlpha, r);
 
@@ -522,7 +526,7 @@ function drawNode(node, dimmed) {
   }
 
   // ── Labels ABOVE the circle ──
-  const fontSize = r >= 32 ? 11 : (r >= 22 ? 10 : 8);
+  const fontSize = r >= 32 ? 11 : (r >= 20 ? 10 : 8);
   const padX = 8;
   const padY = 3;
   const labelY = -(r + padY + fontSize);
@@ -534,7 +538,7 @@ function drawNode(node, dimmed) {
   }
 
   // Name pill above node
-  const fontWeight = r >= 22 ? '600' : '500';
+  const fontWeight = r >= 20 ? '600' : '500';
   ctx.font = `${fontWeight} ${fontSize}px "Inter", sans-serif`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
@@ -543,11 +547,11 @@ function drawNode(node, dimmed) {
   // Pill background
   ctx.fillStyle = 'rgba(5,5,8,0.85)';
   ctx.beginPath();
-  roundRect(ctx, -nameW / 2 - padX, labelY - fontSize / 2 - padY, nameW + padX * 2, fontSize + padY * 2, r >= 22 ? 4 : 3);
+  roundRect(ctx, -nameW / 2 - padX, labelY - fontSize / 2 - padY, nameW + padX * 2, fontSize + padY * 2, r >= 20 ? 4 : 3);
   ctx.fill();
 
   // Pill border
-  ctx.strokeStyle = `rgba(${rgb.r},${rgb.g},${rgb.b},${r >= 22 ? 0.5 : 0.3})`;
+  ctx.strokeStyle = `rgba(${rgb.r},${rgb.g},${rgb.b},${r >= 20 ? 0.5 : 0.3})`;
   ctx.lineWidth = 0.8;
   ctx.stroke();
 
@@ -560,7 +564,7 @@ function drawNode(node, dimmed) {
 
   // Sublabel (only on hover)
   if (isHovered && (!dimmed || isHovered || isSelected)) {
-    const subLabelFontSize = r >= 22 ? 7 : 6;
+    const subLabelFontSize = r >= 20 ? 7 : 6;
     ctx.font = `500 ${subLabelFontSize}px "Inter", sans-serif`;
     const subY = labelY - fontSize / 2 - padY - subLabelFontSize * 0.6 - 3;
     const subW = ctx.measureText(node.role).width;
@@ -602,10 +606,10 @@ function drawNodeIcon(ctx, id, s, alpha, r) {
   ctx.save();
   ctx.fillStyle = `rgba(255,255,255,${alpha})`;
   ctx.strokeStyle = `rgba(255,255,255,${Math.min(alpha + 0.2, 1)})`;
-  ctx.lineWidth = r >= 22 ? 1.8 : 1.4;
+  ctx.lineWidth = r >= 20 ? 1.8 : 1.4;
   ctx.lineCap = 'round';
 
-  if (r >= 22) {
+  if (r >= 20) {
     // ── Hub icon: central node + 3 radiating connections ──
     ctx.beginPath();
     ctx.arc(0, 0, s * 0.34, 0, Math.PI * 2);
@@ -895,7 +899,7 @@ canvas.addEventListener('mousedown', e => {
   const my = e.clientY - rect.top;
   const n = nodeAt(mx, my);
   if (n) {
-    if (n.r < 22) {
+    if (n.r < 18) {
       // Sectorial: show popup
       selectedNodeId = null;
       showPopup(n, mx, my);
