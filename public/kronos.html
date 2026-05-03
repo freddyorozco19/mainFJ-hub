@@ -484,6 +484,10 @@ function drawNode(node, dimmed) {
     ctx.fillText(node.role, 0, subY);
   }
 
+  ctx.globalAlpha = 1;
+  ctx.restore();
+}
+
 function roundRect(c, x, y, w, h, r) {
   c.beginPath();
   c.moveTo(x + r, y);
