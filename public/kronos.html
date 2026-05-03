@@ -48,6 +48,24 @@
     font-family: 'Inter', sans-serif;
   }
   #popup .popup-close:hover { color: #fff; }
+  #zoom-controls {
+    position: fixed; bottom: 20px; right: 20px; z-index: 150;
+    display: flex; flex-direction: column; gap: 6px;
+  }
+  #zoom-controls button {
+    width: 36px; height: 36px; border-radius: 8px;
+    background: #0D0D1A; border: 1px solid rgba(255,255,255,0.15);
+    color: #94A3B8; font-size: 18px; font-family: 'Inter', sans-serif;
+    cursor: pointer; transition: all 0.15s;
+    display: flex; align-items: center; justify-content: center;
+  }
+  #zoom-controls button:hover {
+    background: #1a1a2e; border-color: rgba(255,255,255,0.3); color: #fff;
+  }
+  #zoom-level {
+    color: #64748B; font-family: 'Inter', sans-serif;
+    font-size: 10px; text-align: center; padding: 2px 0;
+  }
 </style>
 </head>
 <body>
@@ -59,6 +77,11 @@
   <div class="popup-parent" id="popupParent"></div>
   <div class="popup-desc" id="popupDesc"></div>
   <a class="popup-btn" id="popupBtn" target="_blank" rel="noopener"></a>
+</div>
+<div id="zoom-controls">
+  <button id="zoomIn">+</button>
+  <div id="zoom-level">100%</div>
+  <button id="zoomOut">&minus;</button>
 </div>
 
 <script>
@@ -311,8 +334,11 @@ let tooltipNode = null;
 let popupNode = null;
 let panX = 0, panY = 0;
 let panning = false;
-let panStartX = 0, panStartY = 0;
+let panStartXScreen = 0, panStartYScreen = 0;
+let panStartPanX = 0, panStartPanY = 0;
 let wasDragging = false;
+let zoom = 1;
+const ZOOM_MIN = 0.3, ZOOM_MAX = 2.5, ZOOM_STEP = 0.15;
 
 // ── Popup ───────────────────────────────────────────────────────────────────
 const popup = document.getElementById('popup');
@@ -791,7 +817,9 @@ function render() {
   ctx.clearRect(0, 0, W, H);
 
   ctx.save();
-  ctx.translate(panX, panY);
+  ctx.translate(W / 2 + panX, H / 2 + panY);
+  ctx.scale(zoom, zoom);
+  ctx.translate(-W / 2, -H / 2);
 
   // Background grid
   renderGrid();
@@ -872,9 +900,11 @@ function updateNodePositions() {
 
 // ── Find node under cursor ──────────────────────────────────────────────────
 function nodeAt(mx, my) {
+  const wx = (mx - W / 2 - panX) / zoom + W / 2;
+  const wy = (my - H / 2 - panY) / zoom + H / 2;
   for (let i = nodes.length - 1; i >= 0; i--) {
     const n = nodes[i];
-    const dist = Math.hypot(mx - n.x, my - n.y);
+    const dist = Math.hypot(wx - n.x, wy - n.y);
     if (dist <= n.r + 10) return n;
   }
   return null;
@@ -887,15 +917,15 @@ canvas.addEventListener('mousemove', e => {
   mouseY = e.clientY - rect.top;
 
   if (panning) {
-    panX = mouseX - panStartX;
-    panY = mouseY - panStartY;
-    if (Math.abs(mouseX - panStartX) > 3 || Math.abs(mouseY - panStartY) > 3) {
+    panX = (mouseX - panStartXScreen) / zoom + panStartPanX;
+    panY = (mouseY - panStartYScreen) / zoom + panStartPanY;
+    if (Math.abs(mouseX - panStartXScreen) > 3 || Math.abs(mouseY - panStartYScreen) > 3) {
       wasDragging = true;
     }
     return;
   }
 
-  const n = nodeAt(mouseX - panX, mouseY - panY);
+  const n = nodeAt(mouseX, mouseY);
   hoveredNodeId = n ? n.id : null;
   tooltipNode = n || null;
   canvas.style.cursor = n ? 'pointer' : 'grab';
@@ -908,8 +938,10 @@ canvas.addEventListener('mousedown', e => {
   const n = nodeAt(mx - panX, my - panY);
   panning = true;
   wasDragging = false;
-  panStartX = mx - panX;
-  panStartY = my - panY;
+  panStartXScreen = mx;
+  panStartYScreen = my;
+  panStartPanX = panX;
+  panStartPanY = panY;
   canvas.style.cursor = 'grabbing';
 });
 
@@ -942,6 +974,17 @@ canvas.addEventListener('mouseleave', () => {
   hoveredNodeId = null;
   tooltipNode = null;
   panning = false;
+});
+
+// ── Zoom Controls ───────────────────────────────────────────────────────────
+const zoomLevel = document.getElementById('zoom-level');
+document.getElementById('zoomIn').addEventListener('click', () => {
+  zoom = Math.min(ZOOM_MAX, zoom + ZOOM_STEP);
+  zoomLevel.textContent = Math.round(zoom * 100) + '%';
+});
+document.getElementById('zoomOut').addEventListener('click', () => {
+  zoom = Math.max(ZOOM_MIN, zoom - ZOOM_STEP);
+  zoomLevel.textContent = Math.round(zoom * 100) + '%';
 });
 
 canvas.addEventListener('dblclick', e => {
