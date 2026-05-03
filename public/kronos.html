@@ -387,6 +387,13 @@ function drawNode(node, dimmed) {
   ctx.fillStyle = coreGrd;
   ctx.fill();
 
+  // ── Node icon (eje sistema / KRONOS only) ──
+  if (r >= 22) {
+    const iSize = r * 0.45;
+    const iconAlpha = dimmed ? 0.15 : 0.5;
+    drawNodeIcon(ctx, node.id, iSize, iconAlpha);
+  }
+
   // Dark inner border
   ctx.shadowBlur = 0;
   ctx.globalAlpha = dimmed ? 0.4 : 0.8;
@@ -491,6 +498,83 @@ function roundRect(c, x, y, w, h, r) {
   c.lineTo(x, y + r);
   c.arcTo(x, y, x + r, y, r);
   c.closePath();
+}
+
+// ── Node Icons (canvas paths) ──────────────────────────────────────────────
+function drawNodeIcon(ctx, id, s, alpha) {
+  ctx.save();
+  ctx.strokeStyle = `rgba(255,255,255,${alpha + 0.3})`;
+  ctx.fillStyle = `rgba(255,255,255,${alpha})`;
+  ctx.lineWidth = 1.2;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+
+  switch (id) {
+    case 'kronos': // 8-point compass star
+      ctx.beginPath();
+      for (let i = 0; i < 8; i++) {
+        const a = (i * Math.PI) / 4 - Math.PI / 2;
+        const r = i % 2 === 0 ? s : s * 0.42;
+        const x = Math.cos(a) * r, y = Math.sin(a) * r;
+        i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+      }
+      ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.beginPath(); ctx.arc(0, 0, s * 0.18, 0, Math.PI * 2); ctx.fill();
+      break;
+
+    case 'winstats': // Bar chart
+      ctx.fillRect(-s * 0.75,  s * 0.25, s * 0.42, -s * 0.45);
+      ctx.fillRect(-s * 0.18,  s * 0.25, s * 0.42, -s * 0.75);
+      ctx.fillRect( s * 0.40,  s * 0.25, s * 0.42, -s * 0.55);
+      break;
+
+    case 'architechia': // Hexagon
+      ctx.beginPath();
+      for (let i = 0; i < 6; i++) {
+        const a = (i * Math.PI) / 3 - Math.PI / 6;
+        const x = Math.cos(a) * s * 0.8, y = Math.sin(a) * s * 0.8;
+        i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+      }
+      ctx.closePath(); ctx.stroke();
+      // Inner dot
+      ctx.beginPath(); ctx.arc(0, 0, s * 0.15, 0, Math.PI * 2); ctx.fill();
+      break;
+
+    case 'growdata': // Upward arrow with bar
+      ctx.beginPath();
+      ctx.moveTo(0, s * 0.75);
+      ctx.lineTo(0, -s * 0.6);
+      ctx.stroke();
+      // Arrowhead
+      ctx.beginPath();
+      ctx.moveTo(-s * 0.55, -s * 0.1);
+      ctx.lineTo(0, -s * 0.75);
+      ctx.lineTo(s * 0.55, -s * 0.1);
+      ctx.stroke();
+      break;
+
+    case 'academia': // Open book
+      ctx.beginPath();
+      ctx.moveTo(-s * 0.55, -s * 0.65);
+      ctx.quadraticCurveTo(-s * 0.55, s * 0.1, 0, s * 0.3);
+      ctx.quadraticCurveTo(s * 0.55, s * 0.1, s * 0.55, -s * 0.65);
+      ctx.stroke();
+      // Center line
+      ctx.beginPath(); ctx.moveTo(0, -s * 0.3); ctx.lineTo(0, s * 0.3); ctx.stroke();
+      break;
+
+    case 'personal': // Person silhouette
+      // Head
+      ctx.beginPath(); ctx.arc(0, -s * 0.35, s * 0.3, 0, Math.PI * 2); ctx.fill();
+      // Body arc
+      ctx.beginPath(); ctx.arc(0, s * 0.6, s * 0.7, Math.PI * 1.15, Math.PI * 1.85); ctx.fill();
+      break;
+
+    default:
+      ctx.beginPath(); ctx.arc(0, 0, s * 0.35, 0, Math.PI * 2); ctx.fill();
+  }
+
+  ctx.restore();
 }
 
 // ── KRONOS orbit rings ──────────────────────────────────────────────────────
