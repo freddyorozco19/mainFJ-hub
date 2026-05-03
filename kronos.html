@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KRONOS — Multi-Agent System</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: #050508; }
+  canvas { display: block; }
+  #tooltip {
+    position: fixed; pointer-events: none; z-index: 100;
+    background: #0D0D1A; border: 1px solid; border-radius: 8px;
+    padding: 10px 14px; font-family: 'Courier New', monospace;
+    font-size: 11px; opacity: 0; transition: opacity 0.15s;
+    min-width: 140px; max-width: 220px;
+  }
+  #tooltip .name { color: #fff; font-weight: bold; font-size: 12px; margin-bottom: 3px; }
+  #tooltip .role { color: #8b8b9c; font-size: 10px; margin-bottom: 4px; }
+  #tooltip .conn { color: #6b6b8c; font-size: 10px; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="tooltip"></div>
+
+<script>
+// ── Configuration ───────────────────────────────────────────────────────────
+const COLORS = {
+  orchestrator: { fill: '#7B61FF', glow: '#7B61FF', label: '#7B61FF' },
+  infrastructure: { fill: '#00E5B0', glow: '#00E5B0', label: '#00E5B0' },
+  operations: { fill: '#FF4F9A', glow: '#FF4F9A', label: '#FF4F9A' },
+  clients: { fill: '#3B9EFF', glow: '#3B9EFF', label: '#3B9EFF' },
+  content: { fill: '#FFB020', glow: '#FFB020', label: '#FFB020' },
+  products: { fill: '#FF6B35', glow: '#FF6B35', label: '#FF6B35' },
+  finance: { fill: '#39D353', glow: '#39D353', label: '#39D353' },
+};
+
+const LAYER_LABELS = {
+  orchestrator: 'ORCHESTRATOR',
+  infrastructure: 'INFRASTRUCTURE',
+  operations: 'OPERATIONS',
+  clients: 'CLIENTS',
+  content: 'CONTENT',
+  products: 'PRODUCTS',
+  finance: 'FINANCE',
+};
+
+// Position presets as canvas fractions
+const NODE_DEFS = [
+  // Orchestrator
+  { id: 'kronos', name: 'KRONOS', role: 'Orchestrator AI', layer: 'orchestrator', fx: 0.25, fy: 0.52, r: 32 },
+  // Infrastructure
+  { id: '47os', name: '47 OS', role: 'Linux Base', layer: 'infrastructure', fx: 0.09, fy: 0.15, r: 20 },
+  { id: 'pulse', name: 'Pulse Mainframe', role: 'Compute Cluster', layer: 'infrastructure', fx: 0.06, fy: 0.30, r: 20 },
+  { id: 'aisol', name: 'AI Solutions', role: 'ML Pipeline', layer: 'infrastructure', fx: 0.11, fy: 0.44, r: 20 },
+  // Operations
+  { id: 'ops-hub', name: 'Operations Hub', role: 'Ops Center', layer: 'operations', fx: 0.42, fy: 0.26, r: 20 },
+  { id: 'outreach', name: 'Outreach Agent', role: 'Lead Gen', layer: 'operations', fx: 0.54, fy: 0.12, r: 13 },
+  { id: 'internal', name: 'Internal Systems', role: 'Automation', layer: 'operations', fx: 0.56, fy: 0.30, r: 13 },
+  // Clients
+  { id: 'clients-hub', name: 'Clients Hub', role: 'Client Mgmt', layer: 'clients', fx: 0.70, fy: 0.22, r: 20 },
+  { id: 'wells', name: 'Wells Landscaping', role: 'Client Account', layer: 'clients', fx: 0.84, fy: 0.07, r: 13 },
+  { id: 'spark8', name: 'Spark 8 Lounge', role: 'Client Account', layer: 'clients', fx: 0.91, fy: 0.20, r: 13 },
+  { id: 'conscious', name: 'Conscious Soul Skin', role: 'Client Account', layer: 'clients', fx: 0.87, fy: 0.37, r: 13 },
+  // Content
+  { id: 'content-studio', name: 'Content Studio', role: 'Media Hub', layer: 'content', fx: 0.70, fy: 0.52, r: 20 },
+  { id: 'leadslicer', name: 'LeadSlicer AI', role: 'AI Content Tool', layer: 'content', fx: 0.84, fy: 0.52, r: 13 },
+  // Products
+  { id: '47music', name: '47 Music', role: 'Music Label', layer: 'products', fx: 0.28, fy: 0.78, r: 20 },
+  { id: 'motorev', name: 'MotoRev', role: 'Motorsport', layer: 'products', fx: 0.46, fy: 0.82, r: 20 },
+  { id: 'bookfam', name: 'BookFam', role: 'Publishing', layer: 'products', fx: 0.62, fy: 0.78, r: 20 },
+  // Personal/Finance
+  { id: 'personal-os', name: 'Personal OS', role: 'Private Workspace', layer: 'finance', fx: 0.68, fy: 0.76, r: 20 },
+  { id: 'finance-tax', name: 'Finance + Tax', role: 'Money Mgmt', layer: 'finance', fx: 0.82, fy: 0.72, r: 13 },
+  { id: 'admin-ops', name: 'Admin Operations', role: 'Logistics', layer: 'finance', fx: 0.85, fy: 0.87, r: 13 },
+];
+
+const EDGE_DEFS = [
+  { from: 'kronos', to: '47os' },
+  { from: 'kronos', to: 'pulse' },
+  { from: 'kronos', to: 'aisol' },
+  { from: 'kronos', to: 'ops-hub' },
+  { from: 'ops-hub', to: 'outreach' },
+  { from: 'ops-hub', to: 'internal' },
+  { from: 'kronos', to: 'clients-hub' },
+  { from: 'clients-hub', to: 'wells' },
+  { from: 'clients-hub', to: 'spark8' },
+  { from: 'clients-hub', to: 'conscious' },
+  { from: 'kronos', to: 'content-studio' },
+  { from: 'content-studio', to: 'leadslicer' },
+  { from: 'kronos', to: '47music' },
+  { from: 'kronos', to: 'motorev' },
+  { from: 'kronos', to: 'bookfam' },
+  { from: 'kronos', to: 'personal-os' },
+  { from: 'personal-os', to: 'finance-tax' },
+  { from: 'personal-os', to: 'admin-ops' },
+];
+
+// ── Canvas Setup ────────────────────────────────────────────────────────────
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+const tooltip = document.getElementById('tooltip');
+
+let W, H;
+function resize() {
+  W = canvas.width = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+}
+window.addEventListener('resize', resize);
+resize();
+
+// ── Grid Background (offscreen, cached) ────────────────────────────────────
+const gridCanvas = document.createElement('canvas');
+let gridValid = false;
+function renderGrid() {
+  if (gridValid && gridCanvas.width === W && gridCanvas.height === H) return;
+  gridCanvas.width = W;
+  gridCanvas.height = H;
+  const g = gridCanvas.getContext('2d');
+  g.clearRect(0, 0, W, H);
+
+  // Radial gradient
+  const grd = g.createRadialGradient(W * 0.25, H * 0.52, 0, W * 0.5, H * 0.5, Math.max(W, H) * 0.7);
+  grd.addColorStop(0, '#0a0a20');
+  grd.addColorStop(0.5, '#050510');
+  grd.addColorStop(1, '#050508');
+  g.fillStyle = grd;
+  g.fillRect(0, 0, W, H);
+
+  // Dotted grid
+  const spacing = 40;
+  g.fillStyle = 'rgba(255,255,255,0.04)';
+  for (let x = spacing; x < W; x += spacing) {
+    for (let y = spacing; y < H; y += spacing) {
+      g.beginPath();
+      g.arc(x, y, 0.8, 0, Math.PI * 2);
+      g.fill();
+    }
+  }
+
+  // Dashed grid lines (subtle)
+  g.strokeStyle = 'rgba(255,255,255,0.03)';
+  g.lineWidth = 0.5;
+  g.setLineDash([2, 20]);
+  for (let x = spacing * 2; x < W; x += spacing * 2) {
+    g.beginPath(); g.moveTo(x, 0); g.lineTo(x, H); g.stroke();
+  }
+  for (let y = spacing * 2; y < H; y += spacing * 2) {
+    g.beginPath(); g.moveTo(0, y); g.lineTo(W, y); g.stroke();
+  }
+  g.setLineDash([]);
+  gridValid = true;
+}
+
+// ── Initialize Nodes ────────────────────────────────────────────────────────
+function hexToRgb(hex) {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return { r, g, b };
+}
+
+const nodes = NODE_DEFS.map(n => ({
+  ...n,
+  x: n.fx * W,
+  y: n.fy * H,
+  baseX: n.fx * W,
+  baseY: n.fy * H,
+  phase: Math.random() * Math.PI * 2,
+  color: COLORS[n.layer],
+  rgb: hexToRgb(COLORS[n.layer].fill),
+  pulse: 0,
+}));
+
+function getNode(id) { return nodes.find(n => n.id === id); }
+const kronos = getNode('kronos');
+
+// ── Connection Map ──────────────────────────────────────────────────────────
+EDGE_DEFS.forEach(e => {
+  e.fromNode = getNode(e.from);
+  e.toNode = getNode(e.to);
+});
+
+// ── Particles ───────────────────────────────────────────────────────────────
+const PARTICLES_PER_EDGE = 3;
+const TRAIL_LENGTH = 7;
+
+const particles = [];
+
+function initParticles() {
+  particles.length = 0;
+  EDGE_DEFS.forEach(edge => {
+    const { fromNode, toNode } = edge;
+    for (let i = 0; i < PARTICLES_PER_EDGE; i++) {
+      // Determine direction: away from KRONOS
+      const dFrom = Math.hypot(fromNode.baseX - kronos.baseX, fromNode.baseY - kronos.baseY);
+      const dTo = Math.hypot(toNode.baseX - kronos.baseX, toNode.baseY - kronos.baseY);
+      // Particle goes from closer-to-KRONOS node → farther-from-KRONOS node
+      const goesForward = dFrom < dTo; // true = t: 0→1, false = t: 1→0
+      particles.push({
+        edge,
+        fromNode,
+        toNode,
+        t: goesForward ? Math.random() : 1 - Math.random(),
+        speed: 0.0004 + Math.random() * 0.0008,
+        goesForward,
+        trail: [],
+        phase: Math.random(),
+      });
+    }
+  });
+}
+initParticles();
+
+// ── Math Helpers ────────────────────────────────────────────────────────────
+function quadraticBez(p0, p1, p2, t) {
+  const mt = 1 - t;
+  return {
+    x: mt * mt * p0.x + 2 * mt * t * p1.x + t * t * p2.x,
+    y: mt * mt * p0.y + 2 * mt * t * p1.y + t * t * p2.y,
+  };
+}
+
+function controlPoint(a, b, arcOffset) {
+  const mx = (a.x + b.x) / 2;
+  const my = (a.y + b.y) / 2;
+  const dx = b.x - a.x;
+  const dy = b.y - a.y;
+  const len = Math.hypot(dx, dy) || 1;
+  const offset = arcOffset || len * 0.25;
+  return { x: mx + (-dy / len) * offset, y: my + (dx / len) * offset };
+}
+
+// ── Connection tracking for selection ───────────────────────────────────────
+function getConnectedNodes(nodeId) {
+  const connected = new Set([nodeId]);
+  EDGE_DEFS.forEach(e => {
+    if (e.from === nodeId || e.to === nodeId) {
+      connected.add(e.from);
+      connected.add(e.to);
+    }
+  });
+  return connected;
+}
+
+function getConnectionCount(nodeId) {
+  return EDGE_DEFS.filter(e => e.from === nodeId || e.to === nodeId).length;
+}
+
+// ── State ───────────────────────────────────────────────────────────────────
+let selectedNodeId = null;
+let hoveredNodeId = null;
+let mouseX = -100, mouseY = -100;
+let dragNode = null;
+let dragOffX = 0, dragOffY = 0;
+let time = 0;
+let tooltipNode = null;
+
+// ── Edge Rendering ──────────────────────────────────────────────────────────
+function drawEdge(from, to, dimmed) {
+  const a = { x: from.x, y: from.y };
+  const b = { x: to.x, y: to.y };
+  const cp = controlPoint(a, b);
+  const color = COLORS[from.layer].fill;
+
+  ctx.beginPath();
+  ctx.moveTo(a.x, a.y);
+  ctx.quadraticCurveTo(cp.x, cp.y, b.x, b.y);
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 1;
+  ctx.globalAlpha = dimmed ? 0.05 : 0.15;
+  ctx.stroke();
+  ctx.globalAlpha = 1;
+}
+
+function drawEdgeHighlight(from, to) {
+  const a = { x: from.x, y: from.y };
+  const b = { x: to.x, y: to.y };
+  const cp = controlPoint(a, b);
+
+  ctx.save();
+  ctx.shadowColor = '#ffffff';
+  ctx.shadowBlur = 8;
+  ctx.beginPath();
+  ctx.moveTo(a.x, a.y);
+  ctx.quadraticCurveTo(cp.x, cp.y, b.x, b.y);
+  ctx.strokeStyle = 'rgba(255,255,255,0.7)';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+  ctx.restore();
+}
+
+// ── Particle Rendering ──────────────────────────────────────────────────────
+function drawParticle(p, dimmed) {
+  const a = { x: p.fromNode.x, y: p.fromNode.y };
+  const b = { x: p.toNode.x, y: p.toNode.y };
+  const cp = controlPoint(a, b);
+  const pos = quadraticBez(a, cp, b, p.t);
+  const color = COLORS[p.fromNode.layer].fill;
+
+  // Draw trail
+  for (let i = 0; i < p.trail.length; i++) {
+    const alpha = ((i + 1) / p.trail.length) * (dimmed ? 0.1 : 0.6);
+    const r = 2.5 * ((i + 1) / p.trail.length);
+    ctx.globalAlpha = alpha;
+    ctx.beginPath();
+    ctx.arc(p.trail[i].x, p.trail[i].y, r, 0, Math.PI * 2);
+    ctx.fillStyle = color;
+    ctx.fill();
+  }
+
+  // Draw head
+  ctx.globalAlpha = dimmed ? 0.1 : 0.9;
+  ctx.beginPath();
+  ctx.arc(pos.x, pos.y, 3, 0, Math.PI * 2);
+  ctx.fillStyle = color;
+  ctx.fill();
+
+  // Glow
+  ctx.globalAlpha = dimmed ? 0.05 : 0.4;
+  ctx.beginPath();
+  ctx.arc(pos.x, pos.y, 5, 0, Math.PI * 2);
+  ctx.fillStyle = color;
+  ctx.fill();
+
+  ctx.globalAlpha = 1;
+}
+
+// ── Node Rendering ──────────────────────────────────────────────────────────
+function drawNode(node, dimmed) {
+  const { x, y, r, color, rgb } = node;
+  const isHovered = hoveredNodeId === node.id;
+  const isSelected = selectedNodeId === node.id;
+  const scale = isHovered ? 1.08 : 1;
+
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.scale(scale, scale);
+
+  // ── Outer halo ring ──
+  const haloAlpha = dimmed ? 0.04 : (0.12 + Math.sin(time * 2.5 + node.phase) * 0.04);
+  ctx.globalAlpha = haloAlpha;
+  ctx.beginPath();
+  ctx.arc(0, 0, r * 1.55, 0, Math.PI * 2);
+  ctx.fillStyle = color.fill;
+  ctx.fill();
+
+  // ── Mid glow ring (breathes) ──
+  const breathe = 0.22 + Math.sin(time * 2 + node.pulse) * 0.08;
+  ctx.globalAlpha = dimmed ? 0.06 : breathe;
+  ctx.beginPath();
+  ctx.arc(0, 0, r * 1.25, 0, Math.PI * 2);
+  ctx.fillStyle = color.fill;
+  ctx.fill();
+
+  // Shadow glow
+  ctx.shadowColor = color.glow;
+  ctx.shadowBlur = isSelected ? r * 1.5 : (r * 0.6);
+
+  // ── Core circle ──
+  ctx.globalAlpha = dimmed ? 0.2 : 1;
+  ctx.beginPath();
+  ctx.arc(0, 0, r, 0, Math.PI * 2);
+
+  // Radial gradient for core
+  const coreGrd = ctx.createRadialGradient(-r * 0.2, -r * 0.2, r * 0.05, 0, 0, r);
+  coreGrd.addColorStop(0, '#ffffff');
+  coreGrd.addColorStop(0.15, color.fill);
+  coreGrd.addColorStop(1, `rgba(${rgb.r},${rgb.g},${rgb.b},0.6)`);
+  ctx.fillStyle = coreGrd;
+  ctx.fill();
+
+  // Dark inner border
+  ctx.shadowBlur = 0;
+  ctx.globalAlpha = dimmed ? 0.4 : 0.8;
+  ctx.beginPath();
+  ctx.arc(0, 0, r, 0, Math.PI * 2);
+  ctx.strokeStyle = `rgba(${rgb.r},${rgb.g},${rgb.b},0.5)`;
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+
+  // ── Inner highlight (specular) ──
+  ctx.globalAlpha = dimmed ? 0.1 : 0.55;
+  ctx.beginPath();
+  ctx.arc(-r * 0.28, -r * 0.28, r * 0.22, 0, Math.PI * 2);
+  ctx.fillStyle = '#ffffff';
+  ctx.fill();
+
+  ctx.globalAlpha = 1;
+  ctx.shadowBlur = 0;
+
+  // ── Selected highlight border ──
+  if (isSelected) {
+    ctx.beginPath();
+    ctx.arc(0, 0, r + 6, 0, Math.PI * 2);
+    ctx.strokeStyle = `rgba(255,255,255,0.7)`;
+    ctx.lineWidth = 2;
+    ctx.setLineDash([8, 4]);
+    ctx.lineDashOffset = -time * 40;
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  // ── Labels ──
+  const fontSize = r >= 32 ? 11 : (r >= 20 ? 10 : 9);
+  ctx.font = `bold ${fontSize}px "Courier New", monospace`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+
+  if (dimmed && !isSelected && !isHovered) {
+    ctx.globalAlpha = 0.2;
+  } else {
+    ctx.globalAlpha = 0.95;
+  }
+
+  // Glow behind name
+  ctx.shadowColor = 'rgba(255,255,255,0.4)';
+  ctx.shadowBlur = 3;
+  ctx.fillStyle = '#ffffff';
+  ctx.fillText(node.name, 0, 0);
+  ctx.shadowBlur = 0;
+
+  // Sublabel (role) - hidden on small leaf nodes unless hovered
+  if (r >= 20 || isHovered) {
+    const subLabelFontSize = r >= 20 ? 8 : 7;
+    ctx.font = `${subLabelFontSize}px "Courier New", monospace`;
+    ctx.globalAlpha = isHovered ? 0.6 : 0.4;
+    ctx.fillStyle = color.fill;
+    ctx.fillText(node.role, 0, r + fontSize * 0.8);
+  }
+
+  ctx.globalAlpha = 1;
+  ctx.restore();
+}
+
+// ── KRONOS orbit rings ──────────────────────────────────────────────────────
+function drawKronosOrbits() {
+  const k = kronos;
+  const dimmed = selectedNodeId && selectedNodeId !== 'kronos';
+
+  ctx.save();
+  ctx.translate(k.x, k.y);
+
+  // Persistent radial glow
+  const grd = ctx.createRadialGradient(0, 0, k.r * 0.5, 0, 0, k.r * 2.5);
+  grd.addColorStop(0, 'rgba(123,97,255,0.15)');
+  grd.addColorStop(0.5, 'rgba(123,97,255,0.04)');
+  grd.addColorStop(1, 'rgba(123,97,255,0)');
+  ctx.globalAlpha = dimmed ? 0.3 : 1;
+  ctx.fillStyle = grd;
+  ctx.beginPath();
+  ctx.arc(0, 0, k.r * 2.5, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Orbit ring 1
+  ctx.globalAlpha = dimmed ? 0.1 : 0.15;
+  ctx.beginPath();
+  ctx.ellipse(0, 0, k.r * 1.6, k.r * 1.2, time * 0.3, 0, Math.PI * 2);
+  ctx.strokeStyle = '#7B61FF';
+  ctx.lineWidth = 0.8;
+  ctx.setLineDash([3, 12]);
+  ctx.lineDashOffset = time * 30;
+  ctx.stroke();
+
+  // Orbit ring 2
+  ctx.beginPath();
+  ctx.ellipse(0, 0, k.r * 2.0, k.r * 1.0, -time * 0.4 + 1.2, 0, Math.PI * 2);
+  ctx.strokeStyle = '#7B61FF';
+  ctx.lineWidth = 0.6;
+  ctx.setLineDash([2, 16]);
+  ctx.lineDashOffset = -time * 25;
+  ctx.stroke();
+
+  ctx.setLineDash([]);
+  ctx.globalAlpha = 1;
+  ctx.restore();
+}
+
+// ── HUD ─────────────────────────────────────────────────────────────────────
+function drawHUD() {
+  // Bottom-left status
+  const statusText = selectedNodeId
+    ? `ACTIVE NODE: ${getNode(selectedNodeId).name.toUpperCase()}`
+    : 'SYSTEM ONLINE';
+
+  ctx.font = '10px "Courier New", monospace';
+  const tw = ctx.measureText(statusText).width;
+
+  // Blinking cursor
+  const blink = Math.sin(time * 5) > 0;
+
+  ctx.fillStyle = '#39D353';
+  ctx.globalAlpha = 0.9;
+  ctx.fillText(statusText, 18, H - 18);
+  if (blink) {
+    ctx.fillRect(18 + tw + 2, H - 28, 7, 14);
+  }
+  ctx.globalAlpha = 1;
+
+  // Top-right MRR counter
+  const mrrText = 'MRR $30,200';
+  ctx.font = '10px "Courier New", monospace';
+  const mrrW = ctx.measureText(mrrText).width;
+  ctx.fillStyle = '#FFB020';
+  ctx.globalAlpha = 0.7;
+  ctx.fillText(mrrText, W - mrrW - 18, 24);
+  ctx.globalAlpha = 1;
+}
+
+// ── Tooltip (DOM) ───────────────────────────────────────────────────────────
+function updateTooltip() {
+  if (tooltipNode) {
+    const n = tooltipNode;
+    tooltip.innerHTML = `
+      <div class="name">${n.name}</div>
+      <div class="role">${n.role}</div>
+      <div class="conn">↔ ${getConnectionCount(n.id)} connections</div>
+    `;
+    tooltip.style.borderColor = n.color.fill;
+    tooltip.style.opacity = '1';
+
+    // Position: offset from cursor, avoid canvas edges
+    const rect = tooltip.getBoundingClientRect();
+    const tw = rect.width || 140;
+    const th = rect.height || 70;
+    let tx = mouseX + 18;
+    let ty = mouseY + 18;
+    if (tx + tw + 10 > window.innerWidth) tx = mouseX - tw - 18;
+    if (ty + th + 10 > window.innerHeight) ty = mouseY - th - 18;
+    if (tx < 5) tx = 5;
+    if (ty < 5) ty = 5;
+    tooltip.style.left = tx + 'px';
+    tooltip.style.top = ty + 'px';
+  } else {
+    tooltip.style.opacity = '0';
+  }
+}
+
+// ── Main Render ─────────────────────────────────────────────────────────────
+function render() {
+  ctx.clearRect(0, 0, W, H);
+
+  // Background grid
+  renderGrid();
+  ctx.drawImage(gridCanvas, 0, 0);
+
+  // KRONOS orbits (behind everything)
+  drawKronosOrbits();
+
+  // Determine connected nodes if something is selected
+  let connectedSet = null;
+  if (selectedNodeId) {
+    connectedSet = getConnectedNodes(selectedNodeId);
+  }
+
+  // Draw edges
+  EDGE_DEFS.forEach(edge => {
+    const highlight = selectedNodeId && (edge.from === selectedNodeId || edge.to === selectedNodeId);
+    if (highlight) {
+      drawEdgeHighlight(edge.fromNode, edge.toNode);
+    } else {
+      const dimmed = !!selectedNodeId;
+      drawEdge(edge.fromNode, edge.toNode, dimmed);
+    }
+  });
+
+  // Update & draw particles
+  particles.forEach(p => {
+    // Move particle
+    if (p.goesForward) {
+      p.t += p.speed;
+      if (p.t > 1) p.t -= 1;
+    } else {
+      p.t -= p.speed;
+      if (p.t < 0) p.t += 1;
+    }
+
+    // Update trail
+    const a = { x: p.fromNode.x, y: p.fromNode.y };
+    const b = { x: p.toNode.x, y: p.toNode.y };
+    const cp = controlPoint(a, b);
+    const pos = quadraticBez(a, cp, b, p.t);
+    p.trail.push({ x: pos.x, y: pos.y });
+    if (p.trail.length > TRAIL_LENGTH) p.trail.shift();
+
+    // Draw
+    const edgeInHighlight = selectedNodeId &&
+      (p.edge.from === selectedNodeId || p.edge.to === selectedNodeId);
+    drawParticle(p, !!selectedNodeId && !edgeInHighlight);
+  });
+
+  // Draw nodes
+  nodes.forEach(node => {
+    const dimmed = connectedSet && !connectedSet.has(node.id);
+    drawNode(node, dimmed);
+  });
+
+  // HUD
+  drawHUD();
+
+  // Tooltip
+  updateTooltip();
+}
+
+// ── Node float animation ───────────────────────────────────────────────────
+function updateNodePositions() {
+  nodes.forEach(node => {
+    if (dragNode === node) return; // Don't animate dragged node
+    const amp = node.id === 'kronos' ? 1.5 : (node.r >= 20 ? 2 : 1.5);
+    const floatX = Math.sin(time * 0.6 + node.phase) * amp;
+    const floatY = Math.cos(time * 0.7 + node.phase + 1.3) * amp;
+    node.x = node.baseX + floatX;
+    node.y = node.baseY + floatY;
+    node.pulse = (node.pulse + 0.01) % (Math.PI * 2);
+  });
+}
+
+// ── Find node under cursor ──────────────────────────────────────────────────
+function nodeAt(mx, my) {
+  for (let i = nodes.length - 1; i >= 0; i--) {
+    const n = nodes[i];
+    const dist = Math.hypot(mx - n.x, my - n.y);
+    if (dist <= n.r + 10) return n;
+  }
+  return null;
+}
+
+// ── Canvas event handlers ───────────────────────────────────────────────────
+canvas.addEventListener('mousemove', e => {
+  const rect = canvas.getBoundingClientRect();
+  mouseX = e.clientX - rect.left;
+  mouseY = e.clientY - rect.top;
+
+  if (dragNode) {
+    dragNode.baseX = Math.max(dragNode.r, Math.min(W - dragNode.r, mouseX - dragOffX));
+    dragNode.baseY = Math.max(dragNode.r, Math.min(H - dragNode.r, mouseY - dragOffY));
+    return;
+  }
+
+  const n = nodeAt(mouseX, mouseY);
+  hoveredNodeId = n ? n.id : null;
+  tooltipNode = n || null;
+  canvas.style.cursor = n ? 'pointer' : 'default';
+});
+
+canvas.addEventListener('mousedown', e => {
+  const rect = canvas.getBoundingClientRect();
+  const mx = e.clientX - rect.left;
+  const my = e.clientY - rect.top;
+  const n = nodeAt(mx, my);
+  if (n) {
+    selectedNodeId = n.id;
+    dragNode = n;
+    dragOffX = mx - n.baseX;
+    dragOffY = my - n.baseY;
+  } else {
+    selectedNodeId = null;
+  }
+});
+
+canvas.addEventListener('mouseup', () => {
+  if (dragNode) {
+    dragNode._wasDragged = true;
+    dragNode = null;
+  }
+});
+
+canvas.addEventListener('mouseleave', () => {
+  hoveredNodeId = null;
+  tooltipNode = null;
+  dragNode = null;
+});
+
+canvas.addEventListener('dblclick', e => {
+  const rect = canvas.getBoundingClientRect();
+  const mx = e.clientX - rect.left;
+  const my = e.clientY - rect.top;
+  const n = nodeAt(mx, my);
+  if (!n) {
+    selectedNodeId = null;
+  }
+});
+
+// ── Responsive reposition ───────────────────────────────────────────────────
+window.addEventListener('resize', () => {
+  resize();
+  gridValid = false;
+  nodes.forEach(n => {
+    const def = NODE_DEFS.find(d => d.id === n.id);
+    if (def && !n._wasDragged) {
+      n.baseX = def.fx * W;
+      n.baseY = def.fy * H;
+    }
+  });
+});
+
+// ── Animation Loop ──────────────────────────────────────────────────────────
+function animate(ts) {
+  time = ts * 0.001;
+  updateNodePositions();
+  render();
+  requestAnimationFrame(animate);
+}
+
+requestAnimationFrame(animate);
+</script>
+</body>
+</html>
