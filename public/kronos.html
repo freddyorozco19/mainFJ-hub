@@ -325,6 +325,19 @@ function getConnectionCount(nodeId) {
   return EDGE_DEFS.filter(e => e.from === nodeId || e.to === nodeId).length;
 }
 
+// ── Path tracing to KRONOS ──────────────────────────────────────────────────
+function getPathToKronos(nodeId) {
+  const path = [nodeId];
+  let current = nodeId;
+  while (current !== 'kronos') {
+    const parent = EDGE_DEFS.find(e => e.to === current);
+    if (!parent) break;
+    current = parent.from;
+    path.push(current);
+  }
+  return path;
+}
+
 // ── State ───────────────────────────────────────────────────────────────────
 let selectedNodeId = null;
 let hoveredNodeId = null;
@@ -481,7 +494,7 @@ function drawParticle(p, dimmed) {
 }
 
 // ── Node Rendering ──────────────────────────────────────────────────────────
-function drawNode(node, dimmed) {
+function drawNode(node, dimmed, onPath) {
   const { x, y, r, color, rgb } = node;
   const isHovered = hoveredNodeId === node.id;
   const isSelected = selectedNodeId === node.id;
@@ -492,24 +505,24 @@ function drawNode(node, dimmed) {
   ctx.scale(scale, scale);
 
   // ── Outer halo ring ──
-  const haloAlpha = dimmed ? 0.04 : (0.12 + Math.sin(time * 2.5 + node.phase) * 0.04);
+  const haloAlpha = dimmed ? 0.04 : (onPath ? 0.22 : (0.12 + Math.sin(time * 2.5 + node.phase) * 0.04));
   ctx.globalAlpha = haloAlpha;
   ctx.beginPath();
   ctx.arc(0, 0, r * 1.55, 0, Math.PI * 2);
-  ctx.fillStyle = color.fill;
+  ctx.fillStyle = onPath ? '#ffffff' : color.fill;
   ctx.fill();
 
   // ── Mid glow ring (breathes) ──
-  const breathe = 0.22 + Math.sin(time * 2 + node.pulse) * 0.08;
-  ctx.globalAlpha = dimmed ? 0.06 : breathe;
+  const breathe = dimmed ? 0.06 : (onPath ? 0.30 : (0.22 + Math.sin(time * 2 + node.pulse) * 0.08));
+  ctx.globalAlpha = breathe;
   ctx.beginPath();
   ctx.arc(0, 0, r * 1.25, 0, Math.PI * 2);
-  ctx.fillStyle = color.fill;
+  ctx.fillStyle = onPath ? '#ffffff' : color.fill;
   ctx.fill();
 
   // Shadow glow
-  ctx.shadowColor = color.glow;
-  ctx.shadowBlur = isSelected ? r * 1.5 : (r * 0.6);
+  ctx.shadowColor = onPath ? '#ffffff' : color.glow;
+  ctx.shadowBlur = isSelected ? r * 1.5 : (onPath ? r * 1.0 : r * 0.6);
 
   // ── Core circle (dark gray, bright colored border) ──
   ctx.globalAlpha = dimmed ? 0.25 : 1;
@@ -834,12 +847,20 @@ function render() {
     connectedSet = getConnectedNodes(selectedNodeId);
   }
 
+  // Path trace from hovered node to KRONOS
+  let pathSet = null;
+  if (hoveredNodeId && hoveredNodeId !== 'kronos') {
+    const path = getPathToKronos(hoveredNodeId);
+    pathSet = new Set(path);
+  }
+
   // Draw edges
-  const mainEdges = ['kronos'];
   EDGE_DEFS.forEach(edge => {
-    const highlight = selectedNodeId && (edge.from === selectedNodeId || edge.to === selectedNodeId);
+    const isSelectedEdge = selectedNodeId && (edge.from === selectedNodeId || edge.to === selectedNodeId);
+    const isPathEdge = pathSet && pathSet.has(edge.from) && pathSet.has(edge.to);
     const isMain = edge.from === 'kronos' || edge.to === 'kronos';
-    if (highlight) {
+
+    if (isSelectedEdge || isPathEdge) {
       drawEdgeHighlight(edge.fromNode, edge.toNode);
     } else {
       const dimmed = !!selectedNodeId;
@@ -875,7 +896,8 @@ function render() {
   // Draw nodes
   nodes.forEach(node => {
     const dimmed = connectedSet && !connectedSet.has(node.id);
-    drawNode(node, dimmed);
+    const onPath = pathSet && pathSet.has(node.id) && !selectedNodeId;
+    drawNode(node, dimmed, onPath);
   });
 
   // HUD
@@ -991,9 +1013,15 @@ canvas.addEventListener('dblclick', e => {
   const rect = canvas.getBoundingClientRect();
   const mx = e.clientX - rect.left;
   const my = e.clientY - rect.top;
-  const n = nodeAt(mx - panX, my - panY);
+  const n = nodeAt(mx, my);
   if (!n) {
+    // Reset view: center on KRONOS, zoom 100%
     selectedNodeId = null;
+    hidePopup();
+    panX = 0;
+    panY = 0;
+    zoom = 1;
+    zoomLevel.textContent = '100%';
   }
 });
 
