@@ -311,6 +311,9 @@ let dragOffX = 0, dragOffY = 0;
 let time = 0;
 let tooltipNode = null;
 let popupNode = null;
+let panX = 0, panY = 0;
+let panning = false;
+let panStartX = 0, panStartY = 0;
 
 // ── Popup ───────────────────────────────────────────────────────────────────
 const popup = document.getElementById('popup');
@@ -788,6 +791,9 @@ function updateTooltip() {
 function render() {
   ctx.clearRect(0, 0, W, H);
 
+  ctx.save();
+  ctx.translate(panX, panY);
+
   // Background grid
   renderGrid();
   ctx.drawImage(gridCanvas, 0, 0);
@@ -846,6 +852,7 @@ function render() {
   });
 
   // HUD
+  ctx.restore();
   drawHUD();
 
   // Tooltip
@@ -881,43 +888,51 @@ canvas.addEventListener('mousemove', e => {
   mouseX = e.clientX - rect.left;
   mouseY = e.clientY - rect.top;
 
-  if (dragNode) {
-    dragNode.baseX = Math.max(dragNode.r, Math.min(W - dragNode.r, mouseX - dragOffX));
-    dragNode.baseY = Math.max(dragNode.r, Math.min(H - dragNode.r, mouseY - dragOffY));
+  if (panning) {
+    panX = mouseX - panStartX;
+    panY = mouseY - panStartY;
     return;
   }
 
-  const n = nodeAt(mouseX, mouseY);
+  if (dragNode) {
+    dragNode.baseX = mouseX - panX - dragOffX;
+    dragNode.baseY = mouseY - panY - dragOffY;
+    return;
+  }
+
+  const n = nodeAt(mouseX - panX, mouseY - panY);
   hoveredNodeId = n ? n.id : null;
   tooltipNode = n || null;
-  canvas.style.cursor = n ? 'pointer' : 'default';
+  canvas.style.cursor = n ? 'pointer' : panning ? 'grabbing' : 'grab';
 });
 
 canvas.addEventListener('mousedown', e => {
   const rect = canvas.getBoundingClientRect();
   const mx = e.clientX - rect.left;
   const my = e.clientY - rect.top;
-  const n = nodeAt(mx, my);
+  const n = nodeAt(mx - panX, my - panY);
   if (n) {
     if (n.r < 18) {
-      // Sectorial: show popup
       selectedNodeId = null;
       showPopup(n, mx, my);
     } else {
-      // Hub / KRONOS: select + drag
       hidePopup();
       selectedNodeId = n.id;
       dragNode = n;
-      dragOffX = mx - n.baseX;
-      dragOffY = my - n.baseY;
+      dragOffX = mx - panX - n.baseX;
+      dragOffY = my - panY - n.baseY;
     }
   } else {
     hidePopup();
     selectedNodeId = null;
+    panning = true;
+    panStartX = mx - panX;
+    panStartY = my - panY;
   }
 });
 
 canvas.addEventListener('mouseup', () => {
+  panning = false;
   if (dragNode) {
     dragNode._wasDragged = true;
     dragNode = null;
@@ -934,7 +949,7 @@ canvas.addEventListener('dblclick', e => {
   const rect = canvas.getBoundingClientRect();
   const mx = e.clientX - rect.left;
   const my = e.clientY - rect.top;
-  const n = nodeAt(mx, my);
+  const n = nodeAt(mx - panX, my - panY);
   if (!n) {
     selectedNodeId = null;
   }
