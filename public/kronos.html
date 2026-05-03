@@ -274,18 +274,31 @@ let time = 0;
 let tooltipNode = null;
 
 // ── Edge Rendering ──────────────────────────────────────────────────────────
-function drawEdge(from, to, dimmed) {
+function drawEdge(from, to, dimmed, isMain) {
   const a = { x: from.x, y: from.y };
   const b = { x: to.x, y: to.y };
   const cp = controlPoint(a, b);
   const color = COLORS[from.layer].fill;
 
+  // Glow layer
+  ctx.save();
+  ctx.shadowColor = color;
+  ctx.shadowBlur = isMain ? 8 : 4;
   ctx.beginPath();
   ctx.moveTo(a.x, a.y);
   ctx.quadraticCurveTo(cp.x, cp.y, b.x, b.y);
   ctx.strokeStyle = color;
-  ctx.lineWidth = 1;
-  ctx.globalAlpha = dimmed ? 0.05 : 0.15;
+  ctx.lineWidth = isMain ? 2.2 : 1.4;
+  ctx.globalAlpha = dimmed ? (isMain ? 0.12 : 0.06) : (isMain ? 0.45 : 0.28);
+  ctx.stroke();
+  ctx.restore();
+
+  // Core line
+  ctx.beginPath();
+  ctx.moveTo(a.x, a.y);
+  ctx.quadraticCurveTo(cp.x, cp.y, b.x, b.y);
+  ctx.strokeStyle = `rgba(255,255,255,${dimmed ? (isMain ? 0.12 : 0.06) : (isMain ? 0.3 : 0.15)})`;
+  ctx.lineWidth = isMain ? 1 : 0.6;
   ctx.stroke();
   ctx.globalAlpha = 1;
 }
@@ -695,13 +708,15 @@ function render() {
   }
 
   // Draw edges
+  const mainEdges = ['kronos'];
   EDGE_DEFS.forEach(edge => {
     const highlight = selectedNodeId && (edge.from === selectedNodeId || edge.to === selectedNodeId);
+    const isMain = edge.from === 'kronos' || edge.to === 'kronos';
     if (highlight) {
       drawEdgeHighlight(edge.fromNode, edge.toNode);
     } else {
       const dimmed = !!selectedNodeId;
-      drawEdge(edge.fromNode, edge.toNode, dimmed);
+      drawEdge(edge.fromNode, edge.toNode, dimmed, isMain);
     }
   });
 
