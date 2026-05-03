@@ -402,36 +402,79 @@ function drawNode(node, dimmed) {
     ctx.setLineDash([]);
   }
 
-  // ── Labels ──
+  // ── Labels with pill backgrounds ──
   const fontSize = r >= 32 ? 11 : (r >= 20 ? 10 : 9);
-  ctx.font = `bold ${fontSize}px "Courier New", monospace`;
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
+  const padX = 8;
+  const padY = 3;
 
   if (dimmed && !isSelected && !isHovered) {
     ctx.globalAlpha = 0.2;
   } else {
-    ctx.globalAlpha = 0.95;
+    ctx.globalAlpha = 1;
   }
 
-  // Glow behind name
-  ctx.shadowColor = 'rgba(255,255,255,0.4)';
-  ctx.shadowBlur = 3;
+  // Name pill
+  ctx.font = `bold ${fontSize}px "Courier New", monospace`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  const nameW = ctx.measureText(node.name).width;
+
+  // Pill background
+  ctx.fillStyle = 'rgba(5,5,8,0.8)';
+  ctx.beginPath();
+  roundRect(ctx, -nameW / 2 - padX, -fontSize / 2 - padY, nameW + padX * 2, fontSize + padY * 2, 4);
+  ctx.fill();
+
+  // Pill border
+  ctx.strokeStyle = `rgba(${rgb.r},${rgb.g},${rgb.b},0.35)`;
+  ctx.lineWidth = 0.8;
+  ctx.stroke();
+
+  // Name text
+  ctx.shadowColor = 'rgba(255,255,255,0.5)';
+  ctx.shadowBlur = 2;
   ctx.fillStyle = '#ffffff';
   ctx.fillText(node.name, 0, 0);
   ctx.shadowBlur = 0;
 
-  // Sublabel (role) - hidden on small leaf nodes unless hovered
+  // Sublabel pill + text (hidden on small leaf nodes unless hovered)
   if (r >= 20 || isHovered) {
     const subLabelFontSize = r >= 20 ? 8 : 7;
     ctx.font = `${subLabelFontSize}px "Courier New", monospace`;
-    ctx.globalAlpha = isHovered ? 0.6 : 0.4;
+    const subY = r + fontSize * 0.8 + subLabelFontSize * 0.6;
+    const subW = ctx.measureText(node.role).width;
+
+    ctx.globalAlpha = (dimmed && !isSelected && !isHovered) ? 0.2 : 0.85;
+    ctx.fillStyle = 'rgba(5,5,8,0.75)';
+    ctx.beginPath();
+    roundRect(ctx, -subW / 2 - padX + 2, subY - subLabelFontSize / 2 - padY + 1, subW + (padX - 2) * 2, subLabelFontSize + (padY - 1) * 2, 3);
+    ctx.fill();
+
+    ctx.strokeStyle = `rgba(${rgb.r},${rgb.g},${rgb.b},0.25)`;
+    ctx.lineWidth = 0.6;
+    ctx.stroke();
+
+    ctx.globalAlpha = (dimmed && !isSelected && !isHovered) ? 0.2 : 0.7;
     ctx.fillStyle = color.fill;
-    ctx.fillText(node.role, 0, r + fontSize * 0.8);
+    ctx.fillText(node.role, 0, subY);
   }
 
   ctx.globalAlpha = 1;
   ctx.restore();
+}
+
+function roundRect(c, x, y, w, h, r) {
+  c.beginPath();
+  c.moveTo(x + r, y);
+  c.lineTo(x + w - r, y);
+  c.arcTo(x + w, y, x + w, y + r, r);
+  c.lineTo(x + w, y + h - r);
+  c.arcTo(x + w, y + h, x + w - r, y + h, r);
+  c.lineTo(x + r, y + h);
+  c.arcTo(x, y + h, x, y + h - r, r);
+  c.lineTo(x, y + r);
+  c.arcTo(x, y, x + r, y, r);
+  c.closePath();
 }
 
 // ── KRONOS orbit rings ──────────────────────────────────────────────────────
