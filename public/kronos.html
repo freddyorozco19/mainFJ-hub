@@ -524,64 +524,24 @@ function drawNodeIcon(ctx, id, s, alpha) {
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
 
-  switch (id) {
-    case 'kronos': // 8-point compass star
-      ctx.beginPath();
-      for (let i = 0; i < 8; i++) {
-        const a = (i * Math.PI) / 4 - Math.PI / 2;
-        const rad = i % 2 === 0 ? s : s * 0.38;
-        const x = Math.cos(a) * rad, y = Math.sin(a) * rad;
-        i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
-      }
-      ctx.closePath(); ctx.fill(); ctx.stroke();
-      ctx.beginPath(); ctx.arc(0, 0, s * 0.2, 0, Math.PI * 2); ctx.fill();
-      break;
+  // Universal node icon: circle hub + 3 radiating connections
+  // Central dot
+  ctx.beginPath();
+  ctx.arc(0, 0, s * 0.24, 0, Math.PI * 2);
+  ctx.fill();
 
-    case 'winstats': // Bar chart — 3 bars
-      ctx.fillRect(-s * 0.75,  s * 0.2, s * 0.42, -s * 0.5);
-      ctx.fillRect(-s * 0.18,  s * 0.2, s * 0.42, -s * 0.8);
-      ctx.fillRect( s * 0.40,  s * 0.2, s * 0.42, -s * 0.6);
-      break;
-
-    case 'architechia': // Hexagon
-      ctx.beginPath();
-      for (let i = 0; i < 6; i++) {
-        const a = (i * Math.PI) / 3 - Math.PI / 6;
-        const x = Math.cos(a) * s * 0.85, y = Math.sin(a) * s * 0.85;
-        i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
-      }
-      ctx.closePath(); ctx.stroke();
-      ctx.beginPath(); ctx.arc(0, 0, s * 0.2, 0, Math.PI * 2); ctx.fill();
-      break;
-
-    case 'growdata': // Upward arrow with bar
-      ctx.beginPath();
-      ctx.moveTo(0, s * 0.8);
-      ctx.lineTo(0, -s * 0.65);
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.moveTo(-s * 0.6, -s * 0.15);
-      ctx.lineTo(0, -s * 0.8);
-      ctx.lineTo(s * 0.6, -s * 0.15);
-      ctx.stroke();
-      break;
-
-    case 'academia': // Open book
-      ctx.beginPath();
-      ctx.moveTo(-s * 0.6, -s * 0.7);
-      ctx.quadraticCurveTo(-s * 0.6, s * 0.15, 0, s * 0.35);
-      ctx.quadraticCurveTo(s * 0.6, s * 0.15, s * 0.6, -s * 0.7);
-      ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(0, -s * 0.35); ctx.lineTo(0, s * 0.35); ctx.stroke();
-      break;
-
-    case 'personal': // Person
-      ctx.beginPath(); ctx.arc(0, -s * 0.4, s * 0.32, 0, Math.PI * 2); ctx.fill();
-      ctx.beginPath(); ctx.arc(0, s * 0.55, s * 0.65, Math.PI * 1.15, Math.PI * 1.85); ctx.fill();
-      break;
-
-    default:
-      ctx.beginPath(); ctx.arc(0, 0, s * 0.4, 0, Math.PI * 2); ctx.fill();
+  // 3 radiating lines to outer dots
+  for (let i = 0; i < 3; i++) {
+    const angle = (i * Math.PI * 2) / 3 - Math.PI / 2;
+    const x = Math.cos(angle) * s * 0.78;
+    const y = Math.sin(angle) * s * 0.78;
+    ctx.beginPath();
+    ctx.moveTo(Math.cos(angle) * s * 0.32, Math.sin(angle) * s * 0.32);
+    ctx.lineTo(x, y);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(x, y, s * 0.14, 0, Math.PI * 2);
+    ctx.fill();
   }
 
   ctx.restore();
