@@ -374,25 +374,119 @@ function drawNode(node, dimmed) {
   ctx.shadowColor = color.glow;
   ctx.shadowBlur = isSelected ? r * 1.5 : (r * 0.6);
 
-  // ── Core circle ──
-  ctx.globalAlpha = dimmed ? 0.2 : 1;
+  // ── Core circle (dark gray, bright colored border) ──
+  ctx.globalAlpha = dimmed ? 0.25 : 1;
   ctx.beginPath();
   ctx.arc(0, 0, r, 0, Math.PI * 2);
-
-  // Radial gradient for core
-  const coreGrd = ctx.createRadialGradient(-r * 0.2, -r * 0.2, r * 0.05, 0, 0, r);
-  coreGrd.addColorStop(0, '#ffffff');
-  coreGrd.addColorStop(0.15, color.fill);
-  coreGrd.addColorStop(1, `rgba(${rgb.r},${rgb.g},${rgb.b},0.6)`);
-  ctx.fillStyle = coreGrd;
+  ctx.fillStyle = '#14141e';
   ctx.fill();
 
-  // ── Node icon (eje sistema / KRONOS only) ──
+  ctx.shadowBlur = 0;
+  ctx.beginPath();
+  ctx.arc(0, 0, r, 0, Math.PI * 2);
+  ctx.strokeStyle = color.glow;
+  ctx.lineWidth = r >= 22 ? 2.5 : 1.8;
+  ctx.stroke();
+
+  // Second subtle border
+  ctx.beginPath();
+  ctx.arc(0, 0, r + 2, 0, Math.PI * 2);
+  ctx.strokeStyle = `rgba(${rgb.r},${rgb.g},${rgb.b},0.3)`;
+  ctx.lineWidth = 1;
+  ctx.stroke();
+
+  // ── Node icon (eje sistema / KRONOS) ──
   if (r >= 22) {
-    const iSize = r * 0.45;
-    const iconAlpha = dimmed ? 0.15 : 0.5;
+    const iSize = r * 0.58;
+    const iconAlpha = dimmed ? 0.2 : 0.85;
     drawNodeIcon(ctx, node.id, iSize, iconAlpha);
   }
+
+  // ── Inner highlight (specular dot) ──
+  ctx.globalAlpha = dimmed ? 0.1 : 0.4;
+  ctx.shadowColor = 'rgba(255,255,255,0.6)';
+  ctx.shadowBlur = 2;
+  ctx.beginPath();
+  ctx.arc(-r * 0.28, -r * 0.28, r * 0.22, 0, Math.PI * 2);
+  ctx.fillStyle = '#ffffff';
+  ctx.fill();
+  ctx.shadowBlur = 0;
+  ctx.shadowColor = 'transparent';
+
+  // ── Selected highlight border ──
+  ctx.globalAlpha = 1;
+  if (isSelected) {
+    ctx.beginPath();
+    ctx.arc(0, 0, r + 6, 0, Math.PI * 2);
+    ctx.strokeStyle = `rgba(255,255,255,0.7)`;
+    ctx.lineWidth = 2;
+    ctx.setLineDash([8, 4]);
+    ctx.lineDashOffset = -time * 40;
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  // ── Labels ABOVE the circle ──
+  const fontSize = r >= 32 ? 11 : (r >= 22 ? 10 : 8);
+  const padX = 8;
+  const padY = 3;
+  const labelY = -(r + padY + fontSize);
+
+  if (dimmed && !isSelected && !isHovered) {
+    ctx.globalAlpha = 0.2;
+  } else {
+    ctx.globalAlpha = 0.95;
+  }
+
+  // Name pill above node
+  const fontWeight = r >= 22 ? '600' : '500';
+  ctx.font = `${fontWeight} ${fontSize}px "Inter", sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  const nameW = ctx.measureText(node.name).width;
+
+  // Pill background
+  ctx.fillStyle = 'rgba(5,5,8,0.85)';
+  ctx.beginPath();
+  roundRect(ctx, -nameW / 2 - padX, labelY - fontSize / 2 - padY, nameW + padX * 2, fontSize + padY * 2, r >= 22 ? 4 : 3);
+  ctx.fill();
+
+  // Pill border
+  ctx.strokeStyle = `rgba(${rgb.r},${rgb.g},${rgb.b},${r >= 22 ? 0.5 : 0.3})`;
+  ctx.lineWidth = 0.8;
+  ctx.stroke();
+
+  // Name text
+  ctx.shadowColor = 'rgba(255,255,255,0.5)';
+  ctx.shadowBlur = 2;
+  ctx.fillStyle = '#ffffff';
+  ctx.fillText(node.name, 0, labelY);
+  ctx.shadowBlur = 0;
+
+  // Sublabel (only for hubs or hovered)
+  if ((r >= 22 || isHovered) && (!dimmed || isHovered || isSelected)) {
+    const subLabelFontSize = r >= 22 ? 7 : 6;
+    ctx.font = `500 ${subLabelFontSize}px "Inter", sans-serif`;
+    const subY = labelY - fontSize / 2 - padY - subLabelFontSize * 0.6 - 3;
+    const subW = ctx.measureText(node.role).width;
+
+    ctx.globalAlpha = isHovered ? 0.75 : 0.5;
+    ctx.fillStyle = 'rgba(5,5,8,0.75)';
+    ctx.beginPath();
+    roundRect(ctx, -subW / 2 - padX + 2, subY - subLabelFontSize / 2 - padY + 1, subW + (padX - 2) * 2, subLabelFontSize + (padY - 1) * 2, 3);
+    ctx.fill();
+
+    ctx.strokeStyle = `rgba(${rgb.r},${rgb.g},${rgb.b},0.2)`;
+    ctx.lineWidth = 0.5;
+    ctx.stroke();
+
+    ctx.fillStyle = color.fill;
+    ctx.fillText(node.role, 0, subY);
+  }
+
+  ctx.globalAlpha = 1;
+  ctx.restore();
+}
 
   // Dark inner border
   ctx.shadowBlur = 0;
@@ -503,9 +597,9 @@ function roundRect(c, x, y, w, h, r) {
 // ── Node Icons (canvas paths) ──────────────────────────────────────────────
 function drawNodeIcon(ctx, id, s, alpha) {
   ctx.save();
-  ctx.strokeStyle = `rgba(255,255,255,${alpha + 0.3})`;
   ctx.fillStyle = `rgba(255,255,255,${alpha})`;
-  ctx.lineWidth = 1.2;
+  ctx.strokeStyle = `rgba(255,255,255,${Math.min(alpha + 0.15, 1)})`;
+  ctx.lineWidth = 1.4;
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
 
@@ -514,64 +608,59 @@ function drawNodeIcon(ctx, id, s, alpha) {
       ctx.beginPath();
       for (let i = 0; i < 8; i++) {
         const a = (i * Math.PI) / 4 - Math.PI / 2;
-        const r = i % 2 === 0 ? s : s * 0.42;
-        const x = Math.cos(a) * r, y = Math.sin(a) * r;
+        const rad = i % 2 === 0 ? s : s * 0.38;
+        const x = Math.cos(a) * rad, y = Math.sin(a) * rad;
         i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
       }
       ctx.closePath(); ctx.fill(); ctx.stroke();
-      ctx.beginPath(); ctx.arc(0, 0, s * 0.18, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(0, 0, s * 0.2, 0, Math.PI * 2); ctx.fill();
       break;
 
-    case 'winstats': // Bar chart
-      ctx.fillRect(-s * 0.75,  s * 0.25, s * 0.42, -s * 0.45);
-      ctx.fillRect(-s * 0.18,  s * 0.25, s * 0.42, -s * 0.75);
-      ctx.fillRect( s * 0.40,  s * 0.25, s * 0.42, -s * 0.55);
+    case 'winstats': // Bar chart — 3 bars
+      ctx.fillRect(-s * 0.75,  s * 0.2, s * 0.42, -s * 0.5);
+      ctx.fillRect(-s * 0.18,  s * 0.2, s * 0.42, -s * 0.8);
+      ctx.fillRect( s * 0.40,  s * 0.2, s * 0.42, -s * 0.6);
       break;
 
     case 'architechia': // Hexagon
       ctx.beginPath();
       for (let i = 0; i < 6; i++) {
         const a = (i * Math.PI) / 3 - Math.PI / 6;
-        const x = Math.cos(a) * s * 0.8, y = Math.sin(a) * s * 0.8;
+        const x = Math.cos(a) * s * 0.85, y = Math.sin(a) * s * 0.85;
         i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
       }
       ctx.closePath(); ctx.stroke();
-      // Inner dot
-      ctx.beginPath(); ctx.arc(0, 0, s * 0.15, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(0, 0, s * 0.2, 0, Math.PI * 2); ctx.fill();
       break;
 
     case 'growdata': // Upward arrow with bar
       ctx.beginPath();
-      ctx.moveTo(0, s * 0.75);
-      ctx.lineTo(0, -s * 0.6);
+      ctx.moveTo(0, s * 0.8);
+      ctx.lineTo(0, -s * 0.65);
       ctx.stroke();
-      // Arrowhead
       ctx.beginPath();
-      ctx.moveTo(-s * 0.55, -s * 0.1);
-      ctx.lineTo(0, -s * 0.75);
-      ctx.lineTo(s * 0.55, -s * 0.1);
+      ctx.moveTo(-s * 0.6, -s * 0.15);
+      ctx.lineTo(0, -s * 0.8);
+      ctx.lineTo(s * 0.6, -s * 0.15);
       ctx.stroke();
       break;
 
     case 'academia': // Open book
       ctx.beginPath();
-      ctx.moveTo(-s * 0.55, -s * 0.65);
-      ctx.quadraticCurveTo(-s * 0.55, s * 0.1, 0, s * 0.3);
-      ctx.quadraticCurveTo(s * 0.55, s * 0.1, s * 0.55, -s * 0.65);
+      ctx.moveTo(-s * 0.6, -s * 0.7);
+      ctx.quadraticCurveTo(-s * 0.6, s * 0.15, 0, s * 0.35);
+      ctx.quadraticCurveTo(s * 0.6, s * 0.15, s * 0.6, -s * 0.7);
       ctx.stroke();
-      // Center line
-      ctx.beginPath(); ctx.moveTo(0, -s * 0.3); ctx.lineTo(0, s * 0.3); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(0, -s * 0.35); ctx.lineTo(0, s * 0.35); ctx.stroke();
       break;
 
-    case 'personal': // Person silhouette
-      // Head
-      ctx.beginPath(); ctx.arc(0, -s * 0.35, s * 0.3, 0, Math.PI * 2); ctx.fill();
-      // Body arc
-      ctx.beginPath(); ctx.arc(0, s * 0.6, s * 0.7, Math.PI * 1.15, Math.PI * 1.85); ctx.fill();
+    case 'personal': // Person
+      ctx.beginPath(); ctx.arc(0, -s * 0.4, s * 0.32, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(0, s * 0.55, s * 0.65, Math.PI * 1.15, Math.PI * 1.85); ctx.fill();
       break;
 
     default:
-      ctx.beginPath(); ctx.arc(0, 0, s * 0.35, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(0, 0, s * 0.4, 0, Math.PI * 2); ctx.fill();
   }
 
   ctx.restore();
