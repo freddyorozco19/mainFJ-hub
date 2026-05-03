@@ -408,6 +408,9 @@ function drawNode(node, dimmed) {
   ctx.lineWidth = 1;
   ctx.stroke();
 
+  ctx.shadowColor = 'transparent';
+  ctx.shadowBlur = 0;
+
   // ── Node icon (eje sistema / KRONOS) ──
   if (r >= 22) {
     const iSize = r * 0.65;
@@ -415,16 +418,7 @@ function drawNode(node, dimmed) {
     drawNodeIcon(ctx, node.id, iSize, iconAlpha);
   }
 
-  // ── Inner highlight (specular dot) ──
-  ctx.globalAlpha = dimmed ? 0.1 : 0.4;
-  ctx.shadowColor = 'rgba(255,255,255,0.6)';
-  ctx.shadowBlur = 2;
-  ctx.beginPath();
-  ctx.arc(-r * 0.28, -r * 0.28, r * 0.22, 0, Math.PI * 2);
-  ctx.fillStyle = '#ffffff';
-  ctx.fill();
-  ctx.shadowBlur = 0;
-  ctx.shadowColor = 'transparent';
+  // ── Inner highlight (specular dot) — removed, clean dark core ──
 
   // ── Selected highlight border ──
   ctx.globalAlpha = 1;
