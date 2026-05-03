@@ -76,7 +76,7 @@ const COLORS = {
 // Eje Central → Ejes Sistema → Ejes Sectoriales
 const NODE_DEFS = [
   // ═══ EJE CENTRAL ═══
-  { id: 'kronos', name: 'KRONOS', role: 'Orchestrator', layer: 'orchestrator', fx: 0.30, fy: 0.50, r: 32 },
+  { id: 'kronos', name: 'KRONOS', role: 'Orchestrator', layer: 'orchestrator', fx: 0.40, fy: 0.50, r: 32 },
 
   // ═══ WIN STATS ═══
   { id: 'winstats',  name: 'WIN STATS',  role: 'Eje Sistema',   layer: 'winstats',    fx: 0.16, fy: 0.18, r: 22 },
@@ -171,7 +171,7 @@ function renderGrid() {
   g.clearRect(0, 0, W, H);
 
   // Radial gradient
-  const grd = g.createRadialGradient(W * 0.25, H * 0.52, 0, W * 0.5, H * 0.5, Math.max(W, H) * 0.7);
+  const grd = g.createRadialGradient(W * 0.40, H * 0.50, 0, W * 0.5, H * 0.5, Math.max(W, H) * 0.7);
   grd.addColorStop(0, '#0a0a20');
   grd.addColorStop(0.5, '#050510');
   grd.addColorStop(1, '#050508');
@@ -370,16 +370,16 @@ function drawEdge(from, to, dimmed, isMain) {
   const a = { x: from.x, y: from.y };
   const b = { x: to.x, y: to.y };
   const cp = controlPoint(a, b);
-  const color = COLORS[from.layer].fill;
+  const edgeColor = isMain ? '#FFFFFF' : COLORS[from.layer].fill;
 
   // Glow layer
   ctx.save();
-  ctx.shadowColor = color;
+  ctx.shadowColor = edgeColor;
   ctx.shadowBlur = isMain ? 8 : 4;
   ctx.beginPath();
   ctx.moveTo(a.x, a.y);
   ctx.quadraticCurveTo(cp.x, cp.y, b.x, b.y);
-  ctx.strokeStyle = color;
+  ctx.strokeStyle = edgeColor;
   ctx.lineWidth = isMain ? 2.2 : 1.4;
   ctx.globalAlpha = dimmed ? (isMain ? 0.12 : 0.06) : (isMain ? 0.45 : 0.28);
   ctx.stroke();
@@ -418,7 +418,7 @@ function drawParticle(p, dimmed) {
   const b = { x: p.toNode.x, y: p.toNode.y };
   const cp = controlPoint(a, b);
   const pos = quadraticBez(a, cp, b, p.t);
-  const color = COLORS[p.fromNode.layer].fill;
+  const pColor = '#FFB020';
 
   // Draw trail
   for (let i = 0; i < p.trail.length; i++) {
@@ -427,7 +427,7 @@ function drawParticle(p, dimmed) {
     ctx.globalAlpha = alpha;
     ctx.beginPath();
     ctx.arc(p.trail[i].x, p.trail[i].y, r, 0, Math.PI * 2);
-    ctx.fillStyle = color;
+    ctx.fillStyle = pColor;
     ctx.fill();
   }
 
@@ -435,14 +435,14 @@ function drawParticle(p, dimmed) {
   ctx.globalAlpha = dimmed ? 0.1 : 0.9;
   ctx.beginPath();
   ctx.arc(pos.x, pos.y, 3, 0, Math.PI * 2);
-  ctx.fillStyle = color;
+  ctx.fillStyle = pColor;
   ctx.fill();
 
   // Glow
   ctx.globalAlpha = dimmed ? 0.05 : 0.4;
   ctx.beginPath();
   ctx.arc(pos.x, pos.y, 5, 0, Math.PI * 2);
-  ctx.fillStyle = color;
+  ctx.fillStyle = pColor;
   ctx.fill();
 
   ctx.globalAlpha = 1;
