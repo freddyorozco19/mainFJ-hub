@@ -31,73 +31,86 @@
 // ── Configuration ───────────────────────────────────────────────────────────
 const COLORS = {
   orchestrator: { fill: '#7B61FF', glow: '#7B61FF', label: '#7B61FF' },
-  infrastructure: { fill: '#00E5B0', glow: '#00E5B0', label: '#00E5B0' },
-  operations: { fill: '#FF4F9A', glow: '#FF4F9A', label: '#FF4F9A' },
-  clients: { fill: '#3B9EFF', glow: '#3B9EFF', label: '#3B9EFF' },
-  content: { fill: '#FFB020', glow: '#FFB020', label: '#FFB020' },
-  products: { fill: '#FF6B35', glow: '#FF6B35', label: '#FF6B35' },
-  finance: { fill: '#39D353', glow: '#39D353', label: '#39D353' },
+  winstats:     { fill: '#FFB020', glow: '#FFB020', label: '#FFB020' },
+  architechia:  { fill: '#FF4F9A', glow: '#FF4F9A', label: '#FF4F9A' },
+  growdata:     { fill: '#00E5B0', glow: '#00E5B0', label: '#00E5B0' },
+  academia:     { fill: '#3B9EFF', glow: '#3B9EFF', label: '#3B9EFF' },
+  personal:     { fill: '#39D353', glow: '#39D353', label: '#39D353' },
 };
 
-const LAYER_LABELS = {
-  orchestrator: 'ORCHESTRATOR',
-  infrastructure: 'INFRASTRUCTURE',
-  operations: 'OPERATIONS',
-  clients: 'CLIENTS',
-  content: 'CONTENT',
-  products: 'PRODUCTS',
-  finance: 'FINANCE',
-};
-
-// Position presets as canvas fractions
+// ── KRONOS Topology ────────────────────────────────────────────────────────
+// Eje Central → Ejes Sistema → Ejes Sectoriales
 const NODE_DEFS = [
-  // Orchestrator
-  { id: 'kronos', name: 'KRONOS', role: 'Orchestrator AI', layer: 'orchestrator', fx: 0.25, fy: 0.52, r: 32 },
-  // Infrastructure
-  { id: '47os', name: '47 OS', role: 'Linux Base', layer: 'infrastructure', fx: 0.09, fy: 0.15, r: 20 },
-  { id: 'pulse', name: 'Pulse Mainframe', role: 'Compute Cluster', layer: 'infrastructure', fx: 0.06, fy: 0.30, r: 20 },
-  { id: 'aisol', name: 'AI Solutions', role: 'ML Pipeline', layer: 'infrastructure', fx: 0.11, fy: 0.44, r: 20 },
-  // Operations
-  { id: 'ops-hub', name: 'Operations Hub', role: 'Ops Center', layer: 'operations', fx: 0.42, fy: 0.26, r: 20 },
-  { id: 'outreach', name: 'Outreach Agent', role: 'Lead Gen', layer: 'operations', fx: 0.54, fy: 0.12, r: 13 },
-  { id: 'internal', name: 'Internal Systems', role: 'Automation', layer: 'operations', fx: 0.56, fy: 0.30, r: 13 },
-  // Clients
-  { id: 'clients-hub', name: 'Clients Hub', role: 'Client Mgmt', layer: 'clients', fx: 0.70, fy: 0.22, r: 20 },
-  { id: 'wells', name: 'Wells Landscaping', role: 'Client Account', layer: 'clients', fx: 0.84, fy: 0.07, r: 13 },
-  { id: 'spark8', name: 'Spark 8 Lounge', role: 'Client Account', layer: 'clients', fx: 0.91, fy: 0.20, r: 13 },
-  { id: 'conscious', name: 'Conscious Soul Skin', role: 'Client Account', layer: 'clients', fx: 0.87, fy: 0.37, r: 13 },
-  // Content
-  { id: 'content-studio', name: 'Content Studio', role: 'Media Hub', layer: 'content', fx: 0.70, fy: 0.52, r: 20 },
-  { id: 'leadslicer', name: 'LeadSlicer AI', role: 'AI Content Tool', layer: 'content', fx: 0.84, fy: 0.52, r: 13 },
-  // Products
-  { id: '47music', name: '47 Music', role: 'Music Label', layer: 'products', fx: 0.28, fy: 0.78, r: 20 },
-  { id: 'motorev', name: 'MotoRev', role: 'Motorsport', layer: 'products', fx: 0.46, fy: 0.82, r: 20 },
-  { id: 'bookfam', name: 'BookFam', role: 'Publishing', layer: 'products', fx: 0.62, fy: 0.78, r: 20 },
-  // Personal/Finance
-  { id: 'personal-os', name: 'Personal OS', role: 'Private Workspace', layer: 'finance', fx: 0.68, fy: 0.76, r: 20 },
-  { id: 'finance-tax', name: 'Finance + Tax', role: 'Money Mgmt', layer: 'finance', fx: 0.82, fy: 0.72, r: 13 },
-  { id: 'admin-ops', name: 'Admin Operations', role: 'Logistics', layer: 'finance', fx: 0.85, fy: 0.87, r: 13 },
+  // ═══ EJE CENTRAL ═══
+  { id: 'kronos', name: 'KRONOS', role: 'Orchestrator', layer: 'orchestrator', fx: 0.30, fy: 0.50, r: 32 },
+
+  // ═══ WIN STATS ═══
+  { id: 'winstats',  name: 'WIN STATS',  role: 'Eje Sistema',   layer: 'winstats',    fx: 0.16, fy: 0.18, r: 22 },
+  { id: 'ws-data',   name: 'DATA',        role: 'Métricas',      layer: 'winstats',    fx: 0.06, fy: 0.07, r: 14 },
+  { id: 'ws-finance',name: 'FINANCE',     role: 'Financiero',    layer: 'winstats',    fx: 0.14, fy: 0.05, r: 14 },
+  { id: 'ws-accounts',name:'ACCOUNTS',    role: 'Cuentas',       layer: 'winstats',    fx: 0.24, fy: 0.08, r: 14 },
+
+  // ═══ ARCHITECHIA ═══
+  { id: 'architechia',name:'ARCHITECHIA', role: 'Eje Sistema',   layer: 'architechia', fx: 0.50, fy: 0.14, r: 22 },
+  { id: 'at-products',name:'PRODUCTS',    role: 'Productos',     layer: 'architechia', fx: 0.40, fy: 0.04, r: 14 },
+  { id: 'at-finances',name:'FINANCES',    role: 'Portafolio',    layer: 'architechia', fx: 0.50, fy: 0.04, r: 14 },
+  { id: 'at-leads',   name:'LEADS',       role: 'Prospectos',    layer: 'architechia', fx: 0.60, fy: 0.04, r: 14 },
+  { id: 'at-accounts',name:'ACCOUNTS',    role: 'Cuentas',       layer: 'architechia', fx: 0.62, fy: 0.12, r: 14 },
+
+  // ═══ GROW DATA ═══
+  { id: 'growdata',  name: 'GROW DATA',  role: 'Eje Sistema',   layer: 'growdata',    fx: 0.74, fy: 0.30, r: 22 },
+  { id: 'gd-presales',name:'PRESALES',    role: 'Pre-ventas',    layer: 'growdata',    fx: 0.88, fy: 0.20, r: 14 },
+  { id: 'gd-finance',name:'FINANCE',      role: 'Revenue Data',  layer: 'growdata',    fx: 0.88, fy: 0.30, r: 14 },
+  { id: 'gd-certs',  name:'CERTIFICATIONS',role:'Certificados',  layer: 'growdata',    fx: 0.88, fy: 0.40, r: 14 },
+
+  // ═══ ACADEMIA ═══
+  { id: 'academia',  name: 'ACADEMIA',   role: 'Eje Sistema',   layer: 'academia',    fx: 0.68, fy: 0.68, r: 22 },
+  { id: 'ac-tesis',  name: 'TESIS',       role: 'Investigación', layer: 'academia',    fx: 0.82, fy: 0.60, r: 14 },
+  { id: 'ac-certs',  name: 'CERTIFICATIONS',role:'Certificados', layer: 'academia',    fx: 0.82, fy: 0.70, r: 14 },
+  { id: 'ac-roadmaps',name:'ROADMAPS',    role: 'Planes',        layer: 'academia',    fx: 0.82, fy: 0.80, r: 14 },
+
+  // ═══ PERSONAL ═══
+  { id: 'personal',  name: 'PERSONAL',   role: 'Eje Sistema',   layer: 'personal',    fx: 0.28, fy: 0.78, r: 22 },
+  { id: 'pe-finance',name:'FINANCE',      role: 'Finanzas Pers.',layer: 'personal',    fx: 0.14, fy: 0.72, r: 14 },
+  { id: 'pe-hubfj',  name: 'HUB FJ',      role: 'Hub Central',   layer: 'personal',    fx: 0.20, fy: 0.85, r: 14 },
+  { id: 'pe-health', name: 'HEALTH',      role: 'Salud',         layer: 'personal',    fx: 0.32, fy: 0.88, r: 14 },
+  { id: 'pe-sports', name: 'SPORTS',      role: 'Deportes',      layer: 'personal',    fx: 0.42, fy: 0.85, r: 14 },
 ];
 
 const EDGE_DEFS = [
-  { from: 'kronos', to: '47os' },
-  { from: 'kronos', to: 'pulse' },
-  { from: 'kronos', to: 'aisol' },
-  { from: 'kronos', to: 'ops-hub' },
-  { from: 'ops-hub', to: 'outreach' },
-  { from: 'ops-hub', to: 'internal' },
-  { from: 'kronos', to: 'clients-hub' },
-  { from: 'clients-hub', to: 'wells' },
-  { from: 'clients-hub', to: 'spark8' },
-  { from: 'clients-hub', to: 'conscious' },
-  { from: 'kronos', to: 'content-studio' },
-  { from: 'content-studio', to: 'leadslicer' },
-  { from: 'kronos', to: '47music' },
-  { from: 'kronos', to: 'motorev' },
-  { from: 'kronos', to: 'bookfam' },
-  { from: 'kronos', to: 'personal-os' },
-  { from: 'personal-os', to: 'finance-tax' },
-  { from: 'personal-os', to: 'admin-ops' },
+  // KRONOS → Ejes Sistema
+  { from: 'kronos', to: 'winstats' },
+  { from: 'kronos', to: 'architechia' },
+  { from: 'kronos', to: 'growdata' },
+  { from: 'kronos', to: 'academia' },
+  { from: 'kronos', to: 'personal' },
+
+  // WIN STATS → Sectoriales
+  { from: 'winstats', to: 'ws-data' },
+  { from: 'winstats', to: 'ws-finance' },
+  { from: 'winstats', to: 'ws-accounts' },
+
+  // ARCHITECHIA → Sectoriales
+  { from: 'architechia', to: 'at-products' },
+  { from: 'architechia', to: 'at-finances' },
+  { from: 'architechia', to: 'at-leads' },
+  { from: 'architechia', to: 'at-accounts' },
+
+  // GROW DATA → Sectoriales
+  { from: 'growdata', to: 'gd-presales' },
+  { from: 'growdata', to: 'gd-finance' },
+  { from: 'growdata', to: 'gd-certs' },
+
+  // ACADEMIA → Sectoriales
+  { from: 'academia', to: 'ac-tesis' },
+  { from: 'academia', to: 'ac-certs' },
+  { from: 'academia', to: 'ac-roadmaps' },
+
+  // PERSONAL → Sectoriales
+  { from: 'personal', to: 'pe-finance' },
+  { from: 'personal', to: 'pe-hubfj' },
+  { from: 'personal', to: 'pe-health' },
+  { from: 'personal', to: 'pe-sports' },
 ];
 
 // ── Canvas Setup ────────────────────────────────────────────────────────────
