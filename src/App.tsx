@@ -98,7 +98,7 @@ function SSEListener() {
       retries++
       setTimeout(() => {
         const t = getToken()
-        const url = t ? ${API}/events?token=${encodeURIComponent(t)} : ${API}/events
+        const url = t ? `${API}/events?token=${encodeURIComponent(t)}` : `${API}/events`
         const newEs = new EventSource(url)
         esRef.current = newEs
         const { updateAgentStatus, addMessage, setTyping, pushLog } = useDashboard.getState()
@@ -121,11 +121,17 @@ function SSEListener() {
         })
         newEs.addEventListener('alert:cost', (e) => {
           const { agent_slug, cost, threshold } = JSON.parse(e.data)
-          ;(window as any).__addToast?.({ message: ${agent_slug}: $ (umbral $), type: 'warn' })
+          ;(window as any).__addToast?.({
+            message: `${agent_slug}: $${cost} (umbral $${threshold})`,
+            type: 'warn',
+          })
         })
         newEs.addEventListener('finance:written', (e) => {
           const { tab, confirmation } = JSON.parse(e.data)
-          ;(window as any).__addToast?.({ message: Finanzas: ${confirmation} → ${tab}, type: 'success' })
+          ;(window as any).__addToast?.({
+            message: `Finanzas: ${confirmation} → ${tab}`,
+            type: 'success',
+          })
         })
         newEs.addEventListener('system', (e) => {
           const { message, level } = JSON.parse(e.data)
@@ -137,7 +143,7 @@ function SSEListener() {
           retries++
           setTimeout(() => {
             const t2 = getToken()
-            const u = t2 ? ${API}/events?token=${encodeURIComponent(t2)} : ${API}/events
+            const u = t2 ? `${API}/events?token=${encodeURIComponent(t2)}` : `${API}/events`
             esRef.current = new EventSource(u)
           }, d)
         }
