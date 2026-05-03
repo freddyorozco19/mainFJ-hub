@@ -558,8 +558,8 @@ function drawNode(node, dimmed) {
   ctx.fillText(node.name, 0, labelY);
   ctx.shadowBlur = 0;
 
-  // Sublabel (only for hubs or hovered)
-  if ((r >= 22 || isHovered) && (!dimmed || isHovered || isSelected)) {
+  // Sublabel (only on hover)
+  if (isHovered && (!dimmed || isHovered || isSelected)) {
     const subLabelFontSize = r >= 22 ? 7 : 6;
     ctx.font = `500 ${subLabelFontSize}px "Inter", sans-serif`;
     const subY = labelY - fontSize / 2 - padY - subLabelFontSize * 0.6 - 3;
