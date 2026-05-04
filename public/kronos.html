@@ -422,6 +422,15 @@ const popupDesc = document.getElementById('popupDesc');
 const popupBtn = document.getElementById('popupBtn');
 const popupClose = document.getElementById('popupClose');
 
+function handlePopupRedirect(url) {
+  // Try internal navigation via parent dashboard
+  if (window.parent !== window) {
+    window.parent.postMessage({ type: 'navigate', route: url }, '*');
+  } else {
+    window.open(url, '_blank', 'noopener');
+  }
+}
+
 function showPopup(node, mx, my) {
   popupNode = node;
   const parent = getNode(
@@ -431,8 +440,12 @@ function showPopup(node, mx, my) {
   popupParent.textContent = parent ? `▸ ${parent.name}` : '';
   popupDesc.textContent = node.desc || `${node.role} — ${node.layer.toUpperCase()}`;
   popupBtn.textContent = node.btnText || 'Abrir';
-  popupBtn.href = node.url || '#';
+  popupBtn.href = '#';
   popupBtn.style.background = COLORS[node.layer]?.fill || '#7B61FF';
+  popupBtn.onclick = (e) => {
+    e.preventDefault();
+    handlePopupRedirect(node.url);
+  };
   popup.style.borderColor = COLORS[node.layer]?.fill || '#7B61FF';
   popup.style.display = 'block';
 
@@ -1268,6 +1281,29 @@ function animate(ts) {
 }
 
 requestAnimationFrame(animate);
+
+// ── Dashboard Bridge ───────────────────────────────────────────────────────
+window.addEventListener('message', (e) => {
+  if (!e.data || typeof e.data !== 'object') return;
+  const { type, data } = e.data;
+  if (type === 'state' && data) {
+    // Update node statuses from dashboard state
+    if (data.agents) {
+      data.agents.forEach(a => {
+        const node = nodes.find(n => n.name.toUpperCase() === a.name?.toUpperCase());
+        if (node && a.status === 'running') node.status = 'active';
+      });
+    }
+    if (data.metrics) {
+      // Could update node data display
+    }
+  }
+});
+
+// Notify parent that KRONOS is ready
+if (window.parent !== window) {
+  window.parent.postMessage({ type: 'ready' }, '*');
+}
 </script>
 </body>
 </html>
