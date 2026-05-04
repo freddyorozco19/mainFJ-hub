@@ -33,7 +33,7 @@ USERS_DB = {
         "id": "1",
         "email": "freddy.orozco729@gmail.com",
         "name": "Freddy J. Orozco",
-        "password": "MainFJ2026*",
+        "password": "admin123",
     }
 }
 
