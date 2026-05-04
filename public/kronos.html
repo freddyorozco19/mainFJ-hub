@@ -723,7 +723,9 @@ function roundRect(c, x, y, w, h, r) {
 
 // ── Node Icons (canvas paths) ──────────────────────────────────────────────
 const winstatsImg = new Image();
-winstatsImg.src = 'WinStats_LogoGray.png';
+winstatsImg.src = 'WinStats_LogoWhite.png';
+const winstatsImgHover = new Image();
+winstatsImgHover.src = 'WinStats_Logo.png';
 
 function drawNodeIcon(ctx, id, s, alpha, r) {
   ctx.save();
@@ -735,10 +737,11 @@ function drawNodeIcon(ctx, id, s, alpha, r) {
   if (r >= 20) {
     // ── Hub icon ──
     if (id === 'winstats' && winstatsImg.complete && winstatsImg.naturalWidth > 0) {
-      // Custom WIN STATS logo
+      const isHovered = hoveredNodeId === id;
+      const img = (isHovered && winstatsImgHover.complete) ? winstatsImgHover : winstatsImg;
       const imgSize = s * 1.9;
       ctx.globalAlpha = alpha;
-      ctx.drawImage(winstatsImg, -imgSize / 2, -imgSize / 2, imgSize, imgSize);
+      ctx.drawImage(img, -imgSize / 2, -imgSize / 2, imgSize, imgSize);
     } else {
       // Generic node icon: central hub + 3 radiating connections
     ctx.beginPath();
