@@ -66,6 +66,36 @@
     color: #64748B; font-family: 'Inter', sans-serif;
     font-size: 10px; text-align: center; padding: 2px 0;
   }
+  #search-wrap {
+    position: fixed; top: 16px; left: 50%; transform: translateX(-50%); z-index: 150;
+  }
+  #search-input {
+    width: 280px; padding: 8px 14px; border-radius: 8px;
+    background: #0D0D1A; border: 1px solid rgba(255,255,255,0.12);
+    color: #fff; font-family: 'Inter', sans-serif; font-size: 12px;
+    outline: none; transition: border-color 0.2s;
+  }
+  #search-input:focus { border-color: rgba(255,255,255,0.35); }
+  #search-input::placeholder { color: #475569; }
+  #search-results {
+    position: absolute; top: 100%; left: 0; right: 0; margin-top: 4px;
+    background: #0D0D1A; border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 8px; max-height: 200px; overflow-y: auto;
+    display: none; font-family: 'Inter', sans-serif;
+  }
+  #search-results .sr-item {
+    padding: 7px 12px; font-size: 11px; color: #94A3B8;
+    cursor: pointer; display: flex; align-items: center; gap: 8px;
+  }
+  #search-results .sr-item:hover { background: rgba(255,255,255,0.05); color: #fff; }
+  #search-results .sr-dot {
+    width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0;
+  }
+  #minimap {
+    position: fixed; bottom: 20px; left: 20px; z-index: 150;
+    border: 1px solid rgba(255,255,255,0.12); border-radius: 8px;
+    background: #0A0A14; cursor: pointer;
+  }
 </style>
 </head>
 <body>
@@ -83,6 +113,11 @@
   <div id="zoom-level">100%</div>
   <button id="zoomOut">&minus;</button>
 </div>
+<div id="search-wrap">
+  <input id="search-input" type="text" placeholder="Buscar nodo... (Ctrl+K)" autocomplete="off">
+  <div id="search-results"></div>
+</div>
+<canvas id="minimap" width="180" height="110"></canvas>
 
 <script>
 // ── Configuration ───────────────────────────────────────────────────────────
@@ -252,6 +287,32 @@ const nodes = NODE_DEFS.map(n => ({
 
 function getNode(id) { return nodes.find(n => n.id === id); }
 const kronos = getNode('kronos');
+
+// ── Status assignment ──────────────────────────────────────────────────────
+const STATUSES = ['online', 'online', 'online', 'active', 'active', 'idle'];
+nodes.forEach(n => { n.status = STATUSES[Math.floor(Math.random() * STATUSES.length)]; });
+kronos.status = 'active';
+
+// ── Collapse state ─────────────────────────────────────────────────────────
+const collapsedHubs = new Set();
+
+function getChildren(hubId) {
+  return NODE_DEFS.filter(n =>
+    EDGE_DEFS.some(e => e.from === hubId && e.to === n.id)
+  );
+}
+
+function isNodeVisible(node) {
+  // Check all ancestors for collapse
+  let current = node.id;
+  while (current !== 'kronos') {
+    const edge = EDGE_DEFS.find(e => e.to === current);
+    if (!edge) break;
+    if (collapsedHubs.has(edge.from)) return false;
+    current = edge.from;
+  }
+  return true;
+}
 
 // ── Connection Map ──────────────────────────────────────────────────────────
 EDGE_DEFS.forEach(e => {
@@ -505,7 +566,9 @@ function drawNode(node, dimmed, onPath) {
   ctx.scale(scale, scale);
 
   // ── Outer halo ring ──
-  const haloAlpha = dimmed ? 0.04 : (onPath ? 0.22 : (0.12 + Math.sin(time * 2.5 + node.phase) * 0.04));
+  const statusBoost = node.status === 'active' ? 1.6 : (node.status === 'idle' ? 0.5 : 1);
+  const statusSpeed = node.status === 'active' ? 4 : (node.status === 'idle' ? 1 : 2.5);
+  const haloAlpha = dimmed ? 0.04 : (onPath ? 0.22 : (0.08 + Math.sin(time * statusSpeed + node.phase) * 0.06) * statusBoost);
   ctx.globalAlpha = haloAlpha;
   ctx.beginPath();
   ctx.arc(0, 0, r * 1.55, 0, Math.PI * 2);
@@ -513,7 +576,7 @@ function drawNode(node, dimmed, onPath) {
   ctx.fill();
 
   // ── Mid glow ring (breathes) ──
-  const breathe = dimmed ? 0.06 : (onPath ? 0.30 : (0.22 + Math.sin(time * 2 + node.pulse) * 0.08));
+  const breathe = dimmed ? 0.06 : (onPath ? 0.30 : (0.18 + Math.sin(time * statusSpeed + node.pulse) * 0.10) * statusBoost);
   ctx.globalAlpha = breathe;
   ctx.beginPath();
   ctx.arc(0, 0, r * 1.25, 0, Math.PI * 2);
@@ -522,7 +585,7 @@ function drawNode(node, dimmed, onPath) {
 
   // Shadow glow
   ctx.shadowColor = onPath ? '#ffffff' : color.glow;
-  ctx.shadowBlur = isSelected ? r * 1.5 : (onPath ? r * 1.0 : r * 0.6);
+  ctx.shadowBlur = isSelected ? r * 1.5 : (onPath ? r * 1.0 : (r * 0.5 + r * 0.2 * statusBoost));
 
   // ── Core circle (dark gray, bright colored border) ──
   ctx.globalAlpha = dimmed ? 0.25 : 1;
@@ -583,7 +646,10 @@ function drawNode(node, dimmed, onPath) {
   ctx.font = `${fontWeight} ${fontSize}px "Inter", sans-serif`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  const nameW = ctx.measureText(node.name).width;
+  const hasKids = getChildren(node.id).length > 0;
+  const collapsed = collapsedHubs.has(node.id);
+  const displayName = (hasKids ? (collapsed ? '▸ ' : '▾ ') : '') + node.name;
+  const nameW = ctx.measureText(displayName).width;
 
   // Pill background
   ctx.fillStyle = 'rgba(5,5,8,0.85)';
@@ -600,7 +666,7 @@ function drawNode(node, dimmed, onPath) {
   ctx.shadowColor = 'rgba(255,255,255,0.5)';
   ctx.shadowBlur = 2;
   ctx.fillStyle = '#ffffff';
-  ctx.fillText(node.name, 0, labelY);
+  ctx.fillText(displayName, 0, labelY);
   ctx.shadowBlur = 0;
 
   // Sublabel (only on hover)
@@ -854,8 +920,9 @@ function render() {
     pathSet = new Set(path);
   }
 
-  // Draw edges
+  // Draw edges (skip if either endpoint is hidden)
   EDGE_DEFS.forEach(edge => {
+    if (!isNodeVisible(edge.fromNode) || !isNodeVisible(edge.toNode)) return;
     const isSelectedEdge = selectedNodeId && (edge.from === selectedNodeId || edge.to === selectedNodeId);
     const isPathEdge = pathSet && pathSet.has(edge.from) && pathSet.has(edge.to);
     const isMain = edge.from === 'kronos' || edge.to === 'kronos';
@@ -868,8 +935,9 @@ function render() {
     }
   });
 
-  // Update & draw particles
+  // Update & draw particles (skip hidden)
   particles.forEach(p => {
+    if (!isNodeVisible(p.fromNode) || !isNodeVisible(p.toNode)) return;
     // Move particle
     if (p.goesForward) {
       p.t += p.speed;
@@ -893,8 +961,9 @@ function render() {
     drawParticle(p, !!selectedNodeId && !edgeInHighlight);
   });
 
-  // Draw nodes
+  // Draw nodes (skip hidden)
   nodes.forEach(node => {
+    if (!isNodeVisible(node)) return;
     const dimmed = connectedSet && !connectedSet.has(node.id);
     const onPath = pathSet && pathSet.has(node.id) && !selectedNodeId;
     drawNode(node, dimmed, onPath);
@@ -906,6 +975,9 @@ function render() {
 
   // Tooltip
   updateTooltip();
+
+  // Minimap
+  drawMinimap();
 }
 
 // ── Node float animation ───────────────────────────────────────────────────
@@ -979,6 +1051,16 @@ canvas.addEventListener('click', e => {
   const my = e.clientY - rect.top;
   const n = nodeAt(mx - panX, my - panY);
   if (n) {
+    // Shift+click on hub toggles collapse
+    if (e.shiftKey && n.r >= 20 && getChildren(n.id).length > 0) {
+      if (collapsedHubs.has(n.id)) {
+        collapsedHubs.delete(n.id);
+      } else {
+        collapsedHubs.add(n.id);
+      }
+      return;
+    }
+
     if (n.url && n.url !== '#') {
       // Has redirect URL: show popup
       selectedNodeId = null;
@@ -1013,6 +1095,139 @@ document.getElementById('zoomIn').addEventListener('click', () => {
 document.getElementById('zoomOut').addEventListener('click', () => {
   zoom = Math.max(ZOOM_MIN, zoom - ZOOM_STEP);
   zoomLevel.textContent = Math.round(zoom * 100) + '%';
+});
+
+// ── Search ──────────────────────────────────────────────────────────────────
+const searchInput = document.getElementById('search-input');
+const searchResults = document.getElementById('search-results');
+
+searchInput.addEventListener('input', () => {
+  const q = searchInput.value.trim().toLowerCase();
+  searchResults.innerHTML = '';
+  if (!q) { searchResults.style.display = 'none'; return; }
+  const matches = nodes.filter(n => n.name.toLowerCase().includes(q)).slice(0, 8);
+  if (matches.length === 0) { searchResults.style.display = 'none'; return; }
+  matches.forEach(n => {
+    const item = document.createElement('div');
+    item.className = 'sr-item';
+    item.innerHTML = `<span class="sr-dot" style="background:${n.color.fill}"></span>${n.name}`;
+    item.addEventListener('mousedown', e => {
+      e.preventDefault();
+      // Center on node
+      panX = -(n.baseX - W / 2);
+      panY = -(n.baseY - H / 2);
+      zoom = 1.4;
+      zoomLevel.textContent = '140%';
+      selectedNodeId = n.id;
+      setTimeout(() => { selectedNodeId = null; }, 2000);
+      searchInput.value = '';
+      searchResults.style.display = 'none';
+    });
+    searchResults.appendChild(item);
+  });
+  searchResults.style.display = 'block';
+});
+
+searchInput.addEventListener('blur', () => {
+  setTimeout(() => { searchResults.style.display = 'none'; }, 150);
+});
+
+searchInput.addEventListener('focus', () => {
+  if (searchInput.value.trim()) searchResults.style.display = 'block';
+});
+
+document.addEventListener('keydown', e => {
+  if (e.ctrlKey && e.key === 'k') {
+    e.preventDefault();
+    searchInput.focus();
+  }
+  if (e.key === 'Escape') {
+    searchInput.value = '';
+    searchResults.style.display = 'none';
+    searchInput.blur();
+  }
+});
+
+// ── Minimap ─────────────────────────────────────────────────────────────────
+const minimap = document.getElementById('minimap');
+const mctx = minimap.getContext('2d');
+const MW = 180, MH = 110;
+
+function drawMinimap() {
+  mctx.clearRect(0, 0, MW, MH);
+  mctx.fillStyle = '#050508';
+  mctx.fillRect(0, 0, MW, MH);
+
+  // Find bounds
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  nodes.forEach(n => {
+    if (!isNodeVisible(n)) return;
+    if (n.baseX < minX) minX = n.baseX;
+    if (n.baseY < minY) minY = n.baseY;
+    if (n.baseX > maxX) maxX = n.baseX;
+    if (n.baseY > maxY) maxY = n.baseY;
+  });
+  minX -= 60; minY -= 60; maxX += 60; maxY += 60;
+  const mapW = maxX - minX || 1;
+  const mapH = maxY - minY || 1;
+  const scale = Math.min(MW / mapW, MH / mapH);
+
+  function sx(x) { return (x - minX) * scale; }
+  function sy(y) { return (y - minY) * scale; }
+
+  // Edges
+  EDGE_DEFS.forEach(e => {
+    if (!isNodeVisible(e.fromNode) || !isNodeVisible(e.toNode)) return;
+    mctx.strokeStyle = 'rgba(255,255,255,0.15)';
+    mctx.lineWidth = 0.5;
+    mctx.beginPath();
+    mctx.moveTo(sx(e.fromNode.baseX), sy(e.fromNode.baseY));
+    mctx.lineTo(sx(e.toNode.baseX), sy(e.toNode.baseY));
+    mctx.stroke();
+  });
+
+  // Nodes
+  nodes.forEach(n => {
+    if (!isNodeVisible(n)) return;
+    mctx.fillStyle = n.color.fill;
+    mctx.beginPath();
+    mctx.arc(sx(n.baseX), sy(n.baseY), n.r >= 20 ? 2.5 : 1.5, 0, Math.PI * 2);
+    mctx.fill();
+  });
+
+  // Viewport rect
+  const vx = (-panX + W / 2 * (1 - 1 / zoom)) / scale + minX;
+  const vy = (-panY + H / 2 * (1 - 1 / zoom)) / scale + minY;
+  const vw = W / (zoom * scale);
+  const vh = H / (zoom * scale);
+  mctx.strokeStyle = 'rgba(255,255,255,0.5)';
+  mctx.lineWidth = 1;
+  mctx.strokeRect(sx(vx), sy(vy), vw, vh);
+}
+
+minimap.addEventListener('click', e => {
+  const rect = minimap.getBoundingClientRect();
+  const mx = e.clientX - rect.left;
+  const my = e.clientY - rect.top;
+
+  // Find same bounds as drawMinimap
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  nodes.forEach(n => {
+    if (!isNodeVisible(n)) return;
+    if (n.baseX < minX) minX = n.baseX;
+    if (n.baseY < minY) minY = n.baseY;
+    if (n.baseX > maxX) maxX = n.baseX;
+    if (n.baseY > maxY) maxY = n.baseY;
+  });
+  minX -= 60; minY -= 60; maxX += 60; maxY += 60;
+  const mapW = maxX - minX || 1;
+  const mapH = maxY - minY || 1;
+  const scale = Math.min(MW / mapW, MH / mapH);
+
+  const worldX = mx / scale + minX;
+  const worldY = my / scale + minY;
+  panX = -(worldX - W / 2);
+  panY = -(worldY - H / 2);
 });
 
 canvas.addEventListener('dblclick', e => {
