@@ -722,6 +722,9 @@ function roundRect(c, x, y, w, h, r) {
 }
 
 // ── Node Icons (canvas paths) ──────────────────────────────────────────────
+const winstatsImg = new Image();
+winstatsImg.src = 'WinStats_LogoDark.png';
+
 function drawNodeIcon(ctx, id, s, alpha, r) {
   ctx.save();
   ctx.fillStyle = `rgba(255,255,255,${alpha})`;
@@ -730,7 +733,14 @@ function drawNodeIcon(ctx, id, s, alpha, r) {
   ctx.lineCap = 'round';
 
   if (r >= 20) {
-    // ── Hub icon: central node + 3 radiating connections ──
+    // ── Hub icon ──
+    if (id === 'winstats' && winstatsImg.complete && winstatsImg.naturalWidth > 0) {
+      // Custom WIN STATS logo
+      const imgSize = s * 1.9;
+      ctx.globalAlpha = alpha;
+      ctx.drawImage(winstatsImg, -imgSize / 2, -imgSize / 2, imgSize, imgSize);
+    } else {
+      // Generic node icon: central hub + 3 radiating connections
     ctx.beginPath();
     ctx.arc(0, 0, s * 0.34, 0, Math.PI * 2);
     ctx.fill();
@@ -747,6 +757,7 @@ function drawNodeIcon(ctx, id, s, alpha, r) {
       ctx.arc(Math.cos(angle) * outerR, Math.sin(angle) * outerR, s * 0.2, 0, Math.PI * 2);
       ctx.fill();
     }
+    } // close else (generic icon)
   } else {
     // ── 3D Folder icon for sectoriales ──
     const foldH = s * 0.22;
