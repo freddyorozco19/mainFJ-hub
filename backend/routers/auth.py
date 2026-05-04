@@ -2,7 +2,7 @@
 """
 backend/routers/auth.py — JWT Authentication + Password Reset
 """
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 import hmac
 import secrets
