@@ -110,7 +110,7 @@ const NODE_DEFS = [
   { id: 'ws-accounts',name:'ACCOUNTS',    role: 'Cuentas',       layer: 'winstats',    fx: 0.24, fy: 0.08, r: 14, desc: 'Gestión de cuentas y balances', url: '#', btnText: 'Ver Accounts' },
 
   // ═══ ARCHITECHIA ═══
-  { id: 'architechia',name:'ARCHITECHIA', role: 'Eje Sistema',   layer: 'architechia', fx: 0.50, fy: 0.14, r: 22 },
+  { id: 'architechia',name:'ARCHITECHIA', role: 'Eje Sistema',   layer: 'architechia', fx: 0.50, fy: 0.14, r: 22, desc: 'Plataforma de arquitectura y soluciones tecnológicas', url: 'https://architechia-portal.vercel.app/', btnText: 'Ir a Architechia' },
   { id: 'at-products',name:'PRODUCTS',    role: 'Productos',     layer: 'architechia', fx: 0.40, fy: 0.04, r: 14, desc: 'Portafolio de productos y servicios', url: '#', btnText: 'Ver Products' },
   { id: 'at-finances',name:'FINANCES',    role: 'Portafolio',    layer: 'architechia', fx: 0.50, fy: 0.04, r: 14, desc: 'Gestión financiera y portafolio', url: 'https://main-fj-hub.vercel.app/finance', btnText: 'Ir a Finanzas' },
   { id: 'at-leads',   name:'LEADS',       role: 'Prospectos',    layer: 'architechia', fx: 0.60, fy: 0.04, r: 14, desc: 'Generación y gestión de prospectos', url: '#', btnText: 'Ver Leads' },
@@ -979,10 +979,16 @@ canvas.addEventListener('click', e => {
   const my = e.clientY - rect.top;
   const n = nodeAt(mx - panX, my - panY);
   if (n) {
-    if (n.r < 18) {
+    if (n.url && n.url !== '#') {
+      // Has redirect URL: show popup
+      selectedNodeId = null;
+      showPopup(n, mx, my);
+    } else if (n.r < 18) {
+      // Sectorial without URL: just popup
       selectedNodeId = null;
       showPopup(n, mx, my);
     } else {
+      // Hub without URL: toggle selection
       hidePopup();
       selectedNodeId = selectedNodeId === n.id ? null : n.id;
     }
