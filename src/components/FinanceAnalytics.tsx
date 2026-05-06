@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { TrendingUp, TrendingDown, BarChart3, ShoppingBag, CreditCard, Store, Tag, AlertCircle } from 'lucide-react'
+import { TrendingUp, ShoppingBag, CreditCard, Tag, AlertCircle } from 'lucide-react'
 import { api } from '../api'
 
 interface TabAnalytics {
@@ -167,7 +167,7 @@ export function FinanceAnalytics() {
               <div className="mb-3">
                 <p className="text-[10px] text-slate-500 mb-1.5 uppercase tracking-wider font-medium">Pagos</p>
                 <div className="flex flex-wrap gap-1">
-                  {data.top_payments.slice(0, 3).map(([pay, count]) => (
+                  {data.top_payments.slice(0, 3).map(([pay]) => (
                     <span
                       key={pay}
                       className="text-[10px] px-2 py-0.5 rounded-md bg-surface border border-border text-slate-400"
