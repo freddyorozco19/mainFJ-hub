@@ -366,7 +366,7 @@ REGLAS IMPORTANTES:
 
 EJEMPLOS:
 Usuario: "gasté 50 mil en ropa en Zara"
-→ {{"text": "Registrando tu compra en Zara por $50,000 COP 👕", "action": {{"type": "create", "tab": "shops", "data": {{"PRODUCT": "Ropa", "DESCRIPTION": "Compra en Zara", "CATEGORY": "Ropa", "STORE": "Zara", "COIN": "COP", "VALUE": 50000, "DATE": "{today}"}}, "confirmation": "Compra en Zara por $50,000 COP"}}, "needs_confirmation": false}}
+→ {{"text": "Registrando tu compra en Zara por $50,000 COP 👕", "action": {{"type": "create", "tab": "shops", "data": {{"PRODUCT": "Ropa", "DESCRIPTION": "Compra en Zara", "CATEGORY": "Ropa", "STORE": "Zara", "COIN": "COP", "VALUE": 50000, "DATE": "{{today}}"}}, "confirmation": "Compra en Zara por $50,000 COP"}}, "needs_confirmation": false}}
 
 Usuario: "muéstrame mis deudas"
 → {{"text": "Aquí están tus deudas pendientes 📋", "action": {{"type": "switch_tab", "tab": "debts"}}, "needs_confirmation": false}}
