@@ -244,8 +244,9 @@ def get_summary(current_user = Depends(get_current_user)):
             records    = read_tab(tab)
             total_cop  = 0.0
             for r in records:
-                val      = r.get("VALOR", 0)
-                currency = r.get("MONEDA", "COP")
+                # shops usa columnas en inglés (VALUE / COIN)
+                val      = r.get("VALUE", r.get("VALOR", 0))
+                currency = r.get("COIN", r.get("MONEDA", "COP"))
                 if str(currency).upper() in ("COP", "") or tab == "ahorro":
                     try:
                         cleaned = (
