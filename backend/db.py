@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 """SQLite setup — single file for all dashboard data."""
+import json
 import sqlite3
+from datetime import datetime
 from pathlib import Path
 
 DB_PATH = Path(__file__).parent.parent / "data" / "dashboard.db"
@@ -11,6 +13,21 @@ def get_conn() -> sqlite3.Connection:
     conn = sqlite3.connect(str(DB_PATH), check_same_thread=False)
     conn.row_factory = sqlite3.Row
     return conn
+
+
+def log_finance_history(action: str, tab: str, row_index: int | None = None,
+                        data: dict | None = None, reason: str | None = None,
+                        user_email: str | None = None) -> None:
+    """Registra una operación CRUD en el historial de finanzas."""
+    with get_conn() as conn:
+        conn.execute(
+            """INSERT INTO finance_history
+               (action, tab, row_index, data, reason, user_email, created_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?)""",
+            (action, tab, row_index,
+             json.dumps(data, ensure_ascii=False) if data else None,
+             reason, user_email, datetime.now().isoformat())
+        )
 
 
 def init_db() -> None:
@@ -46,8 +63,21 @@ def init_db() -> None:
                 created_at  TEXT NOT NULL DEFAULT (datetime('now'))
             );
 
+            CREATE TABLE IF NOT EXISTS finance_history (
+                id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                action      TEXT NOT NULL,
+                tab         TEXT NOT NULL,
+                row_index   INTEGER,
+                data        TEXT,
+                reason      TEXT,
+                user_email  TEXT,
+                created_at  TEXT NOT NULL DEFAULT (datetime('now'))
+            );
+
             CREATE INDEX IF NOT EXISTS idx_msg_agent  ON messages(agent_slug);
             CREATE INDEX IF NOT EXISTS idx_log_level  ON logs(level);
             CREATE INDEX IF NOT EXISTS idx_log_agent  ON logs(agent_slug);
             CREATE INDEX IF NOT EXISTS idx_reset_token ON reset_tokens(token);
+            CREATE INDEX IF NOT EXISTS idx_fin_hist_tab ON finance_history(tab);
+            CREATE INDEX IF NOT EXISTS idx_fin_hist_action ON finance_history(action);
         """)

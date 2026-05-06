@@ -14,6 +14,7 @@ from pydantic import BaseModel
 from dotenv import load_dotenv
 
 from backend.routers.auth import get_current_user
+from backend.db import log_finance_history, get_conn
 from backend.sheets import read_tab, append_row, update_row, delete_row, COLUMNS
 from backend.events import event_manager
 try:
@@ -126,6 +127,7 @@ class RecordUpdate(BaseModel):
 class RecordDelete(BaseModel):
     tab: str
     row_index: int
+    reason: str | None = None
 
 
 class AgentMessage(BaseModel):
@@ -287,6 +289,11 @@ def create_record(req: RecordCreate, current_user = Depends(get_current_user)):
         raise HTTPException(400, f"Tab '{req.tab}' no válido")
     try:
         append_row(req.tab, req.data)
+        log_finance_history(
+            action="CREATE", tab=req.tab,
+            data=req.data,
+            user_email=getattr(current_user, 'email', None)
+        )
         return {"status": "created", "tab": req.tab, "data": req.data}
     except Exception as e:
         raise HTTPException(500, str(e))
@@ -300,6 +307,11 @@ def update_record(req: RecordUpdate, current_user = Depends(get_current_user)):
         raise HTTPException(400, f"Tab '{req.tab}' no válido")
     try:
         update_row(req.tab, req.row_index, req.data)
+        log_finance_history(
+            action="UPDATE", tab=req.tab, row_index=req.row_index,
+            data=req.data,
+            user_email=getattr(current_user, 'email', None)
+        )
         return {"status": "updated", "tab": req.tab, "row_index": req.row_index}
     except Exception as e:
         raise HTTPException(500, str(e))
@@ -313,9 +325,37 @@ def delete_record(req: RecordDelete, current_user = Depends(get_current_user)):
         raise HTTPException(400, f"Tab '{req.tab}' no válido")
     try:
         delete_row(req.tab, req.row_index)
+        log_finance_history(
+            action="DELETE", tab=req.tab, row_index=req.row_index,
+            reason=getattr(req, 'reason', None),
+            user_email=getattr(current_user, 'email', None)
+        )
         return {"status": "deleted", "tab": req.tab, "row_index": req.row_index}
     except Exception as e:
         raise HTTPException(500, str(e))
+
+
+# ── CRUD: Historial de operaciones ────────────────────────────────────────────
+@router.get("/history")
+def get_history(tab: str | None = None, limit: int = 100, current_user = Depends(get_current_user)):
+    """Devuelve el historial de operaciones CRUD en finanzas."""
+    with get_conn() as conn:
+        if tab:
+            rows = conn.execute(
+                """SELECT id, action, tab, row_index, data, reason, user_email, created_at
+                   FROM finance_history WHERE tab = ? ORDER BY id DESC LIMIT ?""",
+                (tab, limit)
+            ).fetchall()
+        else:
+            rows = conn.execute(
+                """SELECT id, action, tab, row_index, data, reason, user_email, created_at
+                   FROM finance_history ORDER BY id DESC LIMIT ?""",
+                (limit,)
+            ).fetchall()
+    return {
+        "count": len(rows),
+        "history": [dict(r) for r in rows]
+    }
 
 
 # ── Finance Agent — system prompt ───────────────────────────────────────────

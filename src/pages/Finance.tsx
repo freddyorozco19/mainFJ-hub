@@ -11,6 +11,7 @@ import { FinanceAgentChat, type AgentAction } from '../components/FinanceAgentCh
 const SUBPAGES = [
   { key: 'dashboard', label: 'Dashboard', hex: '#7C3AED' },
   { key: 'registros', label: 'Registros',  hex: '#10B981' },
+  { key: 'history',   label: 'History',    hex: '#F59E0B' },
 ]
 
 const TABS_CONFIG = [
@@ -31,7 +32,7 @@ const TAB_COLUMNS: Record<TabKey, string[]> = {
   debts:      ['PRODUCTO', 'DESCRIPCION', 'MONEDA', 'VALOR', 'PAGO', 'ESTADO', 'FECHA'],
 }
 
-type SubPageKey = 'dashboard' | 'registros'
+type SubPageKey = 'dashboard' | 'registros' | 'history'
 type TabKey = 'shops' | 'basket' | 'essentials' | 'ahorro' | 'debts' | 'wishlist'
 type Summary = Record<TabKey, { count: number; total_cop: number; error?: string }>
 type Records = Record<string, string | number>[]
@@ -215,6 +216,11 @@ export function Finance() {
   // ── Finance Agent Chat ─────────────────────────────────────────────────────
   const [agentChatOpen, setAgentChatOpen]     = useState(false)
 
+  // ── History ─────────────────────────────────────────────────────────────────
+  const [historyData, setHistoryData]         = useState<any[]>([])
+  const [historyLoading, setHistoryLoading]   = useState(false)
+  const [historyTab, setHistoryTab]           = useState<TabKey | 'all'>('all')
+
   useEffect(() => { loadSummary() }, [])
   useEffect(() => {
     if (activeSubPage === 'dashboard') loadRecords(activeTab)
@@ -222,6 +228,9 @@ export function Finance() {
   useEffect(() => {
     if (activeSubPage === 'registros') loadRecords(crudTab)
   }, [crudTab, activeSubPage])
+  useEffect(() => {
+    if (activeSubPage === 'history') loadHistory()
+  }, [activeSubPage, historyTab])
 
   // ── AI Analysis ───────────────────────────────────────────────────────────
   const [analysisText, setAnalysisText]     = useState('')
@@ -367,6 +376,17 @@ export function Finance() {
       setRecords(data.records ?? [])
     } catch (e: any) { console.error('Error cargando registros:', e) }
     finally { setRecordsLoading(false) }
+  }
+
+  async function loadHistory() {
+    setHistoryLoading(true)
+    try {
+      const url = historyTab === 'all' ? '/finance/history' : `/finance/history?tab=${historyTab}`
+      const res = await api(url)
+      const data = await res.json()
+      setHistoryData(data.history ?? [])
+    } catch (e: any) { console.error('Error cargando historial:', e) }
+    finally { setHistoryLoading(false) }
   }
 
   async function handleWrite() {
@@ -794,6 +814,88 @@ export function Finance() {
           </a>
         </div>
         </>
+      )}
+
+      {/* ── History SubPage ──────────────────────────────────────────────── */}
+      {activeSubPage === 'history' && (
+        <div className="bg-card border border-border rounded-xl p-5 space-y-4">
+          <div className="flex items-center justify-between flex-wrap gap-3">
+            <div>
+              <h3 className="text-sm font-semibold text-white">Historial de Operaciones</h3>
+              <p className="text-xs text-slate-500 mt-0.5">Registro de todas las acciones CRUD en finanzas</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <select
+                value={historyTab}
+                onChange={e => setHistoryTab(e.target.value as TabKey | 'all')}
+                className="bg-surface border border-border text-sm text-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:border-primary/50"
+              >
+                <option value="all">Todas las pestañas</option>
+                {TABS_CONFIG.map(t => (
+                  <option key={t.key} value={t.key}>{t.label}</option>
+                ))}
+              </select>
+              <button
+                onClick={loadHistory}
+                disabled={historyLoading}
+                className="flex items-center gap-2 text-xs text-slate-400 hover:text-slate-200 bg-card border border-border px-3 py-2 rounded-lg transition-colors"
+              >
+                <RefreshCw size={13} className={historyLoading ? 'animate-spin' : ''} />
+                Actualizar
+              </button>
+            </div>
+          </div>
+
+          <div className="overflow-x-auto">
+            {historyLoading ? (
+              <div className="flex items-center justify-center py-12 gap-2 text-slate-500">
+                <Loader2 size={16} className="animate-spin" />
+                <span className="text-sm">Cargando historial…</span>
+              </div>
+            ) : historyData.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 gap-2 text-slate-600">
+                <AlertCircle size={24} />
+                <span className="text-sm">Sin registros en el historial</span>
+              </div>
+            ) : (
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border">
+                    <th className="text-left text-xs text-slate-500 font-medium py-2 px-3">Acción</th>
+                    <th className="text-left text-xs text-slate-500 font-medium py-2 px-3">Pestaña</th>
+                    <th className="text-left text-xs text-slate-500 font-medium py-2 px-3">Datos</th>
+                    <th className="text-left text-xs text-slate-500 font-medium py-2 px-3">Motivo</th>
+                    <th className="text-left text-xs text-slate-500 font-medium py-2 px-3">Usuario</th>
+                    <th className="text-left text-xs text-slate-500 font-medium py-2 px-3">Fecha</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {historyData.map((h, i) => (
+                    <tr key={i} className="border-b border-border/50 hover:bg-white/3 transition-colors">
+                      <td className="py-2 px-3">
+                        <span className={`text-xs px-2 py-0.5 rounded-full border ${
+                          h.action === 'CREATE' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                          : h.action === 'UPDATE' ? 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                          : h.action === 'DELETE' ? 'bg-red-500/10 text-red-400 border-red-500/20'
+                          : 'bg-slate-500/10 text-slate-400 border-slate-500/20'
+                        }`}>
+                          {h.action}
+                        </span>
+                      </td>
+                      <td className="py-2 px-3 text-slate-300">{h.tab}</td>
+                      <td className="py-2 px-3 text-slate-300 max-w-xs truncate" title={h.data}>
+                        {h.data ? JSON.parse(h.data).PRODUCT || JSON.parse(h.data).PRODUCTO || JSON.parse(h.data).NOMBRE || '—' : '—'}
+                      </td>
+                      <td className="py-2 px-3 text-slate-400 text-xs max-w-xs truncate" title={h.reason}>{h.reason || '—'}</td>
+                      <td className="py-2 px-3 text-slate-400 text-xs">{h.user_email || '—'}</td>
+                      <td className="py-2 px-3 text-slate-400 text-xs whitespace-nowrap">{new Date(h.created_at).toLocaleString('es-CO')}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        </div>
       )}
 
       {/* ── AI Analysis ─────────────────────────────────────────────────────── */}
