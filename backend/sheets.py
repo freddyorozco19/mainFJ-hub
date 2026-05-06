@@ -4,7 +4,7 @@ from __future__ import annotations
 from pathlib import Path
 import os
 import json
-import tempfile
+import time
 import gspread
 import unicodedata
 from google.oauth2.service_account import Credentials
@@ -32,6 +32,10 @@ COLUMNS = {
     "wishlist":   ["PRODUCTO", "DESCRIPCION", "MONEDA", "VALOR", "TIENDA", "MEDIO", "SOURCE"],
     "debts":      ["PRODUCTO", "DESCRIPCION", "MONEDA", "VALOR", "PAGO", "ESTADO", "FECHA"],
 }
+
+# ── Simple in-memory cache with TTL ─────────────────────────────────────────
+_CACHE: dict[str, dict] = {}
+_CACHE_TTL = 45  # segundos
 
 
 def _client() -> gspread.Client:
@@ -69,10 +73,23 @@ def get_sheet(tab: str) -> gspread.Worksheet:
     return sh.worksheet(TABS[tab])
 
 
-def read_tab(tab: str) -> list[dict]:
-    """Devuelve todos los registros de una pestaña como lista de dicts con keys normalizadas."""
+def read_tab(tab: str, use_cache: bool = True) -> list[dict]:
+    """Devuelve todos los registros de una pestaña como lista de dicts con keys normalizadas.
+    
+    Usa cache en memoria por 45 segundos para evitar quota de Google Sheets.
+    """
+    now = time.time()
+    
+    # Check cache
+    if use_cache and tab in _CACHE:
+        cached = _CACHE[tab]
+        if now - cached['timestamp'] < _CACHE_TTL:
+            return cached['data']
+    
+    # Fetch from Google Sheets
     ws = get_sheet(tab)
     records = ws.get_all_records()
+    
     # Normaliza las claves para evitar problemas de encoding con tildes
     normalized = []
     for row in records:
@@ -80,7 +97,23 @@ def read_tab(tab: str) -> list[dict]:
         for key, value in row.items():
             new_row[_normalize_key(key)] = value
         normalized.append(new_row)
+    
+    # Store in cache
+    _CACHE[tab] = {
+        'data': normalized,
+        'timestamp': now,
+    }
+    
     return normalized
+
+
+def invalidate_cache(tab: str | None = None) -> None:
+    """Invalida el cache de una pestaña (o todas si tab es None)."""
+    global _CACHE
+    if tab is None:
+        _CACHE.clear()
+    elif tab in _CACHE:
+        del _CACHE[tab]
 
 
 def append_row(tab: str, data: dict) -> bool:
@@ -88,6 +121,7 @@ def append_row(tab: str, data: dict) -> bool:
     ws  = get_sheet(tab)
     row = [data.get(col, "") for col in COLUMNS[tab]]
     ws.append_row(row, value_input_option="USER_ENTERED")
+    invalidate_cache(tab)
     return True
 
 
@@ -98,6 +132,7 @@ def update_row(tab: str, row_index: int, data: dict) -> bool:
     row_values = [data.get(col, "") for col in cols]
     # +2 porque get_all_records() omite la fila 1 (headers); índice 0 → fila 2
     ws.update(f"A{row_index + 2}", [row_values], value_input_option="USER_ENTERED")
+    invalidate_cache(tab)
     return True
 
 
@@ -106,4 +141,5 @@ def delete_row(tab: str, row_index: int) -> bool:
     ws = get_sheet(tab)
     # +2 porque get_all_records() omite la fila 1 (headers); índice 0 → fila 2
     ws.delete_rows(row_index + 2)
+    invalidate_cache(tab)
     return True
