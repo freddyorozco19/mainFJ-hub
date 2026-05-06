@@ -6,7 +6,7 @@ import {
 } from 'lucide-react'
 
 import { api } from '../api'
-import { FinanceAgentChat } from '../components/FinanceAgentChat'
+import { FinanceAgentChat, type AgentAction } from '../components/FinanceAgentChat'
 
 const SUBPAGES = [
   { key: 'dashboard', label: 'Dashboard', hex: '#7C3AED' },
@@ -826,8 +826,23 @@ export function Finance() {
         isOpen={agentChatOpen}
         onClose={() => setAgentChatOpen(false)}
         currentTab={crudTab}
-        onActionExecuted={(action) => {
-          console.log('Acción ejecutada:', action)
+        records={records}
+        onActionExecuted={(action: AgentAction) => {
+          // Toast de éxito
+          const toast = (window as any).__addToast
+          if (action.type === 'create') {
+            toast?.({ message: `✅ ${action.confirmation || 'Registro creado'}`, type: 'success' })
+          } else if (action.type === 'update') {
+            toast?.({ message: `✏️ ${action.confirmation || 'Registro actualizado'}`, type: 'info' })
+          } else if (action.type === 'delete') {
+            toast?.({ message: `🗑️ ${action.confirmation || 'Registro eliminado'}`, type: 'warn' })
+          }
+          // Auto-switch de tab si el agente lo pide
+          if (action.type === 'switch_tab' && action.tab) {
+            setCrudTab(action.tab as TabKey)
+            loadRecords(action.tab as TabKey)
+            toast?.({ message: `📂 Cambiado a ${TABS_CONFIG.find(t => t.key === action.tab)?.label || action.tab}`, type: 'info' })
+          }
         }}
         onRefresh={() => loadRecords(crudTab)}
       />

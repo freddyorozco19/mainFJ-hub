@@ -1,15 +1,15 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { Bot, X, Send, Loader2, Check, Trash2, Edit3, Plus, AlertCircle, User } from 'lucide-react'
+import { Bot, X, Send, Loader2, Check, Trash2, Edit3, Plus, AlertCircle, User, Eraser } from 'lucide-react'
 import { api } from '../api'
 
-interface ChatMessage {
+export interface ChatMessage {
   role: 'user' | 'assistant'
   content: string
   action?: AgentAction
   timestamp: string
 }
 
-interface AgentAction {
+export interface AgentAction {
   type: 'none' | 'create' | 'update' | 'delete' | 'switch_tab'
   tab?: string
   data?: Record<string, string | number>
@@ -27,29 +27,52 @@ interface FinanceAgentChatProps {
   isOpen: boolean
   onClose: () => void
   currentTab: string
+  records: Record<string, string | number>[]
   onActionExecuted: (action: AgentAction) => void
   onRefresh: () => void
+}
+
+const STORAGE_KEY = 'finance_agent_chat'
+
+function loadMessages(): ChatMessage[] {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY)
+    if (raw) return JSON.parse(raw)
+  } catch { /* ignore */ }
+  return [
+    {
+      role: 'assistant',
+      content: '¡Hola! Soy FINANCE, tu agente de gestión financiera. Puedo ayudarte a registrar, editar o eliminar cualquier registro. ¿Qué necesitas hacer hoy?',
+      timestamp: new Date().toISOString(),
+    },
+  ]
+}
+
+function saveMessages(msgs: ChatMessage[]) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(msgs))
+  } catch { /* ignore */ }
 }
 
 export function FinanceAgentChat({
   isOpen,
   onClose,
   currentTab,
+  records,
   onActionExecuted,
   onRefresh,
 }: FinanceAgentChatProps) {
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      role: 'assistant',
-      content: '¡Hola! Soy FINANCE, tu agente de gestión financiera. Puedo ayudarte a registrar, editar o eliminar cualquier registro. ¿Qué necesitas hacer hoy?',
-      timestamp: new Date().toISOString(),
-    },
-  ])
+  const [messages, setMessages] = useState<ChatMessage[]>(loadMessages)
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [pendingAction, setPendingAction] = useState<AgentAction | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+
+  // Persistir mensajes
+  useEffect(() => {
+    saveMessages(messages)
+  }, [messages])
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -64,6 +87,18 @@ export function FinanceAgentChat({
   useEffect(() => {
     scrollToBottom()
   }, [messages, scrollToBottom])
+
+  const clearChat = () => {
+    const fresh = [
+      {
+        role: 'assistant',
+        content: '¡Hola! Soy FINANCE, tu agente de gestión financiera. Puedo ayudarte a registrar, editar o eliminar cualquier registro. ¿Qué necesitas hacer hoy?',
+        timestamp: new Date().toISOString(),
+      },
+    ] as ChatMessage[]
+    setMessages(fresh)
+    setPendingAction(null)
+  }
 
   const sendMessage = async () => {
     if (!input.trim() || loading) return
@@ -203,6 +238,17 @@ export function FinanceAgentChat({
     }
   }
 
+  // Datos del registro para confirmación inteligente
+  const getRecordForConfirmation = () => {
+    if (!pendingAction) return null
+    if (pendingAction.row_index !== undefined && pendingAction.row_index >= 0 && pendingAction.row_index < records.length) {
+      return records[pendingAction.row_index]
+    }
+    return pendingAction.data || null
+  }
+
+  const confirmRecord = getRecordForConfirmation()
+
   if (!isOpen) return null
 
   return (
@@ -222,12 +268,21 @@ export function FinanceAgentChat({
               </div>
             </div>
           </div>
-          <button
-            onClick={onClose}
-            className="text-slate-400 hover:text-white transition-colors p-1 rounded-lg hover:bg-white/5"
-          >
-            <X size={18} />
-          </button>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={clearChat}
+              title="Limpiar conversación"
+              className="text-slate-500 hover:text-slate-300 transition-colors p-1.5 rounded-lg hover:bg-white/5"
+            >
+              <Eraser size={14} />
+            </button>
+            <button
+              onClick={onClose}
+              className="text-slate-400 hover:text-white transition-colors p-1.5 rounded-lg hover:bg-white/5"
+            >
+              <X size={18} />
+            </button>
+          </div>
         </div>
 
         {/* Messages */}
@@ -291,16 +346,39 @@ export function FinanceAgentChat({
             </div>
           )}
 
-          {/* Confirmation prompt */}
+          {/* Confirmation prompt inteligente */}
           {pendingAction && (
             <div className="flex gap-2.5">
               <div className="w-7 h-7 rounded-full bg-amber-500/20 border border-amber-500/30 flex items-center justify-center shrink-0">
                 <AlertCircle size={13} className="text-amber-400" />
               </div>
               <div className="bg-amber-500/10 border border-amber-500/20 rounded-2xl rounded-bl-md px-4 py-3 flex-1">
-                <p className="text-sm text-amber-300 mb-3">
+                <p className="text-sm text-amber-300 mb-3 font-medium">
                   ¿Confirmas esta acción?
                 </p>
+
+                {/* Tarjeta con datos del registro */}
+                {confirmRecord && (
+                  <div className="mb-3 bg-black/20 border border-amber-500/10 rounded-lg p-3">
+                    <p className="text-[10px] text-amber-500/70 uppercase font-medium mb-1.5 tracking-wider">
+                      {pendingAction.type === 'delete' ? 'Registro a eliminar'
+                        : pendingAction.type === 'update' ? 'Registro a actualizar'
+                        : 'Datos del registro'}
+                    </p>
+                    <div className="space-y-1">
+                      {Object.entries(confirmRecord).slice(0, 6).map(([key, value]) => (
+                        <div key={key} className="flex justify-between text-xs">
+                          <span className="text-slate-500">{key}</span>
+                          <span className="text-slate-300 truncate max-w-[180px]" title={String(value)}>{String(value)}</span>
+                        </div>
+                      ))}
+                      {Object.keys(confirmRecord).length > 6 && (
+                        <p className="text-[10px] text-slate-600 mt-1">+ {Object.keys(confirmRecord).length - 6} campos más</p>
+                      )}
+                    </div>
+                  </div>
+                )}
+
                 <div className="flex gap-2">
                   <button
                     onClick={confirmAction}
