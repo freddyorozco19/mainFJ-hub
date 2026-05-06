@@ -205,6 +205,12 @@ export function Finance() {
   const [ocrImage, setOcrImage]               = useState<string | null>(null)
   const [ocrLoading, setOcrLoading]           = useState(false)
 
+  // ── Delete Confirmation Modal ──────────────────────────────────────────────
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [deleteIndex, setDeleteIndex]         = useState<number | null>(null)
+  const [deleteReason, setDeleteReason]       = useState('')
+  const [deleteLoading, setDeleteLoading]     = useState(false)
+
   // ── Finance Agent Chat ─────────────────────────────────────────────────────
   const [agentChatOpen, setAgentChatOpen]     = useState(false)
 
@@ -295,21 +301,35 @@ export function Finance() {
     }
   }
 
-  async function handleDeleteRecord(index: number) {
-    if (!confirm('¿Eliminar este registro?')) return
+  function openDeleteModal(index: number) {
+    setDeleteIndex(index)
+    setDeleteReason('')
+    setShowDeleteModal(true)
+  }
+
+  async function handleConfirmDelete() {
+    if (deleteIndex === null || !deleteReason.trim()) return
+    setDeleteLoading(true)
     try {
       const res = await api('/finance/records', {
         method: 'DELETE',
-        body: { tab: crudTab, row_index: index },
+        body: { tab: crudTab, row_index: deleteIndex, reason: deleteReason.trim() },
       })
       if (!res.ok) {
         const err = await res.json()
         throw new Error(err.detail || 'Error al eliminar')
       }
       await loadRecords(crudTab)
+      setShowDeleteModal(false)
+      setDeleteIndex(null)
+      setDeleteReason('')
+      // Toast de éxito
+      ;(window as any).__addToast?.({ message: 'Registro eliminado correctamente', type: 'success' })
     } catch (e: any) {
-      alert('Error al eliminar: ' + (e.message || 'Error de conexión'))
+      ;(window as any).__addToast?.({ message: 'Error al eliminar: ' + (e.message || 'Error de conexión'), type: 'error' })
       console.error('Delete error:', e)
+    } finally {
+      setDeleteLoading(false)
     }
   }
 
@@ -721,24 +741,38 @@ export function Finance() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-border">
+                    <th className="text-center text-xs text-slate-500 font-medium py-2 px-3 whitespace-nowrap w-[100px]">Acciones</th>
                     {Object.keys(records[0]).map(col => (
                       <th key={col} className="text-left text-xs text-slate-500 font-medium py-2 px-3 whitespace-nowrap">{col}</th>
                     ))}
-                    <th className="text-right text-xs text-slate-500 font-medium py-2 px-3">Acciones</th>
                   </tr>
                 </thead>
                 <tbody>
                   {records.map((row, i) => (
                     <tr key={i} className="border-b border-border/50 hover:bg-white/3 transition-colors">
+                      <td className="py-2 px-3 text-center whitespace-nowrap">
+                        <div className="flex items-center justify-center gap-1">
+                          <button
+                            onClick={() => openEditModal(i)}
+                            title="Editar"
+                            className="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-accent/10 hover:bg-accent/20 text-accent hover:text-accent transition-colors"
+                          >
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                          </button>
+                          <button
+                            onClick={() => openDeleteModal(i)}
+                            title="Eliminar"
+                            className="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-danger/10 hover:bg-danger/20 text-danger hover:text-danger transition-colors"
+                          >
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+                          </button>
+                        </div>
+                      </td>
                       {Object.keys(row).map(col => (
                         <td key={col} className="py-2 px-3 text-slate-300 whitespace-nowrap max-w-xs truncate" title={String(row[col])}>
                           {col === 'VALOR' ? <span className="font-mono text-success text-xs">{formatCOPFull(Number(String(row[col]).replace(/\D/g, '')) || 0)}</span> : String(row[col])}
                         </td>
                       ))}
-                      <td className="py-2 px-3 text-right whitespace-nowrap">
-                        <button onClick={() => openEditModal(i)} className="text-xs text-accent hover:text-accent/80 mr-3">Editar</button>
-                        <button onClick={() => handleDeleteRecord(i)} className="text-xs text-danger hover:text-danger/80">Eliminar</button>
-                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -945,6 +979,83 @@ export function Finance() {
                 className="flex-1 py-2 text-sm bg-primary hover:bg-primary/80 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {saving ? 'Guardando...' : (editingIndex !== null ? 'Guardar Cambios' : 'Crear Registro')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Delete Confirmation Modal ──────────────────────────────────────── */}
+      {showDeleteModal && deleteIndex !== null && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="bg-card border border-danger/20 rounded-2xl w-full max-w-md shadow-2xl p-6 space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-danger/10 border border-danger/20 rounded-xl flex items-center justify-center">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-danger"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-white">Eliminar Registro</h3>
+                <p className="text-xs text-slate-400">Esta acción no se puede deshacer</p>
+              </div>
+            </div>
+
+            {/* Preview del registro a eliminar */}
+            <div className="bg-surface border border-border rounded-xl p-4 space-y-2">
+              <p className="text-[10px] text-slate-500 uppercase font-medium tracking-wider">Registro seleccionado</p>
+              <div className="space-y-1.5">
+                {Object.entries(records[deleteIndex] || {}).slice(0, 5).map(([key, value]) => (
+                  <div key={key} className="flex justify-between text-xs">
+                    <span className="text-slate-500">{key}</span>
+                    <span className="text-slate-300 truncate max-w-[200px]" title={String(value)}>{String(value)}</span>
+                  </div>
+                ))}
+                {Object.keys(records[deleteIndex] || {}).length > 5 && (
+                  <p className="text-[10px] text-slate-600">+ {Object.keys(records[deleteIndex] || {}).length - 5} campos más</p>
+                )}
+              </div>
+            </div>
+
+            {/* Motivo de eliminación */}
+            <div>
+              <label className="text-xs text-slate-400 mb-1.5 block font-medium">
+                Motivo de eliminación <span className="text-danger">*</span>
+              </label>
+              <textarea
+                value={deleteReason}
+                onChange={e => setDeleteReason(e.target.value)}
+                placeholder="Describe por qué eliminas este registro..."
+                rows={3}
+                className="w-full bg-surface border border-border rounded-xl px-4 py-3 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-danger/50 resize-none transition-colors"
+              />
+              <p className="text-[10px] text-slate-600 mt-1">
+                Este motivo se guardará para auditoría.
+              </p>
+            </div>
+
+            <div className="flex gap-3 pt-2">
+              <button
+                onClick={() => { setShowDeleteModal(false); setDeleteIndex(null); setDeleteReason('') }}
+                disabled={deleteLoading}
+                className="flex-1 py-2.5 text-sm text-slate-400 hover:text-white border border-border rounded-xl hover:bg-white/5 transition-colors disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleConfirmDelete}
+                disabled={deleteLoading || !deleteReason.trim()}
+                className="flex-1 py-2.5 text-sm bg-danger hover:bg-danger/80 text-white rounded-xl font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {deleteLoading ? (
+                  <>
+                    <Loader2 size={14} className="animate-spin" />
+                    Eliminando...
+                  </>
+                ) : (
+                  <>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                    Eliminar Registro
+                  </>
+                )}
               </button>
             </div>
           </div>
