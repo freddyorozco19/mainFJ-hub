@@ -149,8 +149,7 @@ function renderFormField(col: string, value: string | number, onChange: (val: st
         <option value="Tarjeta Débito">Tarjeta Débito</option>
         <option value="Tarjeta Crédito">Tarjeta Crédito</option>
         <option value="Transferencia">Transferencia</option>
-        <option value="Nequi">Nequi</option>
-        <option value="Daviplata">Daviplata</option>
+        <option value="PSE">PSE</option>
       </select>
     )
   }
