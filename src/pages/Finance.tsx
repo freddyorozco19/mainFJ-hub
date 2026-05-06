@@ -123,6 +123,7 @@ function renderFormField(col: string, value: string | number, onChange: (val: st
         <option value="Tecnología">Tecnología</option>
         <option value="Entretenimiento">Entretenimiento</option>
         <option value="Regalo">Regalo</option>
+        <option value="Transporte">Transporte</option>
         <option value="Otro">Otro</option>
       </select>
     )
