@@ -281,6 +281,82 @@ def get_tab_data(tab: str, current_user = Depends(get_current_user)):
         raise HTTPException(500, str(e))
 
 
+# ── Analytics por pestaña ──────────────────────────────────────────────────────
+@router.get("/analytics")
+def get_analytics(current_user = Depends(get_current_user)):
+    """Devuelve métricas detalladas por pestaña para paneles de análisis."""
+    tabs = ["essentials", "ahorro", "basket", "shops", "wishlist", "debts"]
+    result = {}
+
+    for tab in tabs:
+        try:
+            records = read_tab(tab)
+            total_cop = 0.0
+            values = []
+            categories = {}
+            stores = {}
+            payments = {}
+            statuses = {"PENDIENTE": 0, "PAGADO": 0, "PARCIAL": 0}
+            currencies = {}
+
+            for r in records:
+                # Valor monetario
+                val = r.get("VALUE", r.get("VALOR", 0))
+                currency = r.get("COIN", r.get("MONEDA", "COP"))
+                try:
+                    cleaned = float(str(val).replace("$", "").replace(".", "").replace(",", "").replace(" ", "") or 0)
+                except (ValueError, TypeError):
+                    cleaned = 0.0
+
+                if str(currency).upper() in ("COP", "") or tab == "ahorro":
+                    total_cop += cleaned
+                    values.append(cleaned)
+
+                currencies[currency] = currencies.get(currency, 0) + 1
+
+                # Categorías
+                cat = r.get("CATEGORY", r.get("CATEGORIA", ""))
+                if cat:
+                    categories[cat] = categories.get(cat, 0) + 1
+
+                # Tiendas
+                store = r.get("STORE", r.get("TIENDA", ""))
+                if store:
+                    stores[store] = stores.get(store, 0) + 1
+
+                # Métodos de pago
+                payment = r.get("PAYMENT", r.get("MEDIO PAGO", r.get("MEDIO", "")))
+                if payment:
+                    payments[payment] = payments.get(payment, 0) + 1
+
+                # Estados (debts)
+                status = r.get("ESTADO", "")
+                if status in statuses:
+                    statuses[status] += 1
+
+            # Calcular métricas
+            avg = sum(values) / len(values) if values else 0
+            max_val = max(values) if values else 0
+            min_val = min(values) if values else 0
+
+            result[tab] = {
+                "count": len(records),
+                "total_cop": total_cop,
+                "average_cop": avg,
+                "max_cop": max_val,
+                "min_cop": min_val,
+                "top_categories": sorted(categories.items(), key=lambda x: x[1], reverse=True)[:5],
+                "top_stores": sorted(stores.items(), key=lambda x: x[1], reverse=True)[:5],
+                "top_payments": sorted(payments.items(), key=lambda x: x[1], reverse=True)[:5],
+                "statuses": statuses,
+                "currencies": currencies,
+            }
+        except Exception as e:
+            result[tab] = {"error": str(e), "count": 0}
+
+    return result
+
+
 # ── CRUD: Crear registro ─────────────────────────────────────────────────────
 @router.post("/records")
 def create_record(req: RecordCreate, current_user = Depends(get_current_user)):

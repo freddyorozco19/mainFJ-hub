@@ -3,10 +3,12 @@ import {
   DollarSign, ShoppingCart,
   Send, Loader2, Bot, Search, PiggyBank,
   AlertCircle, RefreshCw, Sparkles, ChevronDown,
+  BarChart3,
 } from 'lucide-react'
 
 import { api } from '../api'
 import { FinanceAgentChat, type AgentAction } from '../components/FinanceAgentChat'
+import { FinanceAnalytics } from '../components/FinanceAnalytics'
 
 const SUBPAGES = [
   { key: 'dashboard', label: 'Dashboard', hex: '#7C3AED' },
@@ -607,6 +609,16 @@ export function Finance() {
             )
           })}
         </div>
+      </div>
+
+      {/* ── Analytics Panels ─────────────────────────────────────────────── */}
+      <div className="space-y-3">
+        <div className="flex items-center gap-2">
+          <BarChart3 size={15} className="text-primary" />
+          <h3 className="text-sm font-semibold text-white">Análisis por pestaña</h3>
+          <span className="text-xs text-slate-500">— métricas detalladas de cada categoría</span>
+        </div>
+        <FinanceAnalytics />
       </div>
 
       {/* ── Transactions Table ───────────────────────────────────────────────── */}
