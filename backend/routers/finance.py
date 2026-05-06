@@ -306,13 +306,25 @@ def update_record(req: RecordUpdate, current_user = Depends(get_current_user)):
     if req.tab not in COLUMNS:
         raise HTTPException(400, f"Tab '{req.tab}' no válido")
     try:
+        # Leer registro anterior para calcular diff
+        old_records = read_tab(req.tab)
+        old_record = old_records[req.row_index] if req.row_index < len(old_records) else {}
+
         update_row(req.tab, req.row_index, req.data)
+
+        # Calcular diff: solo campos que cambiaron
+        diff = {}
+        for key, new_val in req.data.items():
+            old_val = old_record.get(key)
+            if str(old_val) != str(new_val):
+                diff[key] = {"from": old_val, "to": new_val}
+
         log_finance_history(
             action="UPDATE", tab=req.tab, row_index=req.row_index,
-            data=req.data,
+            data={"diff": diff, "new": req.data},
             user_email=getattr(current_user, 'email', None)
         )
-        return {"status": "updated", "tab": req.tab, "row_index": req.row_index}
+        return {"status": "updated", "tab": req.tab, "row_index": req.row_index, "diff": diff}
     except Exception as e:
         raise HTTPException(500, str(e))
 
@@ -324,10 +336,15 @@ def delete_record(req: RecordDelete, current_user = Depends(get_current_user)):
     if req.tab not in COLUMNS:
         raise HTTPException(400, f"Tab '{req.tab}' no válido")
     try:
+        # Leer registro antes de eliminar para guardarlo en historial
+        old_records = read_tab(req.tab)
+        deleted_record = old_records[req.row_index] if req.row_index < len(old_records) else {}
+
         delete_row(req.tab, req.row_index)
         log_finance_history(
             action="DELETE", tab=req.tab, row_index=req.row_index,
-            reason=getattr(req, 'reason', None),
+            data={"deleted": deleted_record},
+            reason=req.reason,
             user_email=getattr(current_user, 'email', None)
         )
         return {"status": "deleted", "tab": req.tab, "row_index": req.row_index}

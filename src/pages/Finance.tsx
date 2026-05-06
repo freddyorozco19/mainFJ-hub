@@ -883,8 +883,39 @@ export function Finance() {
                         </span>
                       </td>
                       <td className="py-2 px-3 text-slate-300">{h.tab}</td>
-                      <td className="py-2 px-3 text-slate-300 max-w-xs truncate" title={h.data}>
-                        {h.data ? JSON.parse(h.data).PRODUCT || JSON.parse(h.data).PRODUCTO || JSON.parse(h.data).NOMBRE || '—' : '—'}
+                      <td className="py-2 px-3 text-slate-300 max-w-xs">
+                        {(() => {
+                          if (!h.data) return <span className="text-slate-600">—</span>
+                          try {
+                            const d = JSON.parse(h.data)
+                            // UPDATE: show diff
+                            if (h.action === 'UPDATE' && d.diff) {
+                              return (
+                                <div className="space-y-1">
+                                  {Object.entries(d.diff).map(([key, change]: [string, any]) => (
+                                    <div key={key} className="text-[11px]">
+                                      <span className="text-slate-500">{key}:</span>{' '}
+                                      <span className="text-red-400 line-through">{String(change.from)}</span>{' '}
+                                      <span className="text-emerald-400">→ {String(change.to)}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              )
+                            }
+                            // DELETE: show deleted record name
+                            if (h.action === 'DELETE' && d.deleted) {
+                              const name = d.deleted.PRODUCT || d.deleted.PRODUCTO || d.deleted.NOMBRE || 'Registro'
+                              return <span className="text-red-400 text-xs">🗑️ {name}</span>
+                            }
+                            // CREATE: show new record name
+                            if (h.action === 'CREATE' && d.PRODUCT) return <span className="text-emerald-400 text-xs">✚ {d.PRODUCT}</span>
+                            if (h.action === 'CREATE' && d.PRODUCTO) return <span className="text-emerald-400 text-xs">✚ {d.PRODUCTO}</span>
+                            if (h.action === 'CREATE' && d.NOMBRE) return <span className="text-emerald-400 text-xs">✚ {d.NOMBRE}</span>
+                            return <span className="text-slate-600 text-xs">—</span>
+                          } catch {
+                            return <span className="text-slate-600 text-xs">—</span>
+                          }
+                        })()}
                       </td>
                       <td className="py-2 px-3 text-slate-400 text-xs max-w-xs truncate" title={h.reason}>{h.reason || '—'}</td>
                       <td className="py-2 px-3 text-slate-400 text-xs">{h.user_email || '—'}</td>
