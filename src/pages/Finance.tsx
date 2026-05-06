@@ -125,7 +125,7 @@ function renderFormField(col: string, value: string | number, onChange: (val: st
         <option value="Regalo">Regalo</option>
         <option value="Transporte">Transporte</option>
         <option value="Accesorios">Accesorios</option>
-        <option value="DEBT">DEBT</option>
+        <option value="Debt">Debt</option>
         <option value="Otro">Otro</option>
       </select>
     )
