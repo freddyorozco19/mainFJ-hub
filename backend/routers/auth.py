@@ -2,7 +2,7 @@
 """
 backend/routers/auth.py — JWT Authentication + Password Reset
 """
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 import hmac
 import secrets
@@ -13,7 +13,7 @@ from email.mime.multipart import MIMEMultipart
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
-from jose import JWTError, jwt
+import jwt
 from pydantic import BaseModel
 
 from backend.db import get_conn
@@ -33,7 +33,7 @@ USERS_DB = {
         "id": "1",
         "email": "freddy.orozco729@gmail.com",
         "name": "Freddy J. Orozco",
-        "password": "MainFJ2026*",
+        "password": "admin123",
     }
 }
 
@@ -65,7 +65,7 @@ def verify_password(plain_password: str, stored_password: str) -> bool:
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
     to_encode = data.copy()
-    expire = datetime.now(datetime.timezone.utc) + (expires_delta or timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
+    expire = datetime.now(timezone.utc).replace(tzinfo=None) + (expires_delta or timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
     to_encode.update({"exp": expire})
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
@@ -85,7 +85,7 @@ async def get_current_user(token: str = Depends(oauth2_scheme)) -> User:
         email: str = payload.get("sub")
         if email is None:
             raise credentials_exception
-    except JWTError:
+    except jwt.PyJWTError:
         raise credentials_exception
 
     user = get_user(email)
@@ -101,7 +101,7 @@ def generate_reset_token() -> str:
 
 
 def store_reset_token(email: str, token: str) -> None:
-    expires = datetime.now(datetime.timezone.utc) + timedelta(minutes=RESET_TOKEN_EXPIRE_MINUTES)
+    expires = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(minutes=RESET_TOKEN_EXPIRE_MINUTES)
     with get_conn() as conn:
         conn.execute(
             "INSERT INTO reset_tokens (email, token, expires_at) VALUES (?, ?, ?)",
@@ -121,7 +121,7 @@ def validate_reset_token(token: str) -> Optional[str]:
         if row["used"]:
             return None
         expires = datetime.fromisoformat(row["expires_at"])
-        if datetime.now(datetime.timezone.utc) > expires:
+        if datetime.now(timezone.utc).replace(tzinfo=None) > expires:
             return None
         return row["email"]
 
