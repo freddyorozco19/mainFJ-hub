@@ -3,9 +3,11 @@ import {
   DollarSign, ShoppingCart,
   Send, Loader2, Bot, Search, PiggyBank,
   AlertCircle, RefreshCw, Sparkles, ChevronDown,
+  MessageSquare,
 } from 'lucide-react'
 
 import { api } from '../api'
+import { FinanceAgentChat } from '../components/FinanceAgentChat'
 
 const SUBPAGES = [
   { key: 'dashboard', label: 'Dashboard', hex: '#7C3AED' },
@@ -200,6 +202,9 @@ export function Finance() {
   const [saveError, setSaveError]             = useState('')
   const [ocrImage, setOcrImage]               = useState<string | null>(null)
   const [ocrLoading, setOcrLoading]           = useState(false)
+
+  // ── Finance Agent Chat ─────────────────────────────────────────────────────
+  const [agentChatOpen, setAgentChatOpen]     = useState(false)
 
   useEffect(() => { loadSummary() }, [])
   useEffect(() => {
@@ -684,6 +689,13 @@ export function Finance() {
                 ))}
               </select>
               <button
+                onClick={() => setAgentChatOpen(true)}
+                className="flex items-center gap-1.5 px-3 py-2 bg-accent/20 hover:bg-accent/30 border border-accent/30 text-accent text-xs font-medium rounded-lg transition-colors"
+              >
+                <Bot size={13} />
+                Agente
+              </button>
+              <button
                 onClick={openCreateModal}
                 className="px-3 py-2 bg-primary hover:bg-primary/80 text-white text-xs font-medium rounded-lg transition-colors"
               >
@@ -809,6 +821,18 @@ export function Finance() {
         )}
       </div>
       )}
+
+      {/* ── Finance Agent Chat Popup ─────────────────────────────────────── */}
+      <FinanceAgentChat
+        isOpen={agentChatOpen}
+        onClose={() => setAgentChatOpen(false)}
+        currentTab={crudTab}
+        records={records}
+        onActionExecuted={(action) => {
+          console.log('Acción ejecutada:', action)
+        }}
+        onRefresh={() => loadRecords(crudTab)}
+      />
 
       {/* ── Record Modal ─────────────────────────────────────────────────── */}
       {showRecordModal && (

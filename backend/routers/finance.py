@@ -128,6 +128,31 @@ class RecordDelete(BaseModel):
     row_index: int
 
 
+class AgentMessage(BaseModel):
+    role: str
+    content: str
+
+
+class AgentRequest(BaseModel):
+    message: str
+    history: list[AgentMessage] = []
+    current_tab: str = "shops"
+
+
+class AgentAction(BaseModel):
+    type: str
+    tab: str | None = None
+    data: dict | None = None
+    row_index: int | None = None
+    confirmation: str | None = None
+
+
+class AgentResponse(BaseModel):
+    text: str
+    action: AgentAction | None = None
+    needs_confirmation: bool = False
+
+
 # ── Finance Writer ─────────────────────────────────────────────────────────────
 @router.post("/write")
 async def finance_write(req: WriteRequest, current_user = Depends(get_current_user)):
@@ -289,6 +314,161 @@ def delete_record(req: RecordDelete, current_user = Depends(get_current_user)):
         delete_row(req.tab, req.row_index)
         return {"status": "deleted", "tab": req.tab, "row_index": req.row_index}
     except Exception as e:
+        raise HTTPException(500, str(e))
+
+
+# ── Finance Agent — system prompt ───────────────────────────────────────────
+FINANCE_AGENT_PROMPT = f"""Eres FINANCE, el agente de gestión financiera personal de FJ. Tienes acceso directo a sus registros financieros en Google Sheets.
+
+Tu personalidad: profesional, eficiente, directo. Hablas en español. Usas emojis ocasionalmente para hacer la conversación amigable.
+
+PESTAÑAS DISPONIBLES Y SUS COLUMNAS:
+- essentials: {COLUMNS['essentials']} — Pagos fijos mensuales (Netflix, arriendo, servicios)
+- ahorro:     {COLUMNS['ahorro']} — Ahorros e inversiones
+- basket:     {COLUMNS['basket']} — Canasta básica y mercado
+- shops:      {COLUMNS['shops']} — Compras generales
+- wishlist:   {COLUMNS['wishlist']} — Lista de deseos
+- debts:      {COLUMNS['debts']} — Deudas y préstamos
+
+REGLAS DE CLASIFICACIÓN:
+- mercado, supermercado, productos del hogar, aseo → basket
+- compra general, tienda, gasto puntual → shops
+- Netflix, arriendo, servicios fijos, suscripciones → essentials
+- ahorro, consignación, retiro, inversión → ahorro
+- deuda, préstamo, me deben, le debo → debts
+- quiero comprar, presupuestar, wishlist → wishlist
+
+FORMATO DE RESPUESTA:
+Responde SIEMPRE en JSON con este formato exacto:
+{{
+  "text": "<respuesta conversacional amigable>",
+  "action": {{"type": "<none|create|update|delete|switch_tab>", "tab": "<tab>", "data": {{...}}, "row_index": <n>, "confirmation": "<descripción de la acción>"}},
+  "needs_confirmation": <true|false>
+}}
+
+REGLAS DE ACCIONES:
+1. `type: "none"` — Solo conversación, no ejecutes ninguna acción.
+2. `type: "create"` — Cuando el usuario quiere registrar un nuevo gasto/ingreso. Extrae los datos del mensaje y ponlos en `data`.
+3. `type: "update"` — Cuando el usuario quiere editar un registro existente. Pide el índice o identifica por descripción. `row_index` es 0-based.
+4. `type: "delete"` — Cuando el usuario quiere eliminar un registro. Pide confirmación antes de devolver esta acción.
+5. `type: "switch_tab"` — Cuando el usuario quiere ver otra pestaña.
+
+REGLAS IMPORTANTES:
+- Si el usuario pide crear/editar/borrar algo, DEVUELVE la acción correspondiente. No solo hables de ello.
+- Si necesitas datos adicionales para una acción, responde con `action: {{"type": "none"}}` y pregunta al usuario.
+- Para `delete`, SIEMPRE pide confirmación primero (`needs_confirmation: true`).
+- Para `create`, si los datos son claros, ejecuta directamente (`needs_confirmation: false`). Si hay ambigüedad, pregunta.
+- Los valores monetarios van sin puntos ni comas: 45000 no 45.000.
+- La fecha de hoy es: {{today}}.
+- Si el usuario dice "gasté 80k en el mercado", crea un registro en `basket` con VALOR: 80000, PRODUCTO: "Mercado", etc.
+- Si el usuario dice "borra el registro de Netflix", busca en los datos de contexto el índice y devuelve `delete`.
+- Si el usuario dice "edita la deuda de Juan", busca el registro y devuelve `update`.
+
+EJEMPLOS:
+Usuario: "gasté 50 mil en ropa en Zara"
+→ {{"text": "Registrando tu compra en Zara por $50,000 COP 👕", "action": {{"type": "create", "tab": "shops", "data": {{"PRODUCT": "Ropa", "DESCRIPTION": "Compra en Zara", "CATEGORY": "Ropa", "STORE": "Zara", "COIN": "COP", "VALUE": 50000, "DATE": "{today}"}}, "confirmation": "Compra en Zara por $50,000 COP"}}, "needs_confirmation": false}}
+
+Usuario: "muéstrame mis deudas"
+→ {{"text": "Aquí están tus deudas pendientes 📋", "action": {{"type": "switch_tab", "tab": "debts"}}, "needs_confirmation": false}}
+
+Usuario: "borra el último registro"
+→ {{"text": "¿Estás seguro de que quieres eliminar el último registro de {{current_tab}}? Esta acción no se puede deshacer.", "action": {{"type": "none"}}, "needs_confirmation": true}}
+"""
+
+
+# ── Finance Agent Endpoint ──────────────────────────────────────────────────
+@router.post("/agent", response_model=AgentResponse)
+async def finance_agent(req: AgentRequest, current_user = Depends(get_current_user)):
+    """Agente conversacional FINANCE con capacidad de ejecutar acciones CRUD."""
+    client = _get_client()
+    await event_manager.agent_status("finance", "busy", "Finanzas")
+
+    today = datetime.now().strftime("%Y-%m-%d")
+
+    # Cargar registros actuales para contexto
+    context_records = []
+    try:
+        records = read_tab(req.current_tab)
+        context_records = records[:20]  # Últimos 20 registros
+    except Exception:
+        pass
+
+    context_str = f"""
+Pestaña actual: {req.current_tab}
+Registros actuales ({len(context_records)} mostrados):
+{json.dumps(context_records, ensure_ascii=False, indent=2)}
+"""
+
+    messages = [
+        {"role": "system", "content": FINANCE_AGENT_PROMPT.replace("{{today}}", today).replace("{{current_tab}}", req.current_tab)},
+    ]
+
+    for msg in req.history[-10:]:  # Últimos 10 mensajes
+        messages.append({"role": msg.role, "content": msg.content})
+
+    messages.append({"role": "user", "content": f"{context_str}\n\nMensaje del usuario: {req.message}"})
+
+    t0 = time.time()
+    try:
+        resp = client.chat.completions.create(
+            model=_FINANCE_MODEL,
+            max_tokens=1024,
+            messages=messages,
+            extra_headers=_extra_headers(),
+        )
+
+        raw = resp.choices[0].message.content.strip()
+
+        # Extraer JSON si viene envuelto en markdown
+        if "```" in raw:
+            raw = raw.split("```")[1].lstrip("json").strip()
+
+        result = json.loads(raw)
+
+        text = result.get("text", "No entendí bien. ¿Puedes repetir?")
+        action_data = result.get("action", {"type": "none"})
+        action = AgentAction(**action_data) if action_data else None
+        needs_confirmation = result.get("needs_confirmation", False)
+
+        # Ejecutar acción directamente si no necesita confirmación
+        if action and action.type == "create" and action.tab and action.data and not needs_confirmation:
+            try:
+                append_row(action.tab, action.data)
+                await event_manager.finance_written(action.tab, action.confirmation or "Registro creado")
+                await event_manager.new_log("success", "finance", "AGENT_CREATE", action.confirmation or "Registro creado")
+            except Exception as e:
+                text = f"Error al crear el registro: {{e}}"
+                action = None
+
+        if action and action.type == "delete" and action.tab and action.row_index is not None and not needs_confirmation:
+            try:
+                delete_row(action.tab, action.row_index)
+                await event_manager.new_log("success", "finance", "AGENT_DELETE", f"Fila {{action.row_index}} de {{action.tab}}")
+            except Exception as e:
+                text = f"Error al eliminar el registro: {{e}}"
+                action = None
+
+        if action and action.type == "update" and action.tab and action.row_index is not None and action.data and not needs_confirmation:
+            try:
+                update_row(action.tab, action.row_index, action.data)
+                await event_manager.new_log("success", "finance", "AGENT_UPDATE", f"Fila {{action.row_index}} de {{action.tab}}")
+            except Exception as e:
+                text = f"Error al actualizar el registro: {{e}}"
+                action = None
+
+        ms = int((time.time() - t0) * 1000)
+        await event_manager.agent_status("finance", "online", "Finanzas")
+        await event_manager.new_log("info", "finance", "AGENT_CHAT", f"{req.message[:50]}...", ms)
+
+        return AgentResponse(
+            text=text,
+            action=action,
+            needs_confirmation=needs_confirmation,
+        )
+
+    except Exception as e:
+        await event_manager.agent_status("finance", "error", "Finanzas")
+        await event_manager.new_log("error", "finance", "AGENT_ERROR", str(e)[:120])
         raise HTTPException(500, str(e))
 
 
