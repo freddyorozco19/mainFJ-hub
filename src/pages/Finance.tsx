@@ -146,7 +146,8 @@ function renderFormField(col: string, value: string | number, onChange: (val: st
       <select value={value} onChange={e => onChange(e.target.value)} className={baseClass + ' appearance-none cursor-pointer'}>
         <option value="">Seleccionar...</option>
         <option value="Efectivo">Efectivo</option>
-        <option value="Tarjeta">Tarjeta</option>
+        <option value="Tarjeta Débito">Tarjeta Débito</option>
+        <option value="Tarjeta Crédito">Tarjeta Crédito</option>
         <option value="Transferencia">Transferencia</option>
         <option value="Nequi">Nequi</option>
         <option value="Daviplata">Daviplata</option>
