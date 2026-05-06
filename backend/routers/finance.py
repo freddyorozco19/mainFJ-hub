@@ -475,6 +475,11 @@ Registros actuales ({len(context_records)} mostrados):
         if action and action.type == "create" and action.tab and action.data and not needs_confirmation:
             try:
                 append_row(action.tab, action.data)
+                log_finance_history(
+                    action="CREATE", tab=action.tab,
+                    data=action.data,
+                    user_email=getattr(current_user, 'email', None)
+                )
                 await event_manager.finance_written(action.tab, action.confirmation or "Registro creado")
                 await event_manager.new_log("success", "finance", "AGENT_CREATE", action.confirmation or "Registro creado")
             except Exception as e:
@@ -484,6 +489,11 @@ Registros actuales ({len(context_records)} mostrados):
         if action and action.type == "delete" and action.tab and action.row_index is not None and not needs_confirmation:
             try:
                 delete_row(action.tab, action.row_index)
+                log_finance_history(
+                    action="DELETE", tab=action.tab, row_index=action.row_index,
+                    reason=f"Agente FINANCE: {action.confirmation or 'Eliminación automática'}",
+                    user_email=getattr(current_user, 'email', None)
+                )
                 await event_manager.new_log("success", "finance", "AGENT_DELETE", f"Fila {{action.row_index}} de {{action.tab}}")
             except Exception as e:
                 text = f"Error al eliminar el registro: {{e}}"
@@ -492,6 +502,11 @@ Registros actuales ({len(context_records)} mostrados):
         if action and action.type == "update" and action.tab and action.row_index is not None and action.data and not needs_confirmation:
             try:
                 update_row(action.tab, action.row_index, action.data)
+                log_finance_history(
+                    action="UPDATE", tab=action.tab, row_index=action.row_index,
+                    data=action.data,
+                    user_email=getattr(current_user, 'email', None)
+                )
                 await event_manager.new_log("success", "finance", "AGENT_UPDATE", f"Fila {{action.row_index}} de {{action.tab}}")
             except Exception as e:
                 text = f"Error al actualizar el registro: {{e}}"
