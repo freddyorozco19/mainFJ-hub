@@ -27,7 +27,6 @@ interface FinanceAgentChatProps {
   isOpen: boolean
   onClose: () => void
   currentTab: string
-  records: Record<string, string | number>[]
   onActionExecuted: (action: AgentAction) => void
   onRefresh: () => void
 }
@@ -36,7 +35,6 @@ export function FinanceAgentChat({
   isOpen,
   onClose,
   currentTab,
-  records,
   onActionExecuted,
   onRefresh,
 }: FinanceAgentChatProps) {

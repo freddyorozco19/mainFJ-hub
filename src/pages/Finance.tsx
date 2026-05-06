@@ -3,7 +3,6 @@ import {
   DollarSign, ShoppingCart,
   Send, Loader2, Bot, Search, PiggyBank,
   AlertCircle, RefreshCw, Sparkles, ChevronDown,
-  MessageSquare,
 } from 'lucide-react'
 
 import { api } from '../api'
@@ -827,7 +826,6 @@ export function Finance() {
         isOpen={agentChatOpen}
         onClose={() => setAgentChatOpen(false)}
         currentTab={crudTab}
-        records={records}
         onActionExecuted={(action) => {
           console.log('Acción ejecutada:', action)
         }}
