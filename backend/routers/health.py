@@ -2,16 +2,46 @@
 from __future__ import annotations
 from datetime import datetime
 from typing import Optional
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Header, HTTPException
 from pydantic import BaseModel
 from backend.db import get_conn
 from backend.routers.auth import get_current_user
 
 router = APIRouter(prefix="/health", tags=["health"])
 
+# Clave estatica para el Shortcut de iOS (sin expiracion)
+HEALTH_SYNC_KEY = "mainfj-health-2026-fj"
+
+
+def _auth(
+    x_health_key: Optional[str] = Header(default=None),
+    current_user=Depends(get_current_user, use_cache=False),
+):
+    """Acepta JWT normal O la clave estatica del Shortcut."""
+    pass
+
+
+async def verify_auth(
+    x_health_key: Optional[str] = Header(default=None),
+    authorization: Optional[str] = Header(default=None),
+):
+    if x_health_key and x_health_key == HEALTH_SYNC_KEY:
+        return {"method": "api_key"}
+    if authorization:
+        import jwt as pyjwt
+        try:
+            token = authorization.replace("Bearer ", "")
+            payload = pyjwt.decode(
+                token, "MainFJ-Dashboard-SecretKey-2026-FJ", algorithms=["HS256"]
+            )
+            return {"method": "jwt", "sub": payload.get("sub")}
+        except pyjwt.PyJWTError:
+            pass
+    raise HTTPException(status_code=401, detail="No autorizado")
+
 
 class HealthSyncPayload(BaseModel):
-    date: str
+    date: Optional[str] = None
     steps: Optional[int] = None
     calories: Optional[float] = None
     heart_rate_avg: Optional[float] = None
@@ -28,7 +58,11 @@ class HealthSyncPayload(BaseModel):
 
 
 @router.post("/sync")
-def sync_health(payload: HealthSyncPayload, current_user=Depends(get_current_user)):
+async def sync_health(
+    payload: HealthSyncPayload,
+    auth=Depends(verify_auth),
+):
+    date = payload.date or datetime.utcnow().strftime("%Y-%m-%d")
     with get_conn() as conn:
         conn.execute(
             """INSERT INTO health_daily (
@@ -51,20 +85,20 @@ def sync_health(payload: HealthSyncPayload, current_user=Depends(get_current_use
                 active_energy  = excluded.active_energy,
                 distance_km    = excluded.distance_km,
                 synced_at      = excluded.synced_at""",
-            (payload.date, payload.steps, payload.calories,
+            (date, payload.steps, payload.calories,
              payload.heart_rate_avg, payload.heart_rate_min, payload.heart_rate_max,
              payload.hrv, payload.spo2, payload.sleep_hours, payload.sleep_deep,
              payload.sleep_rem, payload.sleep_awake, payload.active_energy,
              payload.distance_km, datetime.utcnow().isoformat())
         )
-    return {"status": "ok", "date": payload.date}
+    return {"status": "ok", "date": date}
 
 
 @router.get("/data")
-def get_health_data(
+async def get_health_data(
     start: Optional[str] = None,
     end: Optional[str] = None,
-    current_user=Depends(get_current_user)
+    auth=Depends(verify_auth),
 ):
     with get_conn() as conn:
         if start and end:
@@ -84,7 +118,7 @@ def get_health_data(
 
 
 @router.get("/summary")
-def get_health_summary(current_user=Depends(get_current_user)):
+async def get_health_summary(auth=Depends(verify_auth)):
     with get_conn() as conn:
         latest = conn.execute(
             "SELECT * FROM health_daily ORDER BY date DESC LIMIT 1"
