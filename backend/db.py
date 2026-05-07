@@ -18,7 +18,7 @@ def get_conn() -> sqlite3.Connection:
 def log_finance_history(action: str, tab: str, row_index: int | None = None,
                         data: dict | None = None, reason: str | None = None,
                         user_email: str | None = None) -> None:
-    """Registra una operación CRUD en el historial de finanzas."""
+    """Registra una operacion CRUD en el historial de finanzas."""
     with get_conn() as conn:
         conn.execute(
             """INSERT INTO finance_history
@@ -74,10 +74,30 @@ def init_db() -> None:
                 created_at  TEXT NOT NULL DEFAULT (datetime('now'))
             );
 
-            CREATE INDEX IF NOT EXISTS idx_msg_agent  ON messages(agent_slug);
-            CREATE INDEX IF NOT EXISTS idx_log_level  ON logs(level);
-            CREATE INDEX IF NOT EXISTS idx_log_agent  ON logs(agent_slug);
-            CREATE INDEX IF NOT EXISTS idx_reset_token ON reset_tokens(token);
-            CREATE INDEX IF NOT EXISTS idx_fin_hist_tab ON finance_history(tab);
+            CREATE TABLE IF NOT EXISTS health_daily (
+                id              INTEGER PRIMARY KEY AUTOINCREMENT,
+                date            TEXT NOT NULL UNIQUE,
+                steps           INTEGER,
+                calories        REAL,
+                heart_rate_avg  REAL,
+                heart_rate_min  REAL,
+                heart_rate_max  REAL,
+                hrv             REAL,
+                spo2            REAL,
+                sleep_hours     REAL,
+                sleep_deep      REAL,
+                sleep_rem       REAL,
+                sleep_awake     REAL,
+                active_energy   REAL,
+                distance_km     REAL,
+                synced_at       TEXT
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_msg_agent      ON messages(agent_slug);
+            CREATE INDEX IF NOT EXISTS idx_log_level      ON logs(level);
+            CREATE INDEX IF NOT EXISTS idx_log_agent      ON logs(agent_slug);
+            CREATE INDEX IF NOT EXISTS idx_reset_token    ON reset_tokens(token);
+            CREATE INDEX IF NOT EXISTS idx_fin_hist_tab   ON finance_history(tab);
             CREATE INDEX IF NOT EXISTS idx_fin_hist_action ON finance_history(action);
+            CREATE INDEX IF NOT EXISTS idx_health_date    ON health_daily(date);
         """)
