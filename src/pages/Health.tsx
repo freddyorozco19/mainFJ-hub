@@ -5,6 +5,7 @@ import {
 } from 'lucide-react'
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:8001'
+const HEALTH_KEY = 'mainfj-health-2026-fj'
 
 interface HealthDay {
   id: number
@@ -43,6 +44,8 @@ const fmt = (v: number | null | undefined, dec = 0) =>
 
 const TABS = ['Dashboard', 'Historial', 'Analytics'] as const
 type Tab = (typeof TABS)[number]
+
+const H = { 'x-health-key': HEALTH_KEY, 'Content-Type': 'application/json' }
 
 function ProgressBar({ value, max, color }: { value: number; max: number; color: string }) {
   const pct = Math.min((value / max) * 100, 100)
@@ -117,13 +120,10 @@ export function Health() {
   const [endDate, setEndDate]     = useState('')
   const [loading, setLoading]     = useState(false)
 
-  const token   = localStorage.getItem('token')
-  const headers = { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }
-
   const loadSummary = async () => {
     setLoading(true)
     try {
-      const r = await fetch(`${API}/health/summary`, { headers })
+      const r = await fetch(`${API}/health/summary`, { headers: H })
       if (r.ok) setSummary(await r.json())
     } finally { setLoading(false) }
   }
@@ -134,7 +134,7 @@ export function Health() {
       const params = new URLSearchParams()
       if (startDate) params.set('start', startDate)
       if (endDate)   params.set('end',   endDate)
-      const r = await fetch(`${API}/health/data?${params}`, { headers })
+      const r = await fetch(`${API}/health/data?${params}`, { headers: H })
       if (r.ok) setHistory(await r.json())
     } finally { setLoading(false) }
   }
@@ -149,13 +149,12 @@ export function Health() {
 
   return (
     <div className="p-6 space-y-6">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-white flex items-center gap-2">
             <Activity className="text-red-400" size={28} /> Health
           </h1>
-          <p className="text-gray-400 text-sm mt-1">Amazfit Helio Strap · vía Apple Health</p>
+          <p className="text-gray-400 text-sm mt-1">Amazfit Helio Strap · via Apple Health</p>
         </div>
         <button
           onClick={loadSummary}
@@ -166,7 +165,6 @@ export function Health() {
         </button>
       </div>
 
-      {/* Tabs */}
       <div className="flex gap-1 bg-gray-800 rounded-xl p-1 w-fit">
         {TABS.map(tab => (
           <button
@@ -181,14 +179,13 @@ export function Health() {
         ))}
       </div>
 
-      {/* ── Dashboard ── */}
       {activeTab === 'Dashboard' && (
         <div className="space-y-6">
           <div className="bg-blue-900/30 border border-blue-700 rounded-xl p-4 text-sm text-blue-300">
-            <span className="font-semibold">Último sync:</span>{' '}
+            <span className="font-semibold">Ultimo sync:</span>{' '}
             {latest.synced_at
               ? new Date(latest.synced_at).toLocaleString('es-CO')
-              : 'Sin datos aún'}
+              : 'Sin datos aun'}
             {' · '}
             <span className="text-blue-400">Ejecuta el Shortcut de iOS para sincronizar</span>
           </div>
@@ -199,10 +196,10 @@ export function Health() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <MetricCard icon={<Footprints size={20} />} label="Pasos"       value={fmt(latest.steps)}          unit="pasos" color="text-green-400"  barVal={latest.steps ?? 0}          barMax={10000} barColor="bg-green-500" />
             <MetricCard icon={<Heart size={20} />}       label="Frec. Card." value={fmt(latest.heart_rate_avg)} unit="bpm"   color="text-red-400"    barVal={latest.heart_rate_avg ?? 0} barMax={100}   barColor="bg-red-500" />
-            <MetricCard icon={<Moon size={20} />}        label="Sueño"       value={fmt(latest.sleep_hours, 1)} unit="hrs"   color="text-purple-400" barVal={latest.sleep_hours ?? 0}    barMax={9}     barColor="bg-purple-500" />
-            <MetricCard icon={<Zap size={20} />}         label="Calorías"    value={fmt(latest.calories)}       unit="kcal"  color="text-orange-400" barVal={latest.calories ?? 0}       barMax={600}   barColor="bg-orange-500" />
+            <MetricCard icon={<Moon size={20} />}        label="Sueno"       value={fmt(latest.sleep_hours, 1)} unit="hrs"   color="text-purple-400" barVal={latest.sleep_hours ?? 0}    barMax={9}     barColor="bg-purple-500" />
+            <MetricCard icon={<Zap size={20} />}         label="Calorias"    value={fmt(latest.calories)}       unit="kcal"  color="text-orange-400" barVal={latest.calories ?? 0}       barMax={600}   barColor="bg-orange-500" />
             <MetricCard icon={<Activity size={20} />}    label="HRV"         value={fmt(latest.hrv, 1)}         unit="ms"    color="text-cyan-400"   barVal={latest.hrv ?? 0}            barMax={100}   barColor="bg-cyan-500" />
-            <MetricCard icon={<Wind size={20} />}        label="SpO₂"        value={fmt(latest.spo2, 1)}        unit="%"     color="text-teal-400"   barVal={latest.spo2 ?? 0}           barMax={100}   barColor="bg-teal-500" />
+            <MetricCard icon={<Wind size={20} />}        label="SpO2"        value={fmt(latest.spo2, 1)}        unit="%"     color="text-teal-400"   barVal={latest.spo2 ?? 0}           barMax={100}   barColor="bg-teal-500" />
             <MetricCard icon={<TrendingUp size={20} />}  label="Distancia"   value={fmt(latest.distance_km, 2)} unit="km"    color="text-yellow-400" barVal={latest.distance_km ?? 0}    barMax={10}    barColor="bg-yellow-500" />
             <MetricCard icon={<Clock size={20} />}       label="E. Activa"   value={fmt(latest.active_energy)}  unit="kcal"  color="text-pink-400"   barVal={latest.active_energy ?? 0}  barMax={500}   barColor="bg-pink-500" />
           </div>
@@ -210,7 +207,7 @@ export function Health() {
           {(latest.sleep_deep != null || latest.sleep_rem != null) && (
             <div className="bg-gray-800 rounded-xl p-4">
               <p className="text-sm text-gray-400 mb-3 flex items-center gap-2">
-                <Moon size={16} /> Detalle de sueño
+                <Moon size={16} /> Detalle de sueno
               </p>
               <div className="grid grid-cols-3 gap-4 text-center">
                 <div><p className="text-purple-400 text-xl font-bold">{fmt(latest.sleep_deep, 1)}h</p><p className="text-xs text-gray-500">Profundo</p></div>
@@ -222,19 +219,18 @@ export function Health() {
 
           <div className="bg-gray-800 rounded-xl p-4">
             <p className="text-sm text-gray-400 mb-3 flex items-center gap-2">
-              <Calendar size={16} /> Promedio últimos 7 días · {weekly.days_tracked ?? 0} días registrados
+              <Calendar size={16} /> Promedio ultimos 7 dias · {weekly.days_tracked ?? 0} dias registrados
             </p>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
               <div><p className="text-green-400  text-lg font-bold">{fmt(weekly.avg_steps)}</p>     <p className="text-xs text-gray-500">Pasos</p></div>
               <div><p className="text-red-400    text-lg font-bold">{fmt(weekly.avg_hr)}</p>        <p className="text-xs text-gray-500">FC promedio</p></div>
-              <div><p className="text-purple-400 text-lg font-bold">{fmt(weekly.avg_sleep, 1)}h</p><p className="text-xs text-gray-500">Sueño</p></div>
+              <div><p className="text-purple-400 text-lg font-bold">{fmt(weekly.avg_sleep, 1)}h</p><p className="text-xs text-gray-500">Sueno</p></div>
               <div><p className="text-cyan-400   text-lg font-bold">{fmt(weekly.avg_hrv, 1)}</p>   <p className="text-xs text-gray-500">HRV</p></div>
             </div>
           </div>
         </div>
       )}
 
-      {/* ── Historial ── */}
       {activeTab === 'Historial' && (
         <div className="space-y-4">
           <div className="flex flex-wrap gap-3 items-end">
@@ -257,7 +253,7 @@ export function Health() {
             <table className="w-full text-sm text-left">
               <thead className="bg-gray-800 text-gray-400 text-xs uppercase">
                 <tr>
-                  {['Fecha','Pasos','FC avg','FC min','FC max','Sueño','HRV','SpO₂','Calorías','Distancia'].map(h => (
+                  {['Fecha','Pasos','FC avg','FC min','FC max','Sueno','HRV','SpO2','Calorias','Distancia'].map(h => (
                     <th key={h} className="px-4 py-3 whitespace-nowrap">{h}</th>
                   ))}
                 </tr>
@@ -285,7 +281,6 @@ export function Health() {
         </div>
       )}
 
-      {/* ── Analytics ── */}
       {activeTab === 'Analytics' && (
         <div className="space-y-8">
           {(() => {
@@ -294,9 +289,9 @@ export function Health() {
             const maxHR   = Math.max(...data.map(d => d.heart_rate_avg ?? 0), 1)
             return (
               <>
-                <ChartBar title="Pasos diarios (últimos 14 días)" data={data} getValue={d => d.steps ?? 0}          max={maxStep} color="bg-green-500"  unit="pasos" />
-                <ChartBar title="Frecuencia cardíaca promedio"     data={data} getValue={d => d.heart_rate_avg ?? 0} max={maxHR}   color="bg-red-500"    unit="bpm"   />
-                <ChartBar title="Horas de sueño"                   data={data} getValue={d => d.sleep_hours ?? 0}   max={9}       color="bg-purple-500" unit="hrs"   />
+                <ChartBar title="Pasos diarios (ultimos 14 dias)" data={data} getValue={d => d.steps ?? 0}          max={maxStep} color="bg-green-500"  unit="pasos" />
+                <ChartBar title="Frecuencia cardiaca promedio"     data={data} getValue={d => d.heart_rate_avg ?? 0} max={maxHR}   color="bg-red-500"    unit="bpm"   />
+                <ChartBar title="Horas de sueno"                   data={data} getValue={d => d.sleep_hours ?? 0}   max={9}       color="bg-purple-500" unit="hrs"   />
                 <ChartBar title="HRV"                              data={data} getValue={d => d.hrv ?? 0}           max={100}     color="bg-cyan-500"   unit="ms"    />
               </>
             )
