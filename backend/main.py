@@ -14,7 +14,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 
-from backend.routers import chat, agents, metrics, logs, finance, auth
+from backend.routers import chat, agents, metrics, logs, finance, auth, health
 from backend.db import init_db
 from backend.events import event_manager
 
@@ -41,7 +41,7 @@ app.include_router(chat.router)
 app.include_router(metrics.router)
 app.include_router(logs.router)
 app.include_router(finance.router)
-
+app.include_router(health.router)
 
 
 @app.get("/")
@@ -49,13 +49,12 @@ def root():
     return {"status": "ok", "service": "MainFJ Dashboard API v0.1"}
 
 @app.get("/health")
-def health():
+def health_check():
     return {"status": "ok"}
 
 @app.get("/events")
 async def events(request: Request, token: str = ""):
     """SSE endpoint — streams real-time events to the client."""
-    # Validate token
     import jwt
     try:
         payload = jwt.decode(token, "MainFJ-Dashboard-SecretKey-2026-FJ", algorithms=["HS256"])
@@ -66,7 +65,6 @@ async def events(request: Request, token: str = ""):
     queue = await event_manager.subscribe()
     try:
         async def event_stream():
-            # Send initial connection confirmation
             yield 'event: connected\ndata: {"status": "ok"}\n\n'
             while True:
                 if await request.is_disconnected():
@@ -77,7 +75,6 @@ async def events(request: Request, token: str = ""):
                     event_type = data.get("event", "message")
                     yield f"event: {event_type}\ndata: {payload}\n\n"
                 except asyncio.TimeoutError:
-                    # Send keepalive
                     yield ": keepalive\n\n"
         return StreamingResponse(event_stream(), media_type="text/event-stream")
     finally:
