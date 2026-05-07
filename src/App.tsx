@@ -13,6 +13,7 @@ import { LIFE } from './pages/LIFE'
 import { Finance } from './pages/Finance'
 import { KRONOS } from './pages/KRONOS'
 import { Profile } from './pages/Profile'
+import { Health } from './pages/Health'
 import { Login } from './pages/Login'
 import { ForgotPassword } from './pages/ForgotPassword'
 import { ResetPassword } from './pages/ResetPassword'
@@ -163,12 +164,10 @@ export default function App() {
       <SSEListener />
       <ToastProvider />
       <Routes>
-        {/* Login público */}
-        <Route path="/login" element={<Login />} />
+        <Route path="/login"          element={<Login />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
-        <Route path="/reset-password" element={<ResetPassword />} />
+        <Route path="/reset-password"  element={<ResetPassword />} />
 
-        {/* Rutas protegidas con Layout */}
         <Route element={<Layout />}>
           <Route element={<ProtectedRoute />}>
             <Route index element={<Navigate to="/home" replace />} />
@@ -183,11 +182,11 @@ export default function App() {
             <Route path="/life"    element={<LIFE />}    />
             <Route path="/finance" element={<Finance />} />
             <Route path="/kronos"  element={<KRONOS />}  />
+            <Route path="/health"  element={<Health />}  />
             <Route path="/profile" element={<Profile />} />
           </Route>
         </Route>
 
-        {/* Cualquier otra ruta → login */}
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     </AuthProvider>
