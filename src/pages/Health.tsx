@@ -1,7 +1,7 @@
 import { useState, useEffect, type ReactNode } from 'react'
 import {
   Heart, Footprints, Moon, Activity, Zap, Wind,
-  RefreshCw, Calendar, TrendingUp, Clock,
+  RefreshCw, Calendar, TrendingUp, Clock, Search,
 } from 'lucide-react'
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:8001'
@@ -42,7 +42,9 @@ interface Summary {
 const fmt = (v: number | null | undefined, dec = 0) =>
   v != null ? Number(v).toFixed(dec) : '–'
 
-const TABS = ['Dashboard', 'Historial', 'Analytics'] as const
+const today = () => new Date().toISOString().slice(0, 10)
+
+const TABS = ['Dashboard', 'Por Día', 'Historial', 'Analytics'] as const
 type Tab = (typeof TABS)[number]
 
 const H = { 'x-health-key': HEALTH_KEY, 'Content-Type': 'application/json' }
@@ -69,6 +71,49 @@ function MetricCard({ icon, label, value, unit, color, barVal, barMax, barColor 
         {value} <span className="text-xs text-gray-500">{unit}</span>
       </p>
       <ProgressBar value={barVal} max={barMax} color={barColor} />
+    </div>
+  )
+}
+
+function MetricsGrid({ d }: { d: Partial<HealthDay> }) {
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <MetricCard icon={<Footprints size={20} />} label="Pasos"       value={fmt(d.steps)}          unit="pasos" color="text-green-400"  barVal={d.steps ?? 0}          barMax={10000} barColor="bg-green-500" />
+        <MetricCard icon={<Heart size={20} />}       label="Frec. Card." value={fmt(d.heart_rate_avg)} unit="bpm"   color="text-red-400"    barVal={d.heart_rate_avg ?? 0} barMax={100}   barColor="bg-red-500" />
+        <MetricCard icon={<Moon size={20} />}        label="Sueno"       value={fmt(d.sleep_hours, 1)} unit="hrs"   color="text-purple-400" barVal={d.sleep_hours ?? 0}    barMax={9}     barColor="bg-purple-500" />
+        <MetricCard icon={<Zap size={20} />}         label="Calorias"    value={fmt(d.calories)}       unit="kcal"  color="text-orange-400" barVal={d.calories ?? 0}       barMax={600}   barColor="bg-orange-500" />
+        <MetricCard icon={<Activity size={20} />}    label="HRV"         value={fmt(d.hrv, 1)}         unit="ms"    color="text-cyan-400"   barVal={d.hrv ?? 0}            barMax={100}   barColor="bg-cyan-500" />
+        <MetricCard icon={<Wind size={20} />}        label="SpO2"        value={fmt(d.spo2, 1)}        unit="%"     color="text-teal-400"   barVal={d.spo2 ?? 0}           barMax={100}   barColor="bg-teal-500" />
+        <MetricCard icon={<TrendingUp size={20} />}  label="Distancia"   value={fmt(d.distance_km, 2)} unit="km"    color="text-yellow-400" barVal={d.distance_km ?? 0}    barMax={10}    barColor="bg-yellow-500" />
+        <MetricCard icon={<Clock size={20} />}       label="E. Activa"   value={fmt(d.active_energy)}  unit="kcal"  color="text-pink-400"   barVal={d.active_energy ?? 0}  barMax={500}   barColor="bg-pink-500" />
+      </div>
+
+      {(d.sleep_deep != null || d.sleep_rem != null) && (
+        <div className="bg-gray-800 rounded-xl p-4">
+          <p className="text-sm text-gray-400 mb-3 flex items-center gap-2">
+            <Moon size={16} /> Detalle de sueno
+          </p>
+          <div className="grid grid-cols-3 gap-4 text-center">
+            <div><p className="text-purple-400 text-xl font-bold">{fmt(d.sleep_deep, 1)}h</p><p className="text-xs text-gray-500">Profundo</p></div>
+            <div><p className="text-blue-400   text-xl font-bold">{fmt(d.sleep_rem, 1)}h</p> <p className="text-xs text-gray-500">REM</p></div>
+            <div><p className="text-gray-400   text-xl font-bold">{fmt(d.sleep_awake, 1)}h</p><p className="text-xs text-gray-500">Despierto</p></div>
+          </div>
+        </div>
+      )}
+
+      {(d.heart_rate_min != null || d.heart_rate_max != null) && (
+        <div className="bg-gray-800 rounded-xl p-4">
+          <p className="text-sm text-gray-400 mb-3 flex items-center gap-2">
+            <Heart size={16} /> Detalle frecuencia cardiaca
+          </p>
+          <div className="grid grid-cols-3 gap-4 text-center">
+            <div><p className="text-red-300 text-xl font-bold">{fmt(d.heart_rate_min)}</p><p className="text-xs text-gray-500">Mínima</p></div>
+            <div><p className="text-red-400 text-xl font-bold">{fmt(d.heart_rate_avg)}</p><p className="text-xs text-gray-500">Promedio</p></div>
+            <div><p className="text-red-500 text-xl font-bold">{fmt(d.heart_rate_max)}</p><p className="text-xs text-gray-500">Máxima</p></div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -113,12 +158,14 @@ function ChartBar({ title, data, getValue, max, color, unit }: {
 }
 
 export function Health() {
-  const [activeTab, setActiveTab] = useState<Tab>('Dashboard')
-  const [summary, setSummary]     = useState<Summary | null>(null)
-  const [history, setHistory]     = useState<HealthDay[]>([])
-  const [startDate, setStartDate] = useState('')
-  const [endDate, setEndDate]     = useState('')
-  const [loading, setLoading]     = useState(false)
+  const [activeTab, setActiveTab]     = useState<Tab>('Dashboard')
+  const [summary, setSummary]         = useState<Summary | null>(null)
+  const [history, setHistory]         = useState<HealthDay[]>([])
+  const [startDate, setStartDate]     = useState('')
+  const [endDate, setEndDate]         = useState('')
+  const [loading, setLoading]         = useState(false)
+  const [selectedDate, setSelectedDate] = useState(today())
+  const [dayData, setDayData]         = useState<HealthDay | null | 'empty'>( null)
 
   const loadSummary = async () => {
     setLoading(true)
@@ -139,9 +186,23 @@ export function Health() {
     } finally { setLoading(false) }
   }
 
+  const loadDay = async (date: string) => {
+    if (!date) return
+    setLoading(true)
+    setDayData(null)
+    try {
+      const r = await fetch(`${API}/health/data?start=${date}&end=${date}`, { headers: H })
+      if (r.ok) {
+        const rows: HealthDay[] = await r.json()
+        setDayData(rows[0] ?? 'empty')
+      }
+    } finally { setLoading(false) }
+  }
+
   useEffect(() => { loadSummary() }, [])
   useEffect(() => {
     if (activeTab === 'Historial' || activeTab === 'Analytics') loadHistory()
+    if (activeTab === 'Por Día') loadDay(selectedDate)
   }, [activeTab])
 
   const latest = summary?.latest ?? {}
@@ -193,29 +254,8 @@ export function Health() {
           <p className="text-xs text-gray-400 uppercase tracking-widest">
             Hoy · {latest.date ?? '–'}
           </p>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <MetricCard icon={<Footprints size={20} />} label="Pasos"       value={fmt(latest.steps)}          unit="pasos" color="text-green-400"  barVal={latest.steps ?? 0}          barMax={10000} barColor="bg-green-500" />
-            <MetricCard icon={<Heart size={20} />}       label="Frec. Card." value={fmt(latest.heart_rate_avg)} unit="bpm"   color="text-red-400"    barVal={latest.heart_rate_avg ?? 0} barMax={100}   barColor="bg-red-500" />
-            <MetricCard icon={<Moon size={20} />}        label="Sueno"       value={fmt(latest.sleep_hours, 1)} unit="hrs"   color="text-purple-400" barVal={latest.sleep_hours ?? 0}    barMax={9}     barColor="bg-purple-500" />
-            <MetricCard icon={<Zap size={20} />}         label="Calorias"    value={fmt(latest.calories)}       unit="kcal"  color="text-orange-400" barVal={latest.calories ?? 0}       barMax={600}   barColor="bg-orange-500" />
-            <MetricCard icon={<Activity size={20} />}    label="HRV"         value={fmt(latest.hrv, 1)}         unit="ms"    color="text-cyan-400"   barVal={latest.hrv ?? 0}            barMax={100}   barColor="bg-cyan-500" />
-            <MetricCard icon={<Wind size={20} />}        label="SpO2"        value={fmt(latest.spo2, 1)}        unit="%"     color="text-teal-400"   barVal={latest.spo2 ?? 0}           barMax={100}   barColor="bg-teal-500" />
-            <MetricCard icon={<TrendingUp size={20} />}  label="Distancia"   value={fmt(latest.distance_km, 2)} unit="km"    color="text-yellow-400" barVal={latest.distance_km ?? 0}    barMax={10}    barColor="bg-yellow-500" />
-            <MetricCard icon={<Clock size={20} />}       label="E. Activa"   value={fmt(latest.active_energy)}  unit="kcal"  color="text-pink-400"   barVal={latest.active_energy ?? 0}  barMax={500}   barColor="bg-pink-500" />
-          </div>
 
-          {(latest.sleep_deep != null || latest.sleep_rem != null) && (
-            <div className="bg-gray-800 rounded-xl p-4">
-              <p className="text-sm text-gray-400 mb-3 flex items-center gap-2">
-                <Moon size={16} /> Detalle de sueno
-              </p>
-              <div className="grid grid-cols-3 gap-4 text-center">
-                <div><p className="text-purple-400 text-xl font-bold">{fmt(latest.sleep_deep, 1)}h</p><p className="text-xs text-gray-500">Profundo</p></div>
-                <div><p className="text-blue-400   text-xl font-bold">{fmt(latest.sleep_rem, 1)}h</p> <p className="text-xs text-gray-500">REM</p></div>
-                <div><p className="text-gray-400   text-xl font-bold">{fmt(latest.sleep_awake, 1)}h</p><p className="text-xs text-gray-500">Despierto</p></div>
-              </div>
-            </div>
-          )}
+          <MetricsGrid d={latest} />
 
           <div className="bg-gray-800 rounded-xl p-4">
             <p className="text-sm text-gray-400 mb-3 flex items-center gap-2">
@@ -228,6 +268,57 @@ export function Health() {
               <div><p className="text-cyan-400   text-lg font-bold">{fmt(weekly.avg_hrv, 1)}</p>   <p className="text-xs text-gray-500">HRV</p></div>
             </div>
           </div>
+        </div>
+      )}
+
+      {activeTab === 'Por Día' && (
+        <div className="space-y-6">
+          <div className="flex items-end gap-3">
+            <div>
+              <label className="text-xs text-gray-400 block mb-1">Seleccionar fecha</label>
+              <input
+                type="date"
+                value={selectedDate}
+                max={today()}
+                onChange={e => setSelectedDate(e.target.value)}
+                className="bg-gray-700 text-white text-sm rounded-lg px-3 py-2 border border-gray-600 focus:outline-none focus:border-blue-500"
+              />
+            </div>
+            <button
+              onClick={() => loadDay(selectedDate)}
+              disabled={loading || !selectedDate}
+              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm px-4 py-2 rounded-lg transition-colors disabled:opacity-50"
+            >
+              <Search size={16} /> Ver
+            </button>
+          </div>
+
+          {loading && (
+            <div className="flex items-center gap-2 text-gray-400 text-sm">
+              <RefreshCw size={16} className="animate-spin" /> Cargando...
+            </div>
+          )}
+
+          {!loading && dayData === 'empty' && (
+            <div className="bg-gray-800 rounded-xl p-8 text-center">
+              <p className="text-gray-400">Sin datos para el <span className="text-white font-semibold">{selectedDate}</span></p>
+              <p className="text-gray-500 text-sm mt-1">Sincroniza el Shortcut de iOS o importa datos desde Apple Health.</p>
+            </div>
+          )}
+
+          {!loading && dayData && dayData !== 'empty' && (
+            <>
+              <p className="text-xs text-gray-400 uppercase tracking-widest">
+                {selectedDate}
+                {dayData.synced_at && (
+                  <span className="ml-2 normal-case text-gray-500">
+                    · sync: {new Date(dayData.synced_at).toLocaleString('es-CO')}
+                  </span>
+                )}
+              </p>
+              <MetricsGrid d={dayData} />
+            </>
+          )}
         </div>
       )}
 
