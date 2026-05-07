@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { NavLink } from 'react-router-dom'
-import { Bot, MessageSquare, BarChart3, ScrollText, Wifi, WifiOff, PanelLeftClose, PanelLeft, Home, Trophy, Brain, TrendingUp, Heart, Wallet, LogOut, X, Menu, User, Network } from 'lucide-react'
+import { Bot, MessageSquare, BarChart3, ScrollText, Wifi, WifiOff, PanelLeftClose, PanelLeft, Home, Trophy, Brain, TrendingUp, Heart, Wallet, LogOut, X, Menu, User, Network, Activity } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:8001'
@@ -20,6 +20,7 @@ const SYSTEMS_NAV = [
   { to: '/expertia',   icon: Brain,       label: 'ArchiTechIA' },
   { to: '/growdata',   icon: TrendingUp,  label: 'Grow Data'   },
   { to: '/life',       icon: Heart,       label: 'LIFE'        },
+  { to: '/health',     icon: Activity,    label: 'Health'      },
 ]
 
 interface SidebarProps {
@@ -139,7 +140,7 @@ function SidebarContent({ collapsed, onToggle }: { collapsed: boolean; onToggle:
           <button
             onClick={logout}
             className={`flex items-center gap-2 w-full px-3 py-3 text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors ${collapsed ? 'justify-center' : ''}`}
-            title="Cerrar sesión"
+            title="Cerrar sesion"
           >
             <LogOut size={16} />
             {!collapsed && <span className="text-xs">Salir</span>}
@@ -198,7 +199,7 @@ export function MobileMenuButton({ onClick }: { onClick: () => void }) {
     <button
       onClick={onClick}
       className="md:hidden p-2 text-slate-400 hover:text-white rounded-lg hover:bg-white/5 transition-colors"
-      aria-label="Abrir menú"
+      aria-label="Abrir menu"
     >
       <Menu size={20} />
     </button>
