@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { Send, Bot, ChevronDown, Paperclip, X, File, Upload } from 'lucide-react'
+import { Send, Bot, ChevronDown, Paperclip, X, File, Upload, Loader2 } from 'lucide-react'
 import { useDashboard } from '../store/dashboardStore'
 import type { ChatMessage } from '../store/dashboardStore'
+import { api } from '../api'
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:8001'
 
@@ -44,11 +45,12 @@ function Message({ msg }: { msg: ChatMessage }) {
 }
 
 export function Chat() {
-  const { agents, activeAgentSlug, chatHistories, isTyping, setActiveAgent, addMessage, setTyping } = useDashboard()
+  const { agents, activeAgentSlug, chatHistories, isTyping, setActiveAgent, addMessage, setHistory, setTyping } = useDashboard()
   const [input, setInput] = useState('')
   const [showPicker, setShowPicker] = useState(false)
   const [attachedFiles, setAttachedFiles] = useState<AttachedFile[]>([])
   const [isDragging, setIsDragging] = useState(false)
+  const [loadingHistory, setLoadingHistory] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
   const inputRef  = useRef<HTMLTextAreaElement>(null)
   const dropZoneRef = useRef<HTMLDivElement>(null)
@@ -60,6 +62,17 @@ export function Chat() {
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, isTyping])
+
+  useEffect(() => {
+    if (!activeAgentSlug) return
+    if ((chatHistories[activeAgentSlug] ?? []).length > 0) return
+    setLoadingHistory(true)
+    api(`/chat/${activeAgentSlug}/history`)
+      .then(r => r.json())
+      .then((data: ChatMessage[]) => { if (data.length > 0) setHistory(activeAgentSlug, data) })
+      .catch(() => {})
+      .finally(() => setLoadingHistory(false))
+  }, [activeAgentSlug])
 
   const handleFiles = useCallback((files: FileList | File[]) => {
     const newFiles: AttachedFile[] = Array.from(files).map(file => ({
@@ -116,10 +129,7 @@ export function Chat() {
     attachedFiles.forEach(f => formData.append('files', f.file))
 
     try {
-      await fetch(`${API}/chat/${activeAgentSlug}`, {
-        method: 'POST',
-        body: formData,
-      })
+      await api(`/chat/${activeAgentSlug}`, { method: 'POST', body: { text } })
       setAttachedFiles([])
     } catch {
       addMessage({
@@ -201,10 +211,15 @@ export function Chat() {
 
         {activeAgentSlug && messages.length === 0 && (
           <div className="flex flex-col items-center justify-center h-full text-slate-600 gap-2">
-            <span className="text-4xl">{activeAgent?.icon}</span>
-            <p className="text-sm font-medium text-slate-400">{activeAgent?.name}</p>
-            <p className="text-xs text-slate-600">¿En qué te puedo ayudar?</p>
-            <p className="text-xs text-slate-700 mt-2">Arrastra archivos aquí para adjuntarlos</p>
+            {loadingHistory
+              ? <Loader2 size={24} className="animate-spin text-slate-500" />
+              : <>
+                  <span className="text-4xl">{activeAgent?.icon}</span>
+                  <p className="text-sm font-medium text-slate-400">{activeAgent?.name}</p>
+                  <p className="text-xs text-slate-600">¿En qué te puedo ayudar?</p>
+                  <p className="text-xs text-slate-700 mt-2">Arrastra archivos aquí para adjuntarlos</p>
+                </>
+            }
           </div>
         )}
 

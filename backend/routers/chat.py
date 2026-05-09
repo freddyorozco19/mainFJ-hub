@@ -8,7 +8,7 @@ from datetime import datetime
 from pathlib import Path
 
 from openai import OpenAI
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 from dotenv import load_dotenv
 
@@ -103,6 +103,26 @@ def _log(slug: str, action: str, detail: str, level: str = "info", ms: int | Non
             "INSERT INTO logs (level, agent_slug, action, detail, duration_ms, created_at) VALUES (?,?,?,?,?,?)",
             (level, slug, action, detail, ms, datetime.now().isoformat()),
         )
+
+
+@router.get("/{slug}/history")
+def get_chat_history(slug: str, limit: int = Query(50, le=200), current_user=Depends(get_current_user)):
+    with get_conn() as conn:
+        rows = conn.execute(
+            "SELECT id, role, content, tokens_in, tokens_out, created_at FROM messages WHERE agent_slug=? ORDER BY id DESC LIMIT ?",
+            (slug, limit),
+        ).fetchall()
+    return [
+        {
+            "id": str(r["id"]),
+            "role": r["role"],
+            "content": r["content"],
+            "tokens": r["tokens_out"] or r["tokens_in"] or 0,
+            "timestamp": r["created_at"],
+            "agentSlug": slug,
+        }
+        for r in reversed(rows)
+    ]
 
 
 @router.post("/{slug}", response_model=ChatResponse)

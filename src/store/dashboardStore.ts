@@ -57,6 +57,7 @@ interface DashboardState {
   isTyping: boolean
   setActiveAgent: (slug: string | null) => void
   addMessage: (msg: ChatMessage) => void
+  setHistory: (slug: string, messages: ChatMessage[]) => void
   setTyping: (v: boolean) => void
 
   // Metrics
@@ -93,6 +94,10 @@ export const useDashboard = create<DashboardState>((set) => ({
         ...s.chatHistories,
         [msg.agentSlug]: [...(s.chatHistories[msg.agentSlug] ?? []), msg],
       },
+    })),
+  setHistory: (slug, messages) =>
+    set(s => ({
+      chatHistories: { ...s.chatHistories, [slug]: messages },
     })),
   setTyping: (v) => set({ isTyping: v }),
 

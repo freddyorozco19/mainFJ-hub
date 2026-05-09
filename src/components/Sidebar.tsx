@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { NavLink } from 'react-router-dom'
-import { Bot, MessageSquare, BarChart3, ScrollText, Wifi, WifiOff, PanelLeftClose, PanelLeft, Home, Trophy, Brain, TrendingUp, Heart, Wallet, LogOut, X, Menu, User, Network, Activity } from 'lucide-react'
+import { Bot, MessageSquare, BarChart3, ScrollText, Wifi, WifiOff, PanelLeftClose, PanelLeft, Home, Trophy, Brain, TrendingUp, Heart, Wallet, LogOut, X, Menu, User, Network, Activity, Webhook } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { getToken } from '../api'
 
@@ -22,6 +22,7 @@ const SYSTEMS_NAV = [
   { to: '/growdata',   icon: TrendingUp,  label: 'Grow Data'   },
   { to: '/life',       icon: Heart,       label: 'LIFE'        },
   { to: '/health',     icon: Activity,    label: 'Health'      },
+  { to: '/webhooks',   icon: Webhook,     label: 'Webhooks'    },
 ]
 
 interface SidebarProps {

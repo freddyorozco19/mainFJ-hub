@@ -14,6 +14,7 @@ import { Finance } from './pages/Finance'
 import { KRONOS } from './pages/KRONOS'
 import { Profile } from './pages/Profile'
 import { Health } from './pages/Health'
+import { Webhooks } from './pages/Webhooks'
 import { Login } from './pages/Login'
 import { ForgotPassword } from './pages/ForgotPassword'
 import { ResetPassword } from './pages/ResetPassword'
@@ -30,7 +31,8 @@ function SSEListener() {
   const { updateAgentStatus, addMessage, setTyping, pushLog } = useDashboard()
 
   useEffect(() => {
-    const es = new EventSource(`${API}/events`)
+    const t = getToken()
+    const es = new EventSource(t ? `${API}/events?token=${encodeURIComponent(t)}` : `${API}/events`)
     esRef.current = es
 
     es.addEventListener('agent:status', (e) => {
@@ -182,8 +184,9 @@ export default function App() {
             <Route path="/life"    element={<LIFE />}    />
             <Route path="/finance" element={<Finance />} />
             <Route path="/kronos"  element={<KRONOS />}  />
-            <Route path="/health"  element={<Health />}  />
-            <Route path="/profile" element={<Profile />} />
+            <Route path="/health"   element={<Health />}   />
+            <Route path="/webhooks" element={<Webhooks />} />
+            <Route path="/profile"  element={<Profile />}  />
           </Route>
         </Route>
 

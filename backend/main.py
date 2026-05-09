@@ -14,7 +14,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 
-from backend.routers import chat, agents, metrics, logs, finance, auth, health
+from backend.routers import chat, agents, metrics, logs, finance, auth, health, search, webhooks
 from backend.db import init_db
 from backend.events import event_manager
 
@@ -42,6 +42,8 @@ app.include_router(metrics.router)
 app.include_router(logs.router)
 app.include_router(finance.router)
 app.include_router(health.router)
+app.include_router(search.router)
+app.include_router(webhooks.router)
 
 
 @app.get("/")

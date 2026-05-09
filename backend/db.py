@@ -100,4 +100,13 @@ def init_db() -> None:
             CREATE INDEX IF NOT EXISTS idx_fin_hist_tab   ON finance_history(tab);
             CREATE INDEX IF NOT EXISTS idx_fin_hist_action ON finance_history(action);
             CREATE INDEX IF NOT EXISTS idx_health_date    ON health_daily(date);
+
+            CREATE TABLE IF NOT EXISTS webhook_events (
+                id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                source      TEXT NOT NULL DEFAULT 'external',
+                event_type  TEXT NOT NULL DEFAULT 'trigger',
+                payload     TEXT,
+                received_at TEXT NOT NULL DEFAULT (datetime('now'))
+            );
+            CREATE INDEX IF NOT EXISTS idx_webhook_received ON webhook_events(received_at);
         """)
