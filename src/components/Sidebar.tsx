@@ -60,79 +60,84 @@ function SidebarContent({ collapsed, onToggle }: { collapsed: boolean; onToggle:
         </button>
       </div>
 
-      {/* MainFJ Section */}
-      {!collapsed && (
-        <div className="px-5 pt-4 pb-1">
-          <span className="text-[10px] text-slate-600 uppercase tracking-widest">Orquestador</span>
-        </div>
-      )}
-      <nav className={`py-2 space-y-1 ${collapsed ? 'px-2' : 'px-3'}`}>
-        {MAIN_FJ_NAV.map(({ to, icon: Icon, label }) => (
+      {/* Scrollable nav area */}
+      <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
+
+        {/* MainFJ Section */}
+        {!collapsed && (
+          <div className="px-5 pt-4 pb-1">
+            <span className="text-[10px] text-slate-600 uppercase tracking-widest">Orquestador</span>
+          </div>
+        )}
+        <nav className={`py-2 space-y-1 ${collapsed ? 'px-2' : 'px-3'}`}>
+          {MAIN_FJ_NAV.map(({ to, icon: Icon, label }) => (
+            <NavLink
+              key={to}
+              to={to}
+              title={collapsed ? label : undefined}
+              className={({ isActive }) =>
+                `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 ${
+                  isActive
+                    ? 'bg-primary/15 text-primary border border-primary/20'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
+                } ${collapsed ? 'justify-center' : ''}`
+              }
+            >
+              <Icon size={16} />
+              {!collapsed && <span>{label}</span>}
+            </NavLink>
+          ))}
+        </nav>
+
+        {/* Systems Section */}
+        {!collapsed && (
+          <div className="px-5 pt-4 pb-1">
+            <span className="text-[10px] text-slate-600 uppercase tracking-widest">Sistemas</span>
+          </div>
+        )}
+        <nav className={`py-2 space-y-1 ${collapsed ? 'px-2' : 'px-3'}`}>
+          {SYSTEMS_NAV.map(({ to, icon: Icon, label }) => (
+            <NavLink
+              key={to}
+              to={to}
+              title={collapsed ? label : undefined}
+              className={({ isActive }) =>
+                `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 ${
+                  isActive
+                    ? 'bg-accent/15 text-accent border border-accent/20'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
+                } ${collapsed ? 'justify-center' : ''}`
+              }
+            >
+              <Icon size={16} />
+              {!collapsed && <span>{label}</span>}
+            </NavLink>
+          ))}
+        </nav>
+
+        {/* Profile link */}
+        {!collapsed && (
+          <div className="px-5 pt-4 pb-1">
+            <span className="text-[10px] text-slate-600 uppercase tracking-widest">Cuenta</span>
+          </div>
+        )}
+        <nav className={`py-2 space-y-1 ${collapsed ? 'px-2' : 'px-3'}`}>
           <NavLink
-            key={to}
-            to={to}
-            title={collapsed ? label : undefined}
+            to="/profile"
             className={({ isActive }) =>
               `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 ${
                 isActive
-                  ? 'bg-primary/15 text-primary border border-primary/20'
+                  ? 'bg-success/15 text-success border border-success/20'
                   : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
               } ${collapsed ? 'justify-center' : ''}`
             }
           >
-            <Icon size={16} />
-            {!collapsed && <span>{label}</span>}
+            <User size={16} />
+            {!collapsed && <span>Perfil</span>}
           </NavLink>
-        ))}
-      </nav>
+        </nav>
 
-      {/* Systems Section */}
-      {!collapsed && (
-        <div className="px-5 pt-4 pb-1">
-          <span className="text-[10px] text-slate-600 uppercase tracking-widest">Sistemas</span>
-        </div>
-      )}
-      <nav className={`py-2 space-y-1 ${collapsed ? 'px-2' : 'px-3'}`}>
-        {SYSTEMS_NAV.map(({ to, icon: Icon, label }) => (
-          <NavLink
-            key={to}
-            to={to}
-            title={collapsed ? label : undefined}
-            className={({ isActive }) =>
-              `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 ${
-                isActive
-                  ? 'bg-accent/15 text-accent border border-accent/20'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
-              } ${collapsed ? 'justify-center' : ''}`
-            }
-          >
-            <Icon size={16} />
-            {!collapsed && <span>{label}</span>}
-          </NavLink>
-        ))}
-      </nav>
-
-      {/* Profile link */}
-      {!collapsed && (
-        <div className="px-5 pt-4 pb-1">
-          <span className="text-[10px] text-slate-600 uppercase tracking-widest">Cuenta</span>
-        </div>
-      )}
-      <nav className={`py-2 space-y-1 ${collapsed ? 'px-2' : 'px-3'}`}>
-        <NavLink
-          to="/profile"
-          className={({ isActive }) =>
-            `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 ${
-              isActive
-                ? 'bg-success/15 text-success border border-success/20'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
-            } ${collapsed ? 'justify-center' : ''}`
-          }
-        >
-          <User size={16} />
-          {!collapsed && <span>Perfil</span>}
-        </NavLink>
-      </nav>
+      </div>
 
       {/* Logout */}
       {user && (
