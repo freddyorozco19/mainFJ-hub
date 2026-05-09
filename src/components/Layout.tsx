@@ -34,7 +34,7 @@ export function Layout() {
 
   const checkConnection = async () => {
     try {
-      await fetch(`${API}/health`, { signal: AbortSignal.timeout(3000) })
+      await fetch(`${API}/health`, { signal: AbortSignal.timeout(15000) })
       setConnected(true)
     } catch {
       setConnected(false)
@@ -43,9 +43,12 @@ export function Layout() {
 
   useEffect(() => {
     checkConnection()
-    const id = setInterval(checkConnection, 15000)
+    // Retry cada 5s hasta conectar, luego cada 30s
+    const id = setInterval(() => {
+      checkConnection()
+    }, connected === false ? 5000 : 30000)
     return () => clearInterval(id)
-  }, [])
+  }, [connected])
 
   return (
     <div className={`min-h-screen flex ${darkMode ? 'bg-gray-900' : 'bg-[#07070F]'}`}>
