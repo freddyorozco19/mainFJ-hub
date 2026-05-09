@@ -1,5 +1,6 @@
 import { useEffect, useRef, useCallback } from 'react'
 import { useDashboard } from '../store/dashboardStore'
+import { getToken } from '../api'
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:8001'
 
@@ -22,7 +23,8 @@ export function useSSE(options?: UseSSEOptions) {
       esRef.current.close()
     }
 
-    const es = new EventSource(`${API}/events`)
+    const token = getToken() ?? ''
+    const es = new EventSource(`${API}/events?token=${token}`)
     esRef.current = es
 
     es.addEventListener('agent:status', (e) => {

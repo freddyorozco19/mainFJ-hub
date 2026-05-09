@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { NavLink } from 'react-router-dom'
 import { Bot, MessageSquare, BarChart3, ScrollText, Wifi, WifiOff, PanelLeftClose, PanelLeft, Home, Trophy, Brain, TrendingUp, Heart, Wallet, LogOut, X, Menu, User, Network, Activity } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
+import { getToken } from '../api'
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:8001'
 
@@ -35,7 +36,8 @@ function SidebarContent({ collapsed, onToggle }: { collapsed: boolean; onToggle:
   const { user, logout } = useAuth()
 
   useEffect(() => {
-    const es = new EventSource(`${API}/events`)
+    const token = getToken() ?? ''
+    const es = new EventSource(`${API}/events?token=${token}`)
     es.onopen = () => setSseConnected(true)
     es.onerror = () => setSseConnected(false)
     return () => { es.close() }

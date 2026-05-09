@@ -57,7 +57,8 @@ async def events(request: Request, token: str = ""):
     """SSE endpoint — streams real-time events to the client."""
     import jwt
     try:
-        payload = jwt.decode(token, "MainFJ-Dashboard-SecretKey-2026-FJ", algorithms=["HS256"])
+        import os
+        payload = jwt.decode(token, os.getenv("JWT_SECRET_KEY", "MainFJ-Dashboard-SecretKey-2026-FJ"), algorithms=["HS256"])
     except (jwt.PyJWTError, AttributeError):
         from fastapi.responses import JSONResponse
         return JSONResponse(status_code=401, content={"detail": "Token invalido"})

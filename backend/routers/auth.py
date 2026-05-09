@@ -20,20 +20,19 @@ from backend.db import get_conn
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
-SECRET_KEY = "MainFJ-Dashboard-SecretKey-2026-FJ"
+SECRET_KEY = os.getenv("JWT_SECRET_KEY", "MainFJ-Dashboard-SecretKey-2026-FJ")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7  # 7 days
 RESET_TOKEN_EXPIRE_MINUTES = 60  # 1 hour
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 
-# Plain text credentials for reliability across environments
 USERS_DB = {
-    "freddy.orozco729@gmail.com": {
+    os.getenv("ADMIN_EMAIL", "freddy.orozco729@gmail.com"): {
         "id": "1",
-        "email": "freddy.orozco729@gmail.com",
-        "name": "Freddy J. Orozco",
-        "password": "admin123",
+        "email": os.getenv("ADMIN_EMAIL", "freddy.orozco729@gmail.com"),
+        "name": os.getenv("ADMIN_NAME", "Freddy J. Orozco"),
+        "password": os.getenv("ADMIN_PASSWORD", "admin123"),
     }
 }
 
