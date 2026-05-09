@@ -4,8 +4,6 @@ import { useDashboard } from '../store/dashboardStore'
 import type { ChatMessage } from '../store/dashboardStore'
 import { api } from '../api'
 
-const API = import.meta.env.VITE_API_URL || 'http://localhost:8001'
-
 interface AttachedFile {
   id: string
   name: string
