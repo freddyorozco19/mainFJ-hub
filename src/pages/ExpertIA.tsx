@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Brain, Cpu, Zap, Clock, Database, FileText, MessageSquare, Bot, ExternalLink, RefreshCw, TrendingUp, FolderKanban, FileCheck, Target } from 'lucide-react'
-import { api } from '../api'
-
 const PORTAL_URL = 'https://architechia-portal.vercel.app'
+const API = import.meta.env.VITE_API_URL || 'http://localhost:8001'
 
 interface PortalSummary {
   online: boolean
@@ -26,7 +25,7 @@ export function ExpertIA() {
 
   const fetchPortal = async () => {
     try {
-      const r = await api('/proxy/portal-summary')
+      const r = await fetch(`${API}/proxy/portal-summary`, { signal: AbortSignal.timeout(10000) })
       if (r.ok) setPortal(await r.json())
       else setPortal(p => p ? { ...p, online: false } : null)
     } catch {
