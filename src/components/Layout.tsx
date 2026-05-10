@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react'
-import { Outlet, NavLink } from 'react-router-dom'
+import { Outlet, NavLink, useLocation } from 'react-router-dom'
 import { Sidebar, MobileMenuButton } from './Sidebar'
 import { GlobalSearch } from './Search'
+import { NotificationsPanel } from './NotificationsPanel'
+import { useAuth } from '../context/AuthContext'
 import { WifiOff, Wifi, Moon, Sun, Search, Home, MessageSquare, Wallet, Bot } from 'lucide-react'
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:8001'
@@ -13,6 +15,39 @@ const MOBILE_NAV = [
   { to: '/agents',  icon: Bot,            label: 'Agentes' },
 ]
 
+const ROUTE_LABELS: Record<string, string> = {
+  '/home':      'Home',
+  '/agents':    'Agentes',
+  '/chat':      'Chat',
+  '/metrics':   'Métricas',
+  '/logs':      'Logs',
+  '/finance':   'Finanzas',
+  '/kronos':    'KRONOS',
+  '/winstats':  'WinStats',
+  '/expertia':  'ArchiTechIA',
+  '/growdata':  'Grow Data',
+  '/life':      'LIFE',
+  '/health':    'Health',
+  '/profile':   'Perfil',
+  '/webhooks':  'Webhooks',
+}
+
+function UserAvatar() {
+  const { user } = useAuth()
+  if (!user) return null
+  const initials = user.name
+    ? user.name.split(' ').map((w: string) => w[0]).slice(0, 2).join('').toUpperCase()
+    : user.email?.[0]?.toUpperCase() ?? 'U'
+  return (
+    <div
+      className="w-7 h-7 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center text-[10px] font-bold text-primary"
+      title={user.name || user.email}
+    >
+      {initials}
+    </div>
+  )
+}
+
 export function Layout() {
   const [connected, setConnected] = useState<boolean | null>(null)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
@@ -22,6 +57,8 @@ export function Layout() {
     const saved = localStorage.getItem('darkMode')
     return saved ? JSON.parse(saved) : false
   })
+  const location = useLocation()
+  const pageTitle = ROUTE_LABELS[location.pathname] ?? ''
 
   useEffect(() => {
     const saved = localStorage.getItem('sidebarCollapsed')
@@ -63,9 +100,7 @@ export function Layout() {
 
   useEffect(() => {
     checkConnection()
-    const id = setInterval(() => {
-      checkConnection()
-    }, connected === false ? 5000 : 30000)
+    const id = setInterval(checkConnection, connected === false ? 5000 : 30000)
     return () => clearInterval(id)
   }, [connected])
 
@@ -83,19 +118,28 @@ export function Layout() {
         <div className={`flex items-center justify-between px-4 py-2 border-b ${darkMode ? 'border-gray-700 bg-gray-800' : 'border-white/10 bg-white/5'}`}>
           <div className="flex items-center gap-3">
             <MobileMenuButton onClick={() => setMobileMenuOpen(true)} />
-            <div className={`hidden md:flex items-center gap-2 text-xs ${connected === false ? 'text-red-400' : darkMode ? 'text-gray-400' : 'text-white/60'}`}>
+
+            {/* Connection status — desktop */}
+            <div className={`hidden md:flex items-center gap-2 text-xs ${connected === false ? 'text-red-400' : 'text-white/40'}`}>
               {connected === null ? (
                 <span className="animate-pulse">verificando...</span>
               ) : connected ? (
-                <><Wifi className="w-3 h-3" /><span>Conectado</span></>
+                <Wifi className="w-3 h-3 text-white/30" />
               ) : (
                 <><WifiOff className="w-3 h-3" /><span>Sin conexión</span></>
               )}
             </div>
+
+            {/* Breadcrumb / page title */}
+            {pageTitle && (
+              <span className="hidden md:block text-xs font-medium text-white/70 border-l border-white/10 pl-3">
+                {pageTitle}
+              </span>
+            )}
           </div>
 
           <div className="flex items-center gap-2">
-            {/* Search trigger */}
+            {/* Search */}
             <button
               onClick={() => setSearchOpen(true)}
               className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs transition-colors ${darkMode ? 'bg-gray-700 text-gray-400 hover:text-white' : 'bg-white/5 text-white/40 hover:text-white/80'}`}
@@ -105,6 +149,10 @@ export function Layout() {
               <kbd className="hidden sm:inline text-[10px] px-1 py-0.5 bg-white/10 rounded">⌘K</kbd>
             </button>
 
+            {/* Notifications */}
+            <NotificationsPanel />
+
+            {/* Dark mode */}
             <button
               onClick={() => setDarkMode(!darkMode)}
               className={`p-1.5 rounded-md transition-colors ${darkMode ? 'hover:bg-gray-700 text-yellow-400' : 'hover:bg-white/10 text-white/60'}`}
@@ -112,10 +160,16 @@ export function Layout() {
             >
               {darkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
             </button>
+
+            {/* Avatar */}
+            <UserAvatar />
           </div>
         </div>
 
-        <Outlet />
+        {/* Page content with transition */}
+        <div key={location.pathname} className="flex-1 flex flex-col animate-fade-in">
+          <Outlet />
+        </div>
       </main>
 
       {/* Mobile bottom nav */}

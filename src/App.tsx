@@ -28,7 +28,7 @@ const API = import.meta.env.VITE_API_URL || 'http://localhost:8001'
 
 function SSEListener() {
   const esRef = useRef<EventSource | null>(null)
-  const { updateAgentStatus, addMessage, setTyping, pushLog } = useDashboard()
+  const { updateAgentStatus, addMessage, setTyping, pushLog, pushNotification } = useDashboard()
 
   useEffect(() => {
     const t = getToken()
@@ -73,26 +73,23 @@ function SSEListener() {
 
     es.addEventListener('alert:cost', (e) => {
       const { agent_slug, cost, threshold } = JSON.parse(e.data)
-      ;(window as any).__addToast?.({
-        message: `${agent_slug}: $${cost} (umbral $${threshold})`,
-        type: 'warn',
-      })
+      const msg = `${agent_slug}: $${cost} (umbral $${threshold})`
+      ;(window as any).__addToast?.({ message: msg, type: 'warn' })
+      pushNotification({ message: msg, type: 'warn' })
     })
 
     es.addEventListener('finance:written', (e) => {
       const { tab, confirmation } = JSON.parse(e.data)
-      ;(window as any).__addToast?.({
-        message: `Finanzas: ${confirmation} → ${tab}`,
-        type: 'success',
-      })
+      const msg = `Finanzas: ${confirmation} → ${tab}`
+      ;(window as any).__addToast?.({ message: msg, type: 'success' })
+      pushNotification({ message: msg, type: 'success' })
     })
 
     es.addEventListener('system', (e) => {
       const { message, level } = JSON.parse(e.data)
-      ;(window as any).__addToast?.({
-        message,
-        type: (level as 'info' | 'success' | 'warn' | 'error') || 'info',
-      })
+      const t = (level as 'info' | 'success' | 'warn' | 'error') || 'info'
+      ;(window as any).__addToast?.({ message, type: t })
+      pushNotification({ message, type: t })
     })
 
     let retries = 0

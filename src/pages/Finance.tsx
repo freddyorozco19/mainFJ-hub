@@ -3,7 +3,7 @@ import {
   DollarSign, ShoppingCart,
   Send, Loader2, Bot, Search, PiggyBank,
   AlertCircle, RefreshCw, Sparkles, ChevronDown,
-  BarChart3,
+  BarChart3, Table2, History,
 } from 'lucide-react'
 
 import { api } from '../api'
@@ -11,9 +11,9 @@ import { FinanceAgentChat, type AgentAction } from '../components/FinanceAgentCh
 import { FinanceAnalytics } from '../components/FinanceAnalytics'
 
 const SUBPAGES = [
-  { key: 'dashboard', label: 'Dashboard', hex: '#7C3AED' },
-  { key: 'registros', label: 'Registros',  hex: '#10B981' },
-  { key: 'history',   label: 'History',    hex: '#F59E0B' },
+  { key: 'dashboard', label: 'Dashboard', hex: '#7C3AED', icon: BarChart3 },
+  { key: 'registros', label: 'Registros',  hex: '#10B981', icon: Table2   },
+  { key: 'history',   label: 'History',    hex: '#F59E0B', icon: History  },
 ]
 
 const TABS_CONFIG = [
@@ -460,19 +460,18 @@ export function Finance() {
           <h1 className="text-2xl font-bold text-white">Finance</h1>
           <p className="text-sm text-slate-500 mt-1">Gestión financiera · Google Sheets sync</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1 bg-black/20 border border-border rounded-xl p-1">
           {SUBPAGES.map(sp => (
             <button
               key={sp.key}
               onClick={() => setActiveSubPage(sp.key as SubPageKey)}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all border ${
-                activeSubPage === sp.key
-                  ? 'text-white'
-                  : 'text-slate-400 border-transparent hover:text-slate-200 hover:bg-white/5'
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                activeSubPage === sp.key ? 'text-white' : 'text-slate-500 hover:text-slate-300'
               }`}
-              style={activeSubPage === sp.key ? { backgroundColor: sp.hex + '22', borderColor: sp.hex + '55', color: sp.hex } : {}}
+              style={activeSubPage === sp.key ? { backgroundColor: sp.hex + '25', color: sp.hex } : {}}
             >
-              {sp.label}
+              <sp.icon size={13} />
+              <span className="hidden sm:inline">{sp.label}</span>
             </button>
           ))}
           <button

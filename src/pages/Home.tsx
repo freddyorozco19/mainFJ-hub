@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { Bot, MessageSquare, TrendingUp, DollarSign, PiggyBank, AlertCircle, ShoppingCart, Activity, ChevronRight, Loader2 } from 'lucide-react'
+import { Bot, MessageSquare, TrendingUp, DollarSign, PiggyBank, AlertCircle, ShoppingCart, Activity, ChevronRight } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { useDashboard } from '../store/dashboardStore'
+import { SkeletonCard, SkeletonRow } from '../components/Skeleton'
+import { EmptyState } from '../components/EmptyState'
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:8001'
 
@@ -94,7 +96,8 @@ export function Home() {
 
       {/* Quick Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {quickCards.map(({ label, value, icon: Icon, color, bg, border, link }) => (
+        {summaryLoading && [0,1,2,3].map(i => <SkeletonCard key={i} />)}
+        {!summaryLoading && quickCards.map(({ label, value, icon: Icon, color, bg, border, link }) => (
           <Link
             key={label}
             to={link}
@@ -112,6 +115,7 @@ export function Home() {
         ))}
       </div>
 
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Finance Breakdown */}
         <div className="bg-card border border-border rounded-xl p-5 space-y-4">
@@ -120,10 +124,7 @@ export function Home() {
             <Link to="/finance" className="text-xs text-primary hover:text-primary/80">Ver todo</Link>
           </div>
           {summaryLoading ? (
-            <div className="flex items-center justify-center py-8 gap-2 text-slate-500">
-              <Loader2 size={16} className="animate-spin" />
-              <span className="text-sm">Cargando...</span>
-            </div>
+            <div className="space-y-3 py-2"><SkeletonRow /><SkeletonRow /><SkeletonRow /><SkeletonRow /></div>
           ) : (
             <div className="space-y-3">
               {financeBreakdown.map(({ label, icon: Icon, color, amount }) => (
@@ -154,7 +155,7 @@ export function Home() {
             <Link to="/logs" className="text-xs text-primary hover:text-primary/80">Ver logs</Link>
           </div>
           {ultimosLogs.length === 0 ? (
-            <div className="text-center py-8 text-slate-600 text-sm">Sin actividad reciente</div>
+            <EmptyState icon={Activity} title="Sin actividad reciente" description="Los eventos del sistema aparecerán aquí en tiempo real" />
           ) : (
             <div className="space-y-3">
               {ultimosLogs.map((log, i) => (
@@ -179,12 +180,9 @@ export function Home() {
             <Link to="/finance" className="text-xs text-primary hover:text-primary/80">Ver todo</Link>
           </div>
           {recordsLoading ? (
-            <div className="flex items-center justify-center py-8 gap-2 text-slate-500">
-              <Loader2 size={16} className="animate-spin" />
-              <span className="text-sm">Cargando...</span>
-            </div>
+            <div className="space-y-2 py-2"><SkeletonRow /><SkeletonRow /><SkeletonRow /></div>
           ) : recentRecords.length === 0 ? (
-            <div className="text-center py-8 text-slate-600 text-sm">Sin registros recientes</div>
+            <EmptyState icon={DollarSign} title="Sin registros recientes" />
           ) : (
             <div className="space-y-3">
               {recentRecords.map((rec, i) => (

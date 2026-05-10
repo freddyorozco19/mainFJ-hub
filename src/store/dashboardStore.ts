@@ -44,6 +44,14 @@ export interface LogEntry {
   durationMs?: number
 }
 
+export interface Notification {
+  id: string
+  message: string
+  type: 'info' | 'success' | 'warn' | 'error'
+  timestamp: string
+  read: boolean
+}
+
 interface DashboardState {
   // Agents
   agents: Agent[]
@@ -68,6 +76,12 @@ interface DashboardState {
   // Logs
   logs: LogEntry[]
   pushLog: (log: LogEntry) => void
+
+  // Notifications
+  notifications: Notification[]
+  pushNotification: (n: Omit<Notification, 'id' | 'timestamp' | 'read'>) => void
+  markAllRead: () => void
+  clearNotifications: () => void
 }
 
 export const useDashboard = create<DashboardState>((set) => ({
@@ -119,4 +133,17 @@ export const useDashboard = create<DashboardState>((set) => ({
   logs: [],
   pushLog: (log) =>
     set(s => ({ logs: [log, ...s.logs].slice(0, 500) })),
+
+  // ── Notifications ───────────────────────────────────────────────────────
+  notifications: [],
+  pushNotification: (n) =>
+    set(s => ({
+      notifications: [
+        { ...n, id: crypto.randomUUID(), timestamp: new Date().toISOString(), read: false },
+        ...s.notifications,
+      ].slice(0, 50),
+    })),
+  markAllRead: () =>
+    set(s => ({ notifications: s.notifications.map(n => ({ ...n, read: true })) })),
+  clearNotifications: () => set({ notifications: [] }),
 }))
