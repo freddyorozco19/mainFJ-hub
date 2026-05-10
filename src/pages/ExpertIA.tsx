@@ -1,5 +1,11 @@
 import { useState, useEffect } from 'react'
-import { Brain, Cpu, Zap, Clock, Database, FileText, MessageSquare, Bot, ExternalLink, RefreshCw, TrendingUp, FolderKanban, FileCheck, Target } from 'lucide-react'
+import {
+  Brain, ExternalLink, RefreshCw, TrendingUp, FolderKanban,
+  FileCheck, Target, Users, Sparkles, Code2, BarChart3,
+  Workflow, ShieldCheck, ArrowRight, CheckCircle2, Clock3,
+  XCircle, Activity,
+} from 'lucide-react'
+
 const PORTAL_URL = 'https://architechia-portal.vercel.app'
 const IS_DEV = import.meta.env.DEV
 const SUMMARY_URL = IS_DEV
@@ -20,6 +26,67 @@ interface PortalSummary {
   avg_progress: number
   activities: number
   updated_at: string
+}
+
+const SERVICES = [
+  {
+    icon: Brain,
+    title: 'Agentes IA',
+    desc: 'Automatización inteligente con agentes especializados por dominio: legal, financiero, datos y más.',
+    color: 'primary',
+  },
+  {
+    icon: Code2,
+    title: 'Desarrollo a medida',
+    desc: 'Soluciones de software hechas para tu negocio: APIs, dashboards, integraciones y pipelines de datos.',
+    color: 'accent',
+  },
+  {
+    icon: BarChart3,
+    title: 'Analítica avanzada',
+    desc: 'Visualización de datos, KPIs en tiempo real, modelos predictivos y reportes ejecutivos automatizados.',
+    color: 'success',
+  },
+  {
+    icon: Workflow,
+    title: 'Automatización',
+    desc: 'Flujos de trabajo automáticos con n8n, webhooks y orquestación de procesos empresariales.',
+    color: 'warning',
+  },
+  {
+    icon: ShieldCheck,
+    title: 'Consultoría técnica',
+    desc: 'Arquitectura de sistemas, auditoría de infraestructura y estrategia de transformación digital.',
+    color: 'success',
+  },
+  {
+    icon: Sparkles,
+    title: 'IA Generativa',
+    desc: 'Integración de LLMs (Claude, GPT) en productos: chatbots, procesamiento de documentos y asistentes.',
+    color: 'primary',
+  },
+]
+
+const PORTAL_LINKS = [
+  { label: 'Pipeline de leads',  path: '/leads',     icon: TrendingUp  },
+  { label: 'Propuestas',         path: '/proposals',  icon: FileCheck   },
+  { label: 'Proyectos activos',  path: '/projects',   icon: FolderKanban},
+  { label: 'Clientes',           path: '/clientes',   icon: Users       },
+]
+
+function ProposalBar({ label, value, total, color }: { label: string; value: number; total: number; color: string }) {
+  const pct = total > 0 ? (value / total) * 100 : 0
+  return (
+    <div className="space-y-1">
+      <div className="flex items-center justify-between text-xs">
+        <span className="text-slate-400">{label}</span>
+        <span className="font-mono text-white">{value}</span>
+      </div>
+      <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
+        <div className={`h-full ${color} rounded-full transition-all duration-500`} style={{ width: `${pct}%` }} />
+      </div>
+    </div>
+  )
 }
 
 export function ExpertIA() {
@@ -44,62 +111,45 @@ export function ExpertIA() {
     return () => clearInterval(id)
   }, [])
 
-  const agents = [
-    { name: 'Abogado IA',       icon: '⚖️', desc: 'Análisis legal, contratos, cláusulas',      status: 'online',  tasks: 24 },
-    { name: 'Contador IA',      icon: '📊', desc: 'Estados financieros, impuestos, auditoría',  status: 'online',  tasks: 18 },
-    { name: 'Médico IA',        icon: '🏥', desc: 'Diagnóstico, análisis clínico, síntomas',    status: 'busy',    tasks: 12 },
-    { name: 'Ingeniero IA',     icon: '🔧', desc: 'Diseño técnico, cálculos, especificaciones', status: 'online',  tasks: 31 },
-    { name: 'Data Scientist IA',icon: '📈', desc: 'ML, estadísticas, modelos predictivos',      status: 'offline', tasks: 0  },
-    { name: 'Marketing IA',     icon: '📢', desc: 'Campañas, SEO, contenido, redes sociales',   status: 'online',  tasks: 15 },
-  ]
-
-  const capabilities = [
-    { title: 'Procesamiento de Documentos', desc: 'Analiza contratos, facturas, reportes', icon: FileText,     count: '1.2K docs' },
-    { title: 'Chat Especializado',          desc: 'Consultas técnicas con contexto domain', icon: MessageSquare, count: '3.4K chats' },
-    { title: 'Base de Conocimiento',        desc: 'Memoria persistente por especialidad',  icon: Database,      count: '890 MB'    },
-    { title: 'APIs Especializadas',         desc: 'Integración con sistemas externos',     icon: Cpu,           count: '12 APIs'   },
-  ]
-
   return (
     <div className="flex-1 p-4 md:p-6 space-y-6 overflow-auto">
 
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white">ArchiTechIA</h1>
-          <p className="text-sm text-slate-500 mt-1">Agentes expertos especializados por dominio</p>
+          <div className="flex items-center gap-2 mb-1">
+            <div className="w-8 h-8 rounded-lg bg-success/15 border border-success/20 flex items-center justify-center">
+              <Brain size={16} className="text-success" />
+            </div>
+            <h1 className="text-2xl font-bold text-white">ArchiTechIA</h1>
+          </div>
+          <p className="text-sm text-slate-500">Soluciones de IA y software a medida · Bogotá, Colombia</p>
         </div>
-        <div className="flex items-center gap-2 text-xs text-success bg-success/15 px-3 py-1.5 rounded-full border border-success/30">
-          <span className="w-2 h-2 rounded-full bg-success animate-pulse" />
-          Sistema Activo
-        </div>
+        <a
+          href={PORTAL_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-1.5 text-xs text-success bg-success/10 border border-success/20 px-3 py-1.5 rounded-lg hover:bg-success/15 transition-colors"
+        >
+          Portal <ExternalLink size={11} />
+        </a>
       </div>
 
-      {/* Portal Widget */}
+      {/* Portal Widget — conexión en vivo */}
       <div className={`border rounded-xl p-5 transition-colors ${portal?.online ? 'bg-card border-success/20' : 'bg-card border-border'}`}>
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 bg-success/10 border border-success/20 rounded-lg flex items-center justify-center">
-              <Brain size={16} className="text-success" />
+              <Activity size={16} className="text-success" />
             </div>
             <div>
-              <h3 className="text-sm font-semibold text-white">ArchiTechIA Portal</h3>
-              <p className="text-[10px] text-slate-500">CRM · Pipeline · Proyectos</p>
+              <h3 className="text-sm font-semibold text-white">Estado del negocio</h3>
+              <p className="text-[10px] text-slate-500">Datos en vivo desde el portal</p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <button onClick={fetchPortal} className="p-1.5 text-slate-500 hover:text-white hover:bg-white/5 rounded-lg transition-colors">
-              <RefreshCw size={13} className={loading ? 'animate-spin' : ''} />
-            </button>
-            <a
-              href={PORTAL_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-1.5 text-xs text-success hover:text-success/80 bg-success/10 hover:bg-success/15 border border-success/20 px-3 py-1.5 rounded-lg transition-colors"
-            >
-              Abrir portal <ExternalLink size={11} />
-            </a>
-          </div>
+          <button onClick={fetchPortal} className="p-1.5 text-slate-500 hover:text-white hover:bg-white/5 rounded-lg transition-colors">
+            <RefreshCw size={13} className={loading ? 'animate-spin' : ''} />
+          </button>
         </div>
 
         {loading ? (
@@ -109,149 +159,149 @@ export function ExpertIA() {
         ) : !portal?.online ? (
           <div className="text-sm text-red-400 py-2">Portal no disponible</div>
         ) : (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <div className="bg-black/20 rounded-lg p-3">
-              <div className="flex items-center gap-1.5 text-[10px] text-slate-500 mb-1">
-                <TrendingUp size={10} /> Pipeline
-              </div>
-              <p className="text-lg font-bold text-white">{portal.leads}</p>
-              <p className="text-[10px] text-slate-500">leads activos</p>
-              <div className="mt-1 text-[10px] text-success font-mono">
-                Win rate {portal.win_rate}%
-              </div>
-            </div>
-
-            <div className="bg-black/20 rounded-lg p-3">
-              <div className="flex items-center gap-1.5 text-[10px] text-slate-500 mb-1">
-                <FileCheck size={10} /> Propuestas
-              </div>
-              <p className="text-lg font-bold text-white">{portal.proposals_total}</p>
-              <p className="text-[10px] text-slate-500">total</p>
-              <div className="mt-1 text-[10px] text-primary font-mono">
-                {portal.proposals_accepted} aceptadas · {portal.proposals_pending} pendientes
-              </div>
-            </div>
-
-            <div className="bg-black/20 rounded-lg p-3">
-              <div className="flex items-center gap-1.5 text-[10px] text-slate-500 mb-1">
-                <FolderKanban size={10} /> Proyectos
-              </div>
-              <p className="text-lg font-bold text-white">{portal.projects_active}</p>
-              <p className="text-[10px] text-slate-500">en curso</p>
-              <div className="mt-1 flex items-center gap-1">
-                <div className="flex-1 h-1 bg-slate-700 rounded-full overflow-hidden">
-                  <div className="h-full bg-success rounded-full" style={{ width: `${portal.avg_progress}%` }} />
+          <div className="space-y-4">
+            {/* KPI row */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <div className="bg-black/20 rounded-lg p-3">
+                <div className="flex items-center gap-1.5 text-[10px] text-slate-500 mb-1">
+                  <TrendingUp size={10} /> Pipeline
                 </div>
-                <span className="text-[10px] text-slate-500">{portal.avg_progress}%</span>
+                <p className="text-xl font-bold text-white">{portal.leads}</p>
+                <p className="text-[10px] text-slate-500">leads totales</p>
+                <p className="text-[10px] text-success font-mono mt-1">Win rate {portal.win_rate}%</p>
+              </div>
+
+              <div className="bg-black/20 rounded-lg p-3">
+                <div className="flex items-center gap-1.5 text-[10px] text-slate-500 mb-1">
+                  <Target size={10} /> Valor pipeline
+                </div>
+                <p className="text-xl font-bold text-white">
+                  ${portal.pipeline_value >= 1000 ? `${(portal.pipeline_value / 1000).toFixed(1)}K` : portal.pipeline_value}
+                </p>
+                <p className="text-[10px] text-slate-500">USD estimado</p>
+                <p className="text-[10px] text-primary font-mono mt-1">{portal.leads_won} ganados</p>
+              </div>
+
+              <div className="bg-black/20 rounded-lg p-3">
+                <div className="flex items-center gap-1.5 text-[10px] text-slate-500 mb-1">
+                  <FolderKanban size={10} /> Proyectos
+                </div>
+                <p className="text-xl font-bold text-white">{portal.projects_active}</p>
+                <p className="text-[10px] text-slate-500">en curso</p>
+                <div className="mt-1.5 flex items-center gap-1">
+                  <div className="flex-1 h-1 bg-slate-700 rounded-full overflow-hidden">
+                    <div className="h-full bg-success rounded-full" style={{ width: `${portal.avg_progress}%` }} />
+                  </div>
+                  <span className="text-[10px] text-slate-500">{portal.avg_progress}%</span>
+                </div>
+              </div>
+
+              <div className="bg-black/20 rounded-lg p-3">
+                <div className="flex items-center gap-1.5 text-[10px] text-slate-500 mb-1">
+                  <FileCheck size={10} /> Propuestas
+                </div>
+                <p className="text-xl font-bold text-white">{portal.proposals_total}</p>
+                <p className="text-[10px] text-slate-500">total</p>
+                <p className="text-[10px] font-mono mt-1">
+                  <span className="text-success">{portal.proposals_accepted} ✓</span>
+                  <span className="text-slate-600 mx-1">·</span>
+                  <span className="text-warning">{portal.proposals_pending} ⏳</span>
+                </p>
               </div>
             </div>
 
-            <div className="bg-black/20 rounded-lg p-3">
-              <div className="flex items-center gap-1.5 text-[10px] text-slate-500 mb-1">
-                <Target size={10} /> Pipeline valor
+            {/* Proposals breakdown */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="bg-black/10 rounded-lg p-4 space-y-3">
+                <p className="text-xs font-medium text-slate-400">Propuestas por estado</p>
+                <ProposalBar label="Aceptadas" value={portal.proposals_accepted} total={portal.proposals_total} color="bg-success" />
+                <ProposalBar label="Pendientes" value={portal.proposals_pending} total={portal.proposals_total} color="bg-warning" />
+                <ProposalBar
+                  label="Otras"
+                  value={portal.proposals_total - portal.proposals_accepted - portal.proposals_pending}
+                  total={portal.proposals_total}
+                  color="bg-slate-600"
+                />
               </div>
-              <p className="text-lg font-bold text-white">
-                ${portal.pipeline_value >= 1000 ? `${(portal.pipeline_value / 1000).toFixed(0)}K` : portal.pipeline_value}
-              </p>
-              <p className="text-[10px] text-slate-500">USD estimado</p>
-              <div className="mt-1 text-[10px] text-slate-500 font-mono">
-                {portal.activities} actividades
+
+              <div className="bg-black/10 rounded-lg p-4 space-y-3">
+                <p className="text-xs font-medium text-slate-400">Estado general</p>
+                <div className="flex items-center gap-3">
+                  <CheckCircle2 size={14} className="text-success flex-shrink-0" />
+                  <span className="text-xs text-slate-300">{portal.projects_completed} proyectos completados</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <Clock3 size={14} className="text-primary flex-shrink-0" />
+                  <span className="text-xs text-slate-300">{portal.projects_active} proyectos activos</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <XCircle size={14} className="text-slate-600 flex-shrink-0" />
+                  <span className="text-xs text-slate-400">{portal.leads - portal.leads_won} leads en proceso</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <Activity size={14} className="text-accent flex-shrink-0" />
+                  <span className="text-xs text-slate-300">{portal.activities} actividades registradas</span>
+                </div>
               </div>
             </div>
           </div>
         )}
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        {[
-          { icon: Brain,       color: 'success', value: '6',     label: 'Agentes Expertos'  },
-          { icon: MessageSquare, color: 'primary', value: '100', label: 'Consultas Hoy'     },
-          { icon: Zap,         color: 'accent',   value: '99.2%',label: 'Disponibilidad'    },
-          { icon: Clock,       color: 'warning',  value: '1.2s', label: 'Tiempo Promedio'   },
-        ].map((s, i) => (
-          <div key={i} className="bg-card border border-border rounded-xl p-4 flex items-center gap-4">
-            <div className={`w-12 h-12 rounded-xl bg-${s.color}/15 flex items-center justify-center`}>
-              <s.icon size={22} className={`text-${s.color}`} />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-white">{s.value}</p>
-              <p className="text-xs text-slate-500">{s.label}</p>
-            </div>
+      {/* Accesos rápidos al portal */}
+      {portal?.online && (
+        <div>
+          <h3 className="text-xs font-medium text-slate-600 uppercase tracking-widest mb-3">Acceso rápido al portal</h3>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {PORTAL_LINKS.map(({ label, path, icon: Icon }) => (
+              <a
+                key={path}
+                href={`${PORTAL_URL}${path}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 bg-card border border-border hover:border-success/30 rounded-xl px-4 py-3 text-sm text-slate-300 hover:text-white transition-all group"
+              >
+                <Icon size={15} className="text-slate-500 group-hover:text-success transition-colors" />
+                <span className="text-xs">{label}</span>
+                <ArrowRight size={11} className="ml-auto text-slate-700 group-hover:text-slate-400 transition-colors" />
+              </a>
+            ))}
           </div>
-        ))}
-      </div>
+        </div>
+      )}
 
-      {/* Agents Grid */}
+      {/* Servicios */}
       <div>
-        <h3 className="text-sm font-medium text-slate-500 uppercase tracking-wider mb-4">Agentes Disponibles</h3>
+        <h3 className="text-xs font-medium text-slate-600 uppercase tracking-widest mb-3">Servicios</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          {agents.map((agent, i) => (
-            <div key={i} className={`bg-card border rounded-xl p-5 hover:border-success/30 transition-all ${agent.status === 'offline' ? 'opacity-50' : ''}`}>
-              <div className="flex items-start justify-between mb-3">
-                <div className="text-3xl">{agent.icon}</div>
-                <span className={`flex items-center gap-1.5 text-[10px] font-medium px-2 py-1 rounded-full ${
-                  agent.status === 'online'  ? 'text-success bg-success/15' :
-                  agent.status === 'busy'    ? 'text-warning bg-warning/15' :
-                                               'text-slate-500 bg-slate-500/15'
-                }`}>
-                  <span className={`w-1.5 h-1.5 rounded-full ${
-                    agent.status === 'online' ? 'bg-success' :
-                    agent.status === 'busy'   ? 'bg-warning animate-pulse' :
-                                                'bg-slate-500'
-                  }`} />
-                  {agent.status === 'online' ? 'Online' : agent.status === 'busy' ? 'Ocupado' : 'Offline'}
-                </span>
+          {SERVICES.map((s, i) => (
+            <div key={i} className="bg-card border border-border rounded-xl p-5 hover:border-white/10 transition-colors group">
+              <div className={`w-10 h-10 rounded-xl bg-${s.color}/10 border border-${s.color}/20 flex items-center justify-center mb-3`}>
+                <s.icon size={18} className={`text-${s.color}`} />
               </div>
-              <h4 className="text-base font-semibold text-white mb-1">{agent.name}</h4>
-              <p className="text-xs text-slate-500 mb-3">{agent.desc}</p>
-              <div className="flex items-center justify-between pt-3 border-t border-border/50">
-                <div className="flex items-center gap-1 text-[10px] text-slate-600">
-                  <Bot size={10} /><span>{agent.tasks} tareas</span>
-                </div>
-                <a href={PORTAL_URL} target="_blank" rel="noopener noreferrer" className="text-xs text-success hover:text-success/80 transition-colors">
-                  Consultar →
-                </a>
-              </div>
+              <h4 className="text-sm font-semibold text-white mb-1.5">{s.title}</h4>
+              <p className="text-xs text-slate-500 leading-relaxed">{s.desc}</p>
             </div>
           ))}
         </div>
       </div>
 
-      {/* Capabilities */}
-      <div>
-        <h3 className="text-sm font-medium text-slate-500 uppercase tracking-wider mb-4">Capacidades</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-          {capabilities.map((cap, i) => (
-            <div key={i} className="bg-card border border-border rounded-xl p-4">
-              <div className="w-10 h-10 rounded-lg bg-success/10 flex items-center justify-center mb-3">
-                <cap.icon size={18} className="text-success" />
-              </div>
-              <h4 className="text-sm font-medium text-white mb-1">{cap.title}</h4>
-              <p className="text-xs text-slate-500 mb-2">{cap.desc}</p>
-              <span className="text-[10px] font-mono text-success bg-success/10 px-2 py-0.5 rounded">{cap.count}</span>
-            </div>
-          ))}
+      {/* CTA */}
+      <div className="bg-gradient-to-r from-success/10 to-primary/10 border border-success/20 rounded-xl p-6 flex items-center justify-between">
+        <div>
+          <h3 className="text-base font-semibold text-white mb-1">¿Tienes un proyecto en mente?</h3>
+          <p className="text-sm text-slate-400">Agenda una sesión de descubrimiento gratuita con el equipo de ArchiTechIA.</p>
         </div>
+        <a
+          href={`${PORTAL_URL}/leads`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex-shrink-0 flex items-center gap-2 bg-success text-white px-5 py-2.5 rounded-xl text-sm font-medium hover:bg-success/90 transition-colors ml-4"
+        >
+          Contactar <ArrowRight size={14} />
+        </a>
       </div>
 
-      {/* Quick Chat */}
-      <div className="bg-card border border-border rounded-xl p-5">
-        <h3 className="text-sm font-semibold text-white mb-4">Consulta Rápida</h3>
-        <div className="flex gap-3">
-          <input
-            type="text"
-            placeholder="Escribe tu consulta a ExpertIA..."
-            className="flex-1 bg-surface border border-border rounded-xl px-4 py-3 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-success/40"
-          />
-          <button className="px-6 py-3 bg-success text-white rounded-xl text-sm font-medium hover:bg-success/90 transition-colors">
-            Consultar
-          </button>
-        </div>
-        <p className="text-[10px] text-slate-600 mt-2">
-          Selecciona un agente experto o deja que ExpertIA enrute tu consulta automáticamente
-        </p>
-      </div>
     </div>
   )
 }
