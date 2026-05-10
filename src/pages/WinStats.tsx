@@ -1,5 +1,10 @@
 import { useState, useEffect } from 'react'
-import { Trophy, Target, Award, Calendar, Zap, Wifi, WifiOff, ExternalLink, RefreshCw, Users, Database, Activity } from 'lucide-react'
+import {
+  Trophy, Wifi, WifiOff, ExternalLink, RefreshCw,
+  Database, Activity, BarChart3, Users, Zap,
+  FileSpreadsheet, Globe, Radar, TrendingUp,
+  ArrowRight, Clock, Bot,
+} from 'lucide-react'
 
 const WS_URL = import.meta.env.VITE_WINSTATS_URL || 'http://localhost:8000'
 
@@ -30,6 +35,31 @@ const MANAGER_DOTS: Record<string, string> = {
   error:   'bg-red-400',
 }
 
+const MANAGER_ICONS: Record<string, string> = {
+  'CEO WS':   '🧠',
+  'Data':     '💾',
+  'Analytics':'📊',
+  'Reports':  '📄',
+  'Content':  '✍️',
+  'Business': '💼',
+}
+
+const DATA_SOURCES = [
+  { name: 'Opta F24',    desc: 'Eventos de partido en tiempo real',      icon: Zap,             color: 'primary' },
+  { name: 'Wyscout',     desc: 'Métricas avanzadas de jugadores',        icon: TrendingUp,      color: 'accent'  },
+  { name: 'FBref',       desc: 'Estadísticas históricas y percentiles',  icon: BarChart3,       color: 'success' },
+  { name: 'Google Drive',desc: 'Almacenamiento y sincronización',        icon: FileSpreadsheet, color: 'warning' },
+]
+
+const CAPABILITIES = [
+  { icon: Radar,     title: 'Radar Charts',       desc: 'Visualización de perfiles de jugadores con percentiles por posición y liga.' },
+  { icon: Activity,  title: 'Match Analysis',     desc: 'Desglose de eventos Opta F24: pases, xG, heatmaps, presión y zonas de juego.' },
+  { icon: Users,     title: 'Player Scouting',    desc: 'Búsqueda avanzada de jugadores por métricas, edad, liga y perfil táctico.' },
+  { icon: Bot,       title: 'Multi-Agente IA',    desc: 'Sistema de agentes especializados que coordinan análisis, reportes y contenido.' },
+  { icon: Globe,     title: 'Multi-Liga',         desc: 'Cobertura de 16+ competiciones internacionales con datos históricos.' },
+  { icon: Database,  title: 'Data Pipeline',      desc: 'ETL automatizado desde fuentes externas a parquet en Drive, con 15K+ partidos.' },
+]
+
 export function WinStats() {
   const [summary, setSummary] = useState<WSSummary | null>(null)
   const [loading, setLoading] = useState(true)
@@ -57,129 +87,111 @@ export function WinStats() {
     return () => clearInterval(id)
   }, [])
 
-  const stats = [
-    { label: 'Victorias Totales', value: '47', change: '+12%', positive: true, icon: Trophy },
-    { label: 'Win Rate',          value: '73%', change: '+5%',  positive: true, icon: Target },
-    { label: 'Proyectos Activos', value: '23',  change: '+3',   positive: true, icon: Zap    },
-    { label: 'Cierre Este Mes',   value: '8',   change: '-2',   positive: false, icon: Calendar },
-  ]
-
-  const recentWins = [
-    { client: 'Alcaldía de Bogotá',          value: '$450M', date: '15 Mar 2026', type: 'SECOP II'   },
-    { client: 'Instituto Nacional de Salud', value: '$180M', date: '8 Mar 2026',  type: 'Licitación' },
-    { client: 'Superintendencia de Salud',   value: '$320M', date: '1 Mar 2026',  type: 'Concurso'   },
-    { client: 'MinTIC',                      value: '$890M', date: '22 Feb 2026', type: 'Cooperativa'},
-  ]
-
   return (
     <div className="flex-1 p-4 md:p-6 space-y-6 overflow-auto">
 
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white">WinStats</h1>
-          <p className="text-sm text-slate-500 mt-1">Análisis de victorias y pipeline comercial</p>
+          <div className="flex items-center gap-2 mb-1">
+            <div className="w-8 h-8 rounded-lg bg-accent/15 border border-accent/20 flex items-center justify-center">
+              <Trophy size={16} className="text-accent" />
+            </div>
+            <h1 className="text-2xl font-bold text-white">WinStats</h1>
+          </div>
+          <p className="text-sm text-slate-500">Plataforma de analítica de fútbol · Multi-agente IA</p>
         </div>
-        <div className="flex items-center gap-2 text-xs text-accent bg-accent/15 px-3 py-1.5 rounded-full border border-accent/30">
-          <span className="w-2 h-2 rounded-full bg-accent animate-pulse" />
-          Sistema Activo
-        </div>
+        <a
+          href={WS_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-1.5 text-xs text-accent bg-accent/10 border border-accent/20 px-3 py-1.5 rounded-lg hover:bg-accent/15 transition-colors"
+        >
+          Abrir plataforma <ExternalLink size={11} />
+        </a>
       </div>
 
-      {/* WinStats Platform Widget */}
-      <div className={`border rounded-xl p-5 transition-colors ${
-        summary?.online
-          ? 'bg-card border-green-500/20'
-          : 'bg-card border-border'
-      }`}>
+      {/* Live connection widget */}
+      <div className={`border rounded-xl p-5 transition-colors ${summary?.online ? 'bg-card border-accent/20' : 'bg-card border-border'}`}>
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 bg-accent/10 border border-accent/20 rounded-lg flex items-center justify-center">
               <Activity size={16} className="text-accent" />
             </div>
             <div>
-              <h3 className="text-sm font-semibold text-white">WinStats Platform</h3>
-              <p className="text-[10px] text-slate-500">Analítica de fútbol · Multi-agente IA</p>
+              <h3 className="text-sm font-semibold text-white">Estado del sistema</h3>
+              <p className="text-[10px] text-slate-500">Datos en vivo desde la plataforma</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <button
-              onClick={fetchSummary}
-              className="p-1.5 text-slate-500 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
-            >
+            <button onClick={fetchSummary} className="p-1.5 text-slate-500 hover:text-white hover:bg-white/5 rounded-lg transition-colors">
               <RefreshCw size={13} className={loading ? 'animate-spin' : ''} />
             </button>
-            <a
-              href={WS_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-1.5 text-xs text-accent hover:text-accent/80 bg-accent/10 hover:bg-accent/15 border border-accent/20 px-3 py-1.5 rounded-lg transition-colors"
-            >
-              Abrir plataforma <ExternalLink size={11} />
-            </a>
           </div>
         </div>
 
         {loading ? (
           <div className="flex items-center gap-2 text-slate-500 text-sm py-2">
-            <RefreshCw size={14} className="animate-spin" />
-            Conectando con WinStats...
+            <RefreshCw size={14} className="animate-spin" /> Conectando con WinStats...
           </div>
         ) : !summary?.online ? (
           <div className="flex items-center gap-2 text-slate-500 text-sm py-2">
             <WifiOff size={14} className="text-red-400" />
             <span className="text-red-400">Plataforma offline</span>
-            <span className="text-slate-600 text-xs">— Asegúrate de que el servidor esté corriendo en {WS_URL}</span>
+            <span className="text-slate-600 text-xs">— inicia el servidor local en {WS_URL}</span>
           </div>
         ) : (
-          <div className="space-y-4">
-            {/* Status + key metrics */}
-            <div className="flex items-center gap-2 flex-wrap">
-              <div className="flex items-center gap-1.5 text-xs text-green-400">
-                <Wifi size={12} />
-                <span>Online</span>
+          <div className="space-y-5">
+            {/* KPIs */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <div className="bg-black/20 rounded-lg p-3">
+                <div className="flex items-center gap-1.5 text-[10px] text-slate-500 mb-1">
+                  <Wifi size={10} className="text-green-400" /> Estado
+                </div>
+                <p className="text-sm font-bold text-green-400">Online</p>
+                <p className="text-[10px] text-slate-500 mt-0.5">{summary.server_time}</p>
               </div>
-              <span className="text-slate-700">·</span>
-              <div className="flex items-center gap-1.5 text-xs text-slate-300">
-                <Database size={12} className="text-primary" />
-                <span className="font-mono">{summary.matches.toLocaleString()}</span>
-                <span className="text-slate-500">partidos</span>
+
+              <div className="bg-black/20 rounded-lg p-3">
+                <div className="flex items-center gap-1.5 text-[10px] text-slate-500 mb-1">
+                  <Database size={10} className="text-primary" /> Partidos
+                </div>
+                <p className="text-xl font-bold text-white">{summary.matches.toLocaleString()}</p>
+                <p className="text-[10px] text-slate-500">en base de datos</p>
               </div>
-              <span className="text-slate-700">·</span>
-              <div className="flex items-center gap-1.5 text-xs text-slate-300">
-                <Trophy size={12} className="text-yellow-400" />
-                <span className="font-mono">{summary.competitions}</span>
-                <span className="text-slate-500">competiciones</span>
+
+              <div className="bg-black/20 rounded-lg p-3">
+                <div className="flex items-center gap-1.5 text-[10px] text-slate-500 mb-1">
+                  <Trophy size={10} className="text-yellow-400" /> Competiciones
+                </div>
+                <p className="text-xl font-bold text-white">{summary.competitions}</p>
+                <p className="text-[10px] text-slate-500">indexadas</p>
               </div>
-              <span className="text-slate-700">·</span>
-              <div className="flex items-center gap-1.5 text-xs text-slate-300">
-                <Zap size={12} className="text-accent" />
-                <span className="font-mono">${summary.today_cost.toFixed(4)}</span>
-                <span className="text-slate-500">hoy</span>
+
+              <div className="bg-black/20 rounded-lg p-3">
+                <div className="flex items-center gap-1.5 text-[10px] text-slate-500 mb-1">
+                  <Zap size={10} className="text-accent" /> Costo hoy
+                </div>
+                <p className="text-xl font-bold text-white">${summary.today_cost.toFixed(4)}</p>
+                <p className="text-[10px] text-slate-500">{summary.today_tokens.toLocaleString()} tokens</p>
               </div>
-              {lastFetch && (
-                <>
-                  <span className="text-slate-700">·</span>
-                  <span className="text-[10px] text-slate-600">
-                    Actualizado {lastFetch.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })}
-                  </span>
-                </>
-              )}
             </div>
 
-            {/* Managers */}
+            {/* Managers grid */}
             <div>
-              <p className="text-[10px] text-slate-600 uppercase tracking-widest mb-2 flex items-center gap-1">
-                <Users size={10} /> Agentes
-              </p>
-              <div className="flex flex-wrap gap-2">
+              <p className="text-[10px] text-slate-600 uppercase tracking-widest mb-2.5">Agentes del sistema</p>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
                 {Object.entries(summary.managers).map(([name, status]) => (
                   <div
                     key={name}
-                    className={`flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full border ${MANAGER_COLORS[status]}`}
+                    className={`flex items-center gap-2.5 px-3 py-2 rounded-lg border ${MANAGER_COLORS[status]}`}
                   >
-                    <span className={`w-1.5 h-1.5 rounded-full ${MANAGER_DOTS[status]}`} />
-                    {name}
+                    <span className="text-base leading-none">{MANAGER_ICONS[name] ?? '🤖'}</span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-medium truncate">{name}</p>
+                      <p className="text-[10px] opacity-60 capitalize">{status}</p>
+                    </div>
+                    <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${MANAGER_DOTS[status]}`} />
                   </div>
                 ))}
               </div>
@@ -187,118 +199,77 @@ export function WinStats() {
 
             {/* Last activity */}
             {summary.last_activity && (
-              <div className="text-xs text-slate-500 border-t border-border/50 pt-3">
-                Última actividad:
-                <span className="text-slate-300 ml-1">{summary.last_activity.agent}</span>
-                <span className="mx-1">·</span>
-                <span className="text-slate-400">{summary.last_activity.action}</span>
-                <span className="text-slate-600 ml-1">{summary.last_activity.time}</span>
+              <div className="flex items-center gap-2 text-xs text-slate-500 border-t border-border/50 pt-3">
+                <Clock size={11} />
+                <span>Última actividad:</span>
+                <span className="text-slate-300">{summary.last_activity.agent}</span>
+                <span className="text-slate-600">·</span>
+                <span className="text-slate-400 truncate">{summary.last_activity.action}</span>
+                <span className="text-slate-600 ml-auto flex-shrink-0">{summary.last_activity.time}</span>
               </div>
+            )}
+
+            {lastFetch && (
+              <p className="text-[10px] text-slate-700">
+                Actualizado {lastFetch.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+              </p>
             )}
           </div>
         )}
       </div>
 
-      {/* Business Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {stats.map((stat, i) => (
-          <div key={i} className="bg-card border border-border rounded-xl p-5">
-            <div className="flex items-center justify-between mb-3">
-              <stat.icon size={18} className="text-accent" />
-              <span className={`text-xs font-medium ${stat.positive ? 'text-success' : 'text-danger'}`}>
-                {stat.change}
-              </span>
-            </div>
-            <p className="text-3xl font-bold text-white">{stat.value}</p>
-            <p className="text-xs text-slate-500 mt-1">{stat.label}</p>
-          </div>
-        ))}
-      </div>
-
-      {/* Chart */}
-      <div className="bg-card border border-border rounded-xl p-5">
-        <div className="flex items-center justify-between mb-6">
-          <h3 className="text-sm font-semibold text-white">Tendencia de Victorias</h3>
-          <div className="flex gap-2">
-            <button className="px-3 py-1 text-xs bg-accent/15 text-accent rounded-lg border border-accent/30">Mensual</button>
-            <button className="px-3 py-1 text-xs text-slate-500 hover:text-slate-300">Trimestral</button>
-          </div>
-        </div>
-        <div className="flex items-end gap-3 h-40">
-          {[65,80,45,90,75,95,70,85,60,88,72,92].map((val, i) => (
-            <div key={i} className="flex-1 flex flex-col items-center gap-1">
-              <div className="w-full bg-accent/30 hover:bg-accent/50 rounded-t transition-colors cursor-pointer" style={{ height: `${val}%` }} />
-              <span className="text-[10px] text-slate-600">{['E','F','M','A','M','J','Jl','A','S','O','N','D'][i]}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Recent Wins */}
-      <div className="bg-card border border-border rounded-xl p-5">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-sm font-semibold text-white">Últimas Victorias</h3>
-          <button className="text-xs text-accent hover:text-accent/80 transition-colors">Ver todas</button>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="text-[10px] text-slate-600 uppercase tracking-wider">
-                <th className="text-left pb-3">Cliente</th>
-                <th className="text-left pb-3">Tipo</th>
-                <th className="text-right pb-3">Valor</th>
-                <th className="text-right pb-3">Fecha</th>
-              </tr>
-            </thead>
-            <tbody>
-              {recentWins.map((win, i) => (
-                <tr key={i} className="border-t border-border/50">
-                  <td className="py-3">
-                    <div className="flex items-center gap-2">
-                      <Award size={14} className="text-accent" />
-                      <span className="text-sm text-slate-200">{win.client}</span>
-                    </div>
-                  </td>
-                  <td className="py-3">
-                    <span className="text-xs text-slate-500 bg-slate-500/10 px-2 py-1 rounded">{win.type}</span>
-                  </td>
-                  <td className="py-3 text-right">
-                    <span className="text-sm font-mono text-success">{win.value}</span>
-                  </td>
-                  <td className="py-3 text-right text-xs text-slate-500">{win.date}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* Pipeline */}
-      <div className="bg-card border border-border rounded-xl p-5">
-        <h3 className="text-sm font-semibold text-white mb-4">Pipeline de Oportunidades</h3>
-        <div className="space-y-3">
-          {[
-            { stage: 'Propuesta Enviada', count: 5, value: '$2.1B', color: 'bg-blue-500'  },
-            { stage: 'Negociación',        count: 3, value: '$890M', color: 'bg-yellow-500'},
-            { stage: 'Ganado',             count: 8, value: '$1.8B', color: 'bg-success'  },
-            { stage: 'Perdido',            count: 2, value: '$450M', color: 'bg-danger'   },
-          ].map((stage, i) => (
-            <div key={i} className="flex items-center gap-4">
-              <div className={`w-2 h-10 rounded-full ${stage.color}`} />
-              <div className="flex-1">
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-sm text-slate-300">{stage.stage}</span>
-                  <span className="text-xs text-slate-500">{stage.count} oportunidades</span>
-                </div>
-                <div className="h-2 bg-slate-700 rounded-full overflow-hidden">
-                  <div className={`h-full ${stage.color} rounded-full`} style={{ width: `${(stage.count / 8) * 100}%` }} />
-                </div>
+      {/* Data sources */}
+      <div>
+        <h3 className="text-xs font-medium text-slate-600 uppercase tracking-widest mb-3">Fuentes de datos</h3>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          {DATA_SOURCES.map((src, i) => (
+            <div key={i} className="bg-card border border-border rounded-xl p-4 flex items-start gap-3">
+              <div className={`w-8 h-8 rounded-lg bg-${src.color}/10 border border-${src.color}/20 flex items-center justify-center flex-shrink-0`}>
+                <src.icon size={14} className={`text-${src.color}`} />
               </div>
-              <span className="text-sm font-mono text-white w-20 text-right">{stage.value}</span>
+              <div>
+                <p className="text-xs font-semibold text-white">{src.name}</p>
+                <p className="text-[10px] text-slate-500 mt-0.5 leading-relaxed">{src.desc}</p>
+              </div>
             </div>
           ))}
         </div>
       </div>
+
+      {/* Capabilities */}
+      <div>
+        <h3 className="text-xs font-medium text-slate-600 uppercase tracking-widest mb-3">Capacidades</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+          {CAPABILITIES.map((cap, i) => (
+            <div key={i} className="bg-card border border-border rounded-xl p-5 hover:border-accent/20 transition-colors">
+              <div className="w-9 h-9 rounded-xl bg-accent/10 border border-accent/20 flex items-center justify-center mb-3">
+                <cap.icon size={16} className="text-accent" />
+              </div>
+              <h4 className="text-sm font-semibold text-white mb-1.5">{cap.title}</h4>
+              <p className="text-xs text-slate-500 leading-relaxed">{cap.desc}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* CTA */}
+      <div className="bg-gradient-to-r from-accent/10 to-primary/10 border border-accent/20 rounded-xl p-6 flex items-center justify-between">
+        <div>
+          <h3 className="text-base font-semibold text-white mb-1">Explorar la plataforma</h3>
+          <p className="text-sm text-slate-400">
+            Accede a análisis de partidos, perfiles de jugadores y reportes del sistema multi-agente.
+          </p>
+        </div>
+        <a
+          href={WS_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex-shrink-0 flex items-center gap-2 bg-accent text-white px-5 py-2.5 rounded-xl text-sm font-medium hover:bg-accent/90 transition-colors ml-4"
+        >
+          Abrir <ArrowRight size={14} />
+        </a>
+      </div>
+
     </div>
   )
 }
