@@ -3,5 +3,14 @@ import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   plugins: [react()],
-  server: { port: 5176 },
+  server: {
+    port: 5176,
+    proxy: {
+      '/portal-proxy': {
+        target: 'https://architechia-portal.vercel.app',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/portal-proxy/, '/api'),
+      },
+    },
+  },
 })
