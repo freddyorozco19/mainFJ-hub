@@ -116,6 +116,17 @@ def read_tab(tab: str, use_cache: bool = True) -> list[dict]:
     return normalized
 
 
+
+def append_rows_batch(tab: str, rows: list[dict]) -> int:
+    """Inserta múltiples filas de una vez (una sola API call)."""
+    if not rows:
+        return 0
+    ws  = get_sheet(tab)
+    values = [[row.get(col, "") for col in COLUMNS[tab]] for row in rows]
+    ws.append_rows(values, value_input_option="USER_ENTERED")
+    invalidate_cache(tab)
+    return len(rows)
+
 def invalidate_cache(tab: str | None = None) -> None:
     """Invalida el cache de una pestaña (o todas si tab es None)."""
     global _CACHE
