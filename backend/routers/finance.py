@@ -48,6 +48,7 @@ Pestañas disponibles y sus columnas:
 - shops:      {COLUMNS['shops']}
 - wishlist:   {COLUMNS['wishlist']}
 - debts:      {COLUMNS['debts']}
+- credito:    {COLUMNS['credito']}
 
 Reglas de clasificación:
 - mercado, supermercado, productos del hogar, aseo → basket
@@ -56,6 +57,7 @@ Reglas de clasificación:
 - ahorro, consignación, retiro, inversión → ahorro
 - deuda, préstamo, me deben, le debo → debts
 - quiero comprar, presupuestar, wishlist → wishlist
+- tarjeta de crédito, cuotas, Visa, Mastercard → credito
 
 Reglas de formato:
 - MONEDA: siempre "COP" o "USD"
@@ -88,6 +90,7 @@ ANALYSIS_PROMPTS = {
     "shops":      "Eres el agente de Compras de FJ. Analizas historial de compras, gastos por categoría, tiendas frecuentes y tendencias. Responde en español.",
     "wishlist":   "Eres el agente de WishList de FJ. Administras la lista de deseos, prioridades de compra y presupuesto disponible. Responde en español.",
     "debts":      "Eres el agente de Deudas de FJ. Analizas deudas activas, próximos pagos, total adeudado y progreso de pago. Responde en español.",
+    "credito":    "Eres el agente de Tarjetas de Crédito de FJ. Analizas compras a crédito, cuotas pendientes, fechas de corte y pago, y estado de cada tarjeta. Responde en español.",
 }
 
 
@@ -240,7 +243,7 @@ async def finance_analyze(req: AnalysisRequest, current_user = Depends(get_curre
 @router.get("/summary")
 def get_summary(current_user = Depends(get_current_user)):
     """Devuelve totales y conteos por pestaña para el dashboard de finanzas."""
-    tabs   = ["essentials", "ahorro", "basket", "shops", "wishlist", "debts"]
+    tabs   = ["essentials", "ahorro", "basket", "shops", "wishlist", "debts", "credito"]
     result = {}
     for tab in tabs:
         try:
@@ -272,7 +275,7 @@ def get_summary(current_user = Depends(get_current_user)):
 @router.get("/data/{tab}")
 def get_tab_data(tab: str, current_user = Depends(get_current_user)):
     """Devuelve todos los registros de una pestaña."""
-    valid_tabs = ["essentials", "ahorro", "basket", "shops", "wishlist", "debts"]
+    valid_tabs = ["essentials", "ahorro", "basket", "shops", "wishlist", "debts", "credito"]
     if tab not in valid_tabs:
         raise HTTPException(400, f"Tab '{tab}' no válido")
     try:
@@ -286,7 +289,7 @@ def get_tab_data(tab: str, current_user = Depends(get_current_user)):
 @router.get("/analytics")
 def get_analytics(current_user = Depends(get_current_user)):
     """Devuelve métricas detalladas por pestaña para paneles de análisis."""
-    tabs = ["essentials", "ahorro", "basket", "shops", "wishlist", "debts"]
+    tabs = ["essentials", "ahorro", "basket", "shops", "wishlist", "debts", "credito"]
     result = {}
 
     for tab in tabs:
@@ -463,7 +466,8 @@ PESTAÑAS DISPONIBLES Y SUS COLUMNAS:
 - basket:     {COLUMNS['basket']} — Canasta básica y mercado
 - shops:      {COLUMNS['shops']} — Compras generales
 - wishlist:   {COLUMNS['wishlist']} — Lista de deseos
-- debts:      {COLUMNS['debts']} — Deudas y préstamos
+- debts:      {COLUMNS['debts']}
+- credito:    {COLUMNS['credito']} — Deudas y préstamos
 
 REGLAS DE CLASIFICACIÓN:
 - mercado, supermercado, productos del hogar, aseo → basket
@@ -472,6 +476,7 @@ REGLAS DE CLASIFICACIÓN:
 - ahorro, consignación, retiro, inversión → ahorro
 - deuda, préstamo, me deben, le debo → debts
 - quiero comprar, presupuestar, wishlist → wishlist
+- tarjeta de crédito, cuotas, Visa, Mastercard → credito
 
 FORMATO DE RESPUESTA:
 Responde SIEMPRE en JSON con este formato exacto:
