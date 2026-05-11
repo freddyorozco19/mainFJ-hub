@@ -355,13 +355,6 @@ export function Finance() {
     })
   }
 
-  function toggleSelectAll() {
-    setSelectedRows(prev => {
-      if (prev.size === records.length && records.length > 0) return new Set()
-      return new Set(records.map((_, i) => i))
-    })
-  }
-
   async function handleBulkDelete() {
     if (!confirm("Eliminar " + selectedRows.size + " registros seleccionados?")) return
     const indices = Array.from(selectedRows).sort((a,b) => b-a)
@@ -855,6 +848,7 @@ export function Finance() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-border">
+                    <th className="text-center text-xs text-slate-500 font-medium py-2 px-2"><input type="checkbox" onChange={() => { if (selectedRows.size === records.length) setSelectedRows(new Set()); else setSelectedRows(new Set(records.map((_, i) => i))) }} className="rounded" /></th>
                     <th className="text-center text-xs text-slate-500 font-medium py-2 px-3 whitespace-nowrap w-[100px]">Acciones</th>
                     {Object.keys(records[0]).map(col => (
                       <th key={col} className="text-left text-xs text-slate-500 font-medium py-2 px-3 whitespace-nowrap">{col}</th>
