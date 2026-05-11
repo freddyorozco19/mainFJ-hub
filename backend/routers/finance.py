@@ -666,6 +666,69 @@ Registros actuales ({len(context_records)} mostrados):
         raise HTTPException(500, str(e))
 
 
+
+# ── Migración: Sincronizar Shops → Crédito ───────────────────────────────────
+@router.post("/migrate-credito")
+def migrate_credito(current_user = Depends(get_current_user)):
+    """Escanea shops y crea registros en credito para todas las compras con tarjeta de crédito."""
+    try:
+        shops_records = read_tab("shops")
+    except Exception as e:
+        raise HTTPException(500, f"Error leyendo shops: {e}")
+    
+    # Leer existentes en credito para evitar duplicados
+    try:
+        existing = read_tab("credito")
+        existing_keys = {(r.get("PRODUCTO", ""), r.get("VALOR_TOTAL", "")) for r in existing}
+    except:
+        existing_keys = set()
+    
+    created = 0
+    skipped = 0
+    for r in shops_records:
+        payment = str(r.get("PAYMENT", "")).lower()
+        if "crédito" not in payment and "credito" not in payment:
+            continue
+        
+        key = (str(r.get("PRODUCT", "")), str(r.get("VALUE", "")))
+        if key in existing_keys:
+            skipped += 1
+            continue
+        
+        try:
+            valor = float(str(r.get("VALUE", 0)).replace("$", "").replace(",", "").replace(" ", "") or 0)
+        except (ValueError, TypeError):
+            valor = 0
+        
+        cuotas = 1
+        raw_cuotas = str(r.get("CUOTAS", "1")).strip()
+        if raw_cuotas and raw_cuotas.isdigit():
+            cuotas = int(raw_cuotas)
+        
+        valor_cuota = round(valor / cuotas, 2) if cuotas > 0 else valor
+        
+        credito_data = {
+            "PRODUCTO":     str(r.get("PRODUCT", "")),
+            "DESCRIPCION":  str(r.get("DESCRIPTION", f"Compra con tarjeta")),
+            "ENTIDAD":      "Tarjeta",
+            "MONEDA":       str(r.get("COIN", "COP")),
+            "VALOR_TOTAL":  valor,
+            "CUOTAS":       cuotas,
+            "CUOTA_ACTUAL": 1,
+            "VALOR_CUOTA":  valor_cuota,
+            "FECHA_CORTE":  "",
+            "FECHA_PAGO":   "",
+            "ESTADO":       "PENDIENTE",
+        }
+        try:
+            append_row("credito", credito_data)
+            created += 1
+        except Exception as e:
+            print(f"[MIGRATE] Error en {r.get('PRODUCT')}: {e}")
+    
+    return {"status": "ok", "created": created, "skipped": skipped, "total_shops": len(shops_records)}
+
+
 # ── OCR Helper ─────────────────────────────────────────────────────────────
 def _parse_invoice_text(text: str, tab: str) -> dict:
     lines = [l.strip() for l in text.splitlines() if l.strip()]
