@@ -46,6 +46,7 @@ Pestañas disponibles y sus columnas:
 - ahorro:     {COLUMNS['ahorro']}
 - basket:     {COLUMNS['basket']}
 - shops:      {COLUMNS['shops']}
+Requerido para shops con tarjeta de credito: agregar campo CUOTAS (numero de cuotas) en el JSON data.
 - wishlist:   {COLUMNS['wishlist']}
 - debts:      {COLUMNS['debts']}
 - credito:    {COLUMNS['credito']}
@@ -159,6 +160,42 @@ class AgentResponse(BaseModel):
     needs_confirmation: bool = False
 
 
+
+def _auto_link_credito(tab: str, data: dict):
+    """Si un registro de shops se paga con tarjeta de credito, crea automaticamente un registro en credito."""
+    if tab != "shops":
+        return
+    payment = str(data.get("PAYMENT", "")).lower()
+    if "tarjeta" not in payment and "crédito" not in payment and "credito" not in payment:
+        return
+
+    cuotas = 1
+    raw_cuotas = str(data.get("CUOTAS", "1")).strip()
+    if raw_cuotas and raw_cuotas.isdigit():
+        cuotas = int(raw_cuotas)
+
+    valor = float(str(data.get("VALUE", 0)).replace("$", "").replace(",", "").replace(" ", "") or 0)
+    valor_cuota = round(valor / cuotas, 2) if cuotas > 0 else valor
+
+    credito_data = {
+        "PRODUCTO":     data.get("PRODUCT", ""),
+        "DESCRIPCION":  data.get("DESCRIPTION", f"Compra con tarjeta"),
+        "ENTIDAD":      "Tarjeta",
+        "MONEDA":       data.get("COIN", "COP"),
+        "VALOR_TOTAL":  valor,
+        "CUOTAS":       cuotas,
+        "CUOTA_ACTUAL": 1,
+        "VALOR_CUOTA":  valor_cuota,
+        "FECHA_CORTE":  "",
+        "FECHA_PAGO":   "",
+        "ESTADO":       "PENDIENTE",
+    }
+    try:
+        append_row("credito", credito_data)
+    except Exception as e:
+        print(f"[CREDITO] Error creando registro automático: {e}")
+
+
 # ── Finance Writer ─────────────────────────────────────────────────────────────
 @router.post("/write")
 async def finance_write(req: WriteRequest, current_user = Depends(get_current_user)):
@@ -188,6 +225,7 @@ async def finance_write(req: WriteRequest, current_user = Depends(get_current_us
 
     if result.get("tab") and result.get("data"):
         append_row(result["tab"], result["data"])
+        _auto_link_credito(result["tab"], result["data"])
         await event_manager.finance_written(result["tab"], result["confirmation"])
         await event_manager.new_log("success", "finance", "WRITE", result["confirmation"])
         await event_manager.agent_status("finance", "online", "Finanzas")
@@ -464,7 +502,8 @@ PESTAÑAS DISPONIBLES Y SUS COLUMNAS:
 - essentials: {COLUMNS['essentials']} — Pagos fijos mensuales (Netflix, arriendo, servicios)
 - ahorro:     {COLUMNS['ahorro']} — Ahorros e inversiones
 - basket:     {COLUMNS['basket']} — Canasta básica y mercado
-- shops:      {COLUMNS['shops']} — Compras generales
+- shops:      {COLUMNS['shops']}
+Requerido para shops con tarjeta de credito: agregar campo CUOTAS (numero de cuotas) en el JSON data. — Compras generales
 - wishlist:   {COLUMNS['wishlist']} — Lista de deseos
 - debts:      {COLUMNS['debts']}
 - credito:    {COLUMNS['credito']} — Deudas y préstamos
