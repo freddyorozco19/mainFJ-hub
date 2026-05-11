@@ -678,65 +678,86 @@ Registros actuales ({len(context_records)} mostrados):
 # ── Migración: Sincronizar Shops → Crédito ───────────────────────────────────
 @router.post("/migrate-credito")
 def migrate_credito(current_user = Depends(get_current_user)):
-    """Escanea shops y crea registros en credito para todas las compras con tarjeta de crédito."""
+    """Escanea shops y crea/actualiza registros en credito para compras con tarjeta de crédito."""
     try:
         shops_records = read_tab("shops")
     except Exception as e:
         raise HTTPException(500, f"Error leyendo shops: {e}")
-    
-    # Leer existentes en credito para evitar duplicados
+
+    # Leer existentes en credito
     try:
         existing = read_tab("credito")
-        existing_keys = {(r.get("PRODUCTO", ""), r.get("VALOR_TOTAL", "")) for r in existing}
-    except:
-        existing_keys = set()
-    
-    to_create = []
+    except Exception:
+        existing = []
+
+    # Indexar existentes por (PRODUCTO, VALOR_TOTAL) para match rápido
+    existing_index: dict[tuple[str, str], tuple[int, dict]] = {}
+    for idx, ex in enumerate(existing):
+        key = (str(ex.get("PRODUCTO", "")), str(ex.get("VALOR_TOTAL", "")))
+        existing_index[key] = (idx, ex)
+
+    created = 0
+    updated = 0
     skipped = 0
+    to_create: list[dict] = []
+
     for r in shops_records:
         payment = str(r.get("PAYMENT", "")).lower()
         if "crédito" not in payment and "credito" not in payment:
             continue
-        
-        key = (str(r.get("PRODUCT", "")), str(r.get("VALUE", "")))
-        if key in existing_keys:
-            skipped += 1
-            continue
-        
+
+        shop_key = (str(r.get("PRODUCT", "")), str(r.get("VALUE", "")))
+
         try:
             valor = float(str(r.get("VALUE", 0)).replace("$", "").replace(",", "").replace(" ", "") or 0)
         except (ValueError, TypeError):
             valor = 0
-        
+
         cuotas = 1
         raw_cuotas = str(r.get("CUOTAS", "1")).strip()
         if raw_cuotas and raw_cuotas.isdigit():
             cuotas = int(raw_cuotas)
-        
+
         valor_cuota = round(valor / cuotas, 2) if cuotas > 0 else valor
-        
-        credito_data = {
-            "PRODUCTO":     str(r.get("PRODUCT", "")),
-            "DESCRIPCION":  str(r.get("DESCRIPTION", f"Compra con tarjeta")),
-            "ENTIDAD":      str(r.get("ACCOUNT", "")),
-            "MONEDA":       str(r.get("COIN", "COP")),
-            "VALOR_TOTAL":  valor,
-            "CUOTAS":       cuotas,
-            "CUOTA_ACTUAL": 1,
-            "VALOR_CUOTA":  valor_cuota,
-            "FECHA_CORTE":  "",
-            "FECHA_PAGO":   "",
-            "ESTADO":       "PENDIENTE",
-        }
-        try:
-            append_row("credito", credito_data)
-            created += 1
-        except Exception as e:
-            print(f"[MIGRATE] Error en {r.get('PRODUCT')}: {e}")
-    
+        account = str(r.get("ACCOUNT", "")).strip()
+
+        if shop_key in existing_index:
+            row_idx, ex_record = existing_index[shop_key]
+            entidad = str(ex_record.get("ENTIDAD", "")).strip()
+            if entidad == "Tarjeta" or entidad == "":
+                # Actualizar ENTIDAD con el banco real
+                update_data = {**ex_record, "ENTIDAD": account or entidad}
+                try:
+                    update_row("credito", row_idx, update_data)
+                    updated += 1
+                except Exception as e:
+                    print(f"[MIGRATE] Error actualizando {shop_key}: {e}")
+            else:
+                skipped += 1
+        else:
+            credito_data = {
+                "PRODUCTO":     shop_key[0],
+                "DESCRIPCION":  str(r.get("DESCRIPTION", "Compra con tarjeta")),
+                "ENTIDAD":      account,
+                "MONEDA":       str(r.get("COIN", "COP")),
+                "VALOR_TOTAL":  valor,
+                "CUOTAS":       cuotas,
+                "CUOTA_ACTUAL": 1,
+                "VALOR_CUOTA":  valor_cuota,
+                "FECHA_CORTE":  "",
+                "FECHA_PAGO":   "",
+                "ESTADO":       "PENDIENTE",
+            }
+            to_create.append(credito_data)
+
     if to_create:
-        append_rows_batch("credito", to_create)
-    return {"status": "ok", "created": len(to_create), "skipped": skipped, "total_shops": len(shops_records)}
+        try:
+            append_rows_batch("credito", to_create)
+            created = len(to_create)
+        except Exception as e:
+            print(f"[MIGRATE] Error batch create: {e}")
+
+    return {"status": "ok", "created": created, "updated": updated, "skipped": skipped, "total_shops": len(shops_records)}
 
 
 # ── OCR Helper ─────────────────────────────────────────────────────────────

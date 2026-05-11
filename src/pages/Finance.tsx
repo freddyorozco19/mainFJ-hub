@@ -365,7 +365,7 @@ export function Finance() {
     try {
       const res = await api("/finance/migrate-credito", { method: "POST" })
       const data = await res.json()
-      alert("Migracion: " + data.created + " creados, " + data.skipped + " ya existian")
+      alert("Migracion: " + (data.created || 0) + " creados, " + (data.updated || 0) + " actualizados, " + (data.skipped || 0) + " sin cambios")
       loadRecords("credito")
       loadSummary()
     } catch (e: any) {
