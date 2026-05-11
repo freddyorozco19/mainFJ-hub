@@ -228,6 +228,7 @@ export function Finance() {
   const [deleteIndex, setDeleteIndex]         = useState<number | null>(null)
   const [deleteReason, setDeleteReason]       = useState('')
   const [deleteLoading, setDeleteLoading]     = useState(false)
+  const [selectedRows, setSelectedRows]     = useState<Set<number>>(new Set())
 
   // ── Finance Agent Chat ─────────────────────────────────────────────────────
   const [agentChatOpen, setAgentChatOpen]     = useState(false)
@@ -343,6 +344,38 @@ export function Finance() {
     } catch (e: any) {
       alert("Error: " + (e.message || "Desconocido"))
     }
+  }
+
+  function toggleSelectRow(index: number) {
+    setSelectedRows(prev => {
+      const next = new Set(prev)
+      if (next.has(index)) next.delete(index)
+      else next.add(index)
+      return next
+    })
+  }
+
+  function toggleSelectAll() {
+    setSelectedRows(prev => {
+      if (prev.size === records.length && records.length > 0) return new Set()
+      return new Set(records.map((_, i) => i))
+    })
+  }
+
+  async function handleBulkDelete() {
+    if (!confirm("Eliminar " + selectedRows.size + " registros seleccionados?")) return
+    const indices = Array.from(selectedRows).sort((a,b) => b-a)
+    for (const i of indices) {
+      try {
+        await api("/finance/records", { method: "DELETE", body: { tab: crudTab, row_index: i } })
+      } catch (e: any) {
+        alert("Error eliminando fila " + i + ": " + (e.message || "Desconocido"))
+        break
+      }
+    }
+    setSelectedRows(new Set())
+    loadRecords(crudTab)
+    loadSummary()
   }
 
   async function handleConfirmDelete() {
@@ -689,7 +722,14 @@ export function Finance() {
 
         {/* Table */}
         <div className="overflow-x-auto">
-          {recordsLoading ? (
+          {selectedRows.size > 0 && (
+              <div className="flex items-center gap-3 px-4 py-2 bg-orange-500/10 border border-orange-500/30 rounded-lg mb-3">
+                <span className="text-xs text-orange-400">{selectedRows.size} seleccionados</span>
+                <button onClick={handleBulkDelete} className="px-2 py-1 text-xs bg-danger/20 hover:bg-danger/30 text-danger rounded transition-colors">Eliminar seleccionados</button>
+                <button onClick={() => setSelectedRows(new Set())} className="px-2 py-1 text-xs text-slate-400 hover:text-white rounded transition-colors">Cancelar</button>
+              </div>
+            )}
+            {recordsLoading ? (
             <div className="flex items-center justify-center py-12 gap-2 text-slate-500">
               <Loader2 size={16} className="animate-spin" />
               <span className="text-sm">Cargando desde Google Sheets…</span>
@@ -794,6 +834,13 @@ export function Finance() {
           </div>
 
           <div className="overflow-x-auto">
+            {selectedRows.size > 0 && (
+              <div className="flex items-center gap-3 px-4 py-2 bg-orange-500/10 border border-orange-500/30 rounded-lg mb-3">
+                <span className="text-xs text-orange-400">{selectedRows.size} seleccionados</span>
+                <button onClick={handleBulkDelete} className="px-2 py-1 text-xs bg-danger/20 hover:bg-danger/30 text-danger rounded transition-colors">Eliminar seleccionados</button>
+                <button onClick={() => setSelectedRows(new Set())} className="px-2 py-1 text-xs text-slate-400 hover:text-white rounded transition-colors">Cancelar</button>
+              </div>
+            )}
             {recordsLoading ? (
               <div className="flex items-center justify-center py-12 gap-2 text-slate-500">
                 <Loader2 size={16} className="animate-spin" />
@@ -817,6 +864,9 @@ export function Finance() {
                 <tbody>
                   {records.map((row, i) => (
                     <tr key={i} className="border-b border-border/50 hover:bg-white/3 transition-colors">
+                      <td className="py-2 px-2 text-center whitespace-nowrap">
+                        <input type="checkbox" checked={selectedRows.has(i)} onChange={() => toggleSelectRow(i)} className="rounded" />
+                      </td>
                       <td className="py-2 px-3 text-center whitespace-nowrap">
                         <div className="flex items-center justify-center gap-1">
                           <button
