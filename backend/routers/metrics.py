@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """GET /metrics — consumo agregado por agente y global."""
 from fastapi import APIRouter, Depends
+from backend.db import get_conn
 from backend.routers.auth import get_current_user
 
 router = APIRouter(prefix="/metrics", tags=["metrics"])
