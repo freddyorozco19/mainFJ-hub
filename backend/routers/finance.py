@@ -577,7 +577,7 @@ Registros actuales ({len(context_records)} mostrados):
                 await event_manager.finance_written(action.tab, action.confirmation or "Registro creado")
                 await event_manager.new_log("success", "finance", "AGENT_CREATE", action.confirmation or "Registro creado")
             except Exception as e:
-                text = f"Error al crear el registro: {{e}}"
+                text = f"Error al crear el registro: {e}"
                 action = None
 
         if action and action.type == "delete" and action.tab and action.row_index is not None and not needs_confirmation:
@@ -588,9 +588,9 @@ Registros actuales ({len(context_records)} mostrados):
                     reason=f"Agente FINANCE: {action.confirmation or 'Eliminación automática'}",
                     user_email=getattr(current_user, 'email', None)
                 )
-                await event_manager.new_log("success", "finance", "AGENT_DELETE", f"Fila {{action.row_index}} de {{action.tab}}")
+                await event_manager.new_log("success", "finance", "AGENT_DELETE", f"Fila {action.row_index} de {action.tab}")
             except Exception as e:
-                text = f"Error al eliminar el registro: {{e}}"
+                text = f"Error al eliminar el registro: {e}"
                 action = None
 
         if action and action.type == "update" and action.tab and action.row_index is not None and action.data and not needs_confirmation:
@@ -601,9 +601,9 @@ Registros actuales ({len(context_records)} mostrados):
                     data=action.data,
                     user_email=getattr(current_user, 'email', None)
                 )
-                await event_manager.new_log("success", "finance", "AGENT_UPDATE", f"Fila {{action.row_index}} de {{action.tab}}")
+                await event_manager.new_log("success", "finance", "AGENT_UPDATE", f"Fila {action.row_index} de {action.tab}")
             except Exception as e:
-                text = f"Error al actualizar el registro: {{e}}"
+                text = f"Error al actualizar el registro: {e}"
                 action = None
 
         ms = int((time.time() - t0) * 1000)
