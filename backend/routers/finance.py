@@ -282,7 +282,7 @@ _SUMMARY_CACHE = {"data": None, "timestamp": 0}
 
 @router.get("/summary")
 def get_summary(current_user = Depends(get_current_user)):
-    import time
+    global _SUMMARY_CACHE
     now = time.time()
     if _SUMMARY_CACHE["data"] is not None and now - _SUMMARY_CACHE["timestamp"] < 120:
         return _SUMMARY_CACHE["data"]
