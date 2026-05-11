@@ -21,6 +21,7 @@ TABS = {
     "shops":      "Shops",
     "wishlist":   "Wish List",
     "debts":      "Debts",
+    "credito":    "Crédito",
 }
 
 # Columnas por pestaña (orden EXACTO del Google Sheet)
@@ -71,7 +72,14 @@ def _normalize_key(key: str) -> str:
 def get_sheet(tab: str) -> gspread.Worksheet:
     gc = _client()
     sh = gc.open_by_key(SHEET_ID)
-    return sh.worksheet(TABS[tab])
+    sheet_name = TABS[tab]
+    try:
+        return sh.worksheet(sheet_name)
+    except:
+        headers = COLUMNS[tab]
+        ws = sh.add_worksheet(title=sheet_name, rows=1000, cols=len(headers))
+        ws.append_row(headers, value_input_option="USER_ENTERED")
+        return ws
 
 
 def read_tab(tab: str, use_cache: bool = True) -> list[dict]:
