@@ -166,7 +166,7 @@ def _auto_link_credito(tab: str, data: dict):
     if tab != "shops":
         return
     payment = str(data.get("PAYMENT", "")).lower()
-    if "tarjeta" not in payment and "crédito" not in payment and "credito" not in payment:
+    if "crédito" not in payment and "credito" not in payment:
         return
 
     cuotas = 1
