@@ -151,9 +151,12 @@ function renderFormField(col: string, value: string | number, onChange: (val: st
     return (
       <select value={value} onChange={e => onChange(e.target.value)} className={baseClass + ' appearance-none cursor-pointer'}>
         <option value=''>Seleccionar...</option>
-        <option value='Visa'>Visa</option>
-        <option value='Mastercard'>Mastercard</option>
-        <option value='Amex'>Amex</option>
+        <option value='Nubank'>Nubank</option>
+        <option value='Falabella'>Falabella</option>
+        <option value='Bancolombia'>Bancolombia</option>
+        <option value='Davivienda'>Davivienda</option>
+        <option value='Nequi'>Nequi</option>
+        <option value='Nu'>Nu</option>
         <option value='Otra'>Otra</option>
       </select>
     )
@@ -180,6 +183,25 @@ function renderFormField(col: string, value: string | number, onChange: (val: st
       className={baseClass}
     />
   )
+}
+
+const TAB_FILTERS: Record<TabKey, string[]> = {
+  shops:      ['CATEGORY', 'STORE', 'COIN', 'PAYMENT', 'ACCOUNT'],
+  debts:      ['MONEDA', 'ESTADO'],
+  credito:    ['ENTIDAD', 'MONEDA', 'ESTADO'],
+  basket:     ['CATEGORIA', 'MONEDA'],
+  essentials: ['MONEDA', 'MEDIO PAGO', 'MODO'],
+  ahorro:     ['MEDIO', 'MONEDA'],
+  wishlist:   ['MONEDA', 'TIENDA', 'MEDIO'],
+}
+
+function getUniqueValues(records: Records, col: string): string[] {
+  const vals = new Set<string>()
+  records.forEach(r => {
+    const v = String(r[col] ?? '').trim()
+    if (v) vals.add(v)
+  })
+  return Array.from(vals).sort((a, b) => a.localeCompare(b))
 }
 
 const SUMMARY_CARDS = [
@@ -212,6 +234,9 @@ export function Finance() {
   const [records, setRecords]               = useState<Records>([])
   const [recordsLoading, setRecordsLoading] = useState(false)
   const [search, setSearch]                 = useState('')
+
+  // ── Column Filters (Registros) ─────────────────────────────────────────────
+  const [columnFilters, setColumnFilters] = useState<Record<string, string>>({})
 
   // ── CRUD Registros ─────────────────────────────────────────────────────────
   const [showRecordModal, setShowRecordModal] = useState(false)
@@ -336,6 +361,7 @@ export function Finance() {
   }
 
   async function handleMigrateCredito() {
+    setMigrating(true)
     try {
       const res = await api("/finance/migrate-credito", { method: "POST" })
       const data = await res.json()
@@ -344,6 +370,8 @@ export function Finance() {
       loadSummary()
     } catch (e: any) {
       alert("Error: " + (e.message || "Desconocido"))
+    } finally {
+      setMigrating(false)
     }
   }
 
@@ -425,6 +453,7 @@ export function Finance() {
     setRecordsLoading(true)
     setRecords([])
     setSearch('')
+    setColumnFilters({})
     try {
       const res = await api(`/finance/data/${tab}`)
       const data = await res.json()
@@ -496,6 +525,18 @@ export function Finance() {
   const filteredRecords = records.filter(r =>
     Object.values(r).some(v => String(v).toLowerCase().includes(search.toLowerCase()))
   )
+
+  const filteredCrudRecords = records.map((row, i) => ({ row, i })).filter(({ row }) => {
+    if (search) {
+      const matchesSearch = Object.values(row).some(v => String(v).toLowerCase().includes(search.toLowerCase()))
+      if (!matchesSearch) return false
+    }
+    for (const [col, val] of Object.entries(columnFilters)) {
+      if (!val) continue
+      if (String(row[col] ?? '').trim() !== val) return false
+    }
+    return true
+  })
 
   const maxTotal = Math.max(
     ...Object.values(summary).map(s => s?.total_cop ?? 0),
@@ -828,6 +869,45 @@ export function Finance() {
             </div>
           </div>
 
+          {/* Search + Column Filters */}
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="relative flex-1 min-w-[200px]">
+              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+              <input
+                type="text"
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                placeholder="Buscar registros…"
+                className="w-full bg-surface border border-border rounded-lg pl-9 pr-4 py-2 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-primary/50 transition-colors"
+              />
+            </div>
+            {TAB_FILTERS[crudTab]?.map(col => {
+              const options = getUniqueValues(records, col)
+              if (options.length === 0) return null
+              return (
+                <select
+                  key={col}
+                  value={columnFilters[col] || ''}
+                  onChange={e => setColumnFilters(prev => ({ ...prev, [col]: e.target.value }))}
+                  className="bg-surface border border-border text-sm text-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:border-primary/50 appearance-none cursor-pointer"
+                >
+                  <option value="">{col}</option>
+                  {options.map(opt => (
+                    <option key={opt} value={opt}>{opt}</option>
+                  ))}
+                </select>
+              )
+            })}
+            {(search || Object.values(columnFilters).some(Boolean)) && (
+              <button
+                onClick={() => { setSearch(''); setColumnFilters({}) }}
+                className="text-xs text-slate-400 hover:text-white px-2 py-1 border border-border rounded-lg transition-colors"
+              >
+                Limpiar filtros
+              </button>
+            )}
+          </div>
+
           <div className="overflow-x-auto">
             {selectedRows.size > 0 && (
               <div className="flex items-center gap-3 px-4 py-2 bg-orange-500/10 border border-orange-500/30 rounded-lg mb-3">
@@ -841,16 +921,20 @@ export function Finance() {
                 <Loader2 size={16} className="animate-spin" />
                 <span className="text-sm">Cargando…</span>
               </div>
-            ) : records.length === 0 ? (
+            ) : filteredCrudRecords.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12 gap-2 text-slate-600">
                 <DollarSign size={24} />
-                <span className="text-sm">Sin registros en {TABS_CONFIG.find(t => t.key === crudTab)?.label}</span>
+                <span className="text-sm">
+                  {(search || Object.values(columnFilters).some(Boolean))
+                    ? 'Sin registros que coincidan con los filtros'
+                    : `Sin registros en ${TABS_CONFIG.find(t => t.key === crudTab)?.label}`}
+                </span>
               </div>
             ) : (
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-border">
-                    <th className="text-center text-xs text-slate-500 font-medium py-2 px-2"><input type="checkbox" onChange={() => { if (selectedRows.size === records.length) setSelectedRows(new Set()); else setSelectedRows(new Set(records.map((_, i) => i))) }} className="rounded" /></th>
+                    <th className="text-center text-xs text-slate-500 font-medium py-2 px-2"><input type="checkbox" onChange={() => { const visibleIdx = new Set(filteredCrudRecords.map(({ i }) => i)); if (visibleIdx.size > 0 && Array.from(visibleIdx).every(idx => selectedRows.has(idx))) { const next = new Set(selectedRows); Array.from(visibleIdx).forEach(idx => next.delete(idx)); setSelectedRows(next); } else { const next = new Set(selectedRows); Array.from(visibleIdx).forEach(idx => next.add(idx)); setSelectedRows(next); } }} className="rounded" /></th>
                     <th className="text-center text-xs text-slate-500 font-medium py-2 px-3 whitespace-nowrap w-[100px]">Acciones</th>
                     {Object.keys(records[0]).map(col => (
                       <th key={col} className="text-left text-xs text-slate-500 font-medium py-2 px-3 whitespace-nowrap">{col}</th>
@@ -858,7 +942,7 @@ export function Finance() {
                   </tr>
                 </thead>
                 <tbody>
-                  {records.map((row, i) => (
+                  {filteredCrudRecords.map(({ row, i }) => (
                     <tr key={i} className="border-b border-border/50 hover:bg-white/3 transition-colors">
                       <td className="py-2 px-2 text-center whitespace-nowrap">
                         <input type="checkbox" checked={selectedRows.has(i)} onChange={() => toggleSelectRow(i)} className="rounded" />

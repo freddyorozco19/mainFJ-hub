@@ -180,7 +180,7 @@ def _auto_link_credito(tab: str, data: dict):
     credito_data = {
         "PRODUCTO":     data.get("PRODUCT", ""),
         "DESCRIPCION":  data.get("DESCRIPTION", f"Compra con tarjeta"),
-        "ENTIDAD":      "Tarjeta",
+        "ENTIDAD":      data.get("ACCOUNT", ""),
         "MONEDA":       data.get("COIN", "COP"),
         "VALOR_TOTAL":  valor,
         "CUOTAS":       cuotas,
@@ -718,7 +718,7 @@ def migrate_credito(current_user = Depends(get_current_user)):
         credito_data = {
             "PRODUCTO":     str(r.get("PRODUCT", "")),
             "DESCRIPCION":  str(r.get("DESCRIPTION", f"Compra con tarjeta")),
-            "ENTIDAD":      "Tarjeta",
+            "ENTIDAD":      str(r.get("ACCOUNT", "")),
             "MONEDA":       str(r.get("COIN", "COP")),
             "VALOR_TOTAL":  valor,
             "CUOTAS":       cuotas,
