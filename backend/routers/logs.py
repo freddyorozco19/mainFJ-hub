@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """GET /logs — historial de actividad del sistema."""
 from fastapi import APIRouter, Depends, Query
+from backend.db import get_conn
 from backend.routers.auth import get_current_user
 
 router = APIRouter(prefix="/logs", tags=["logs"])
