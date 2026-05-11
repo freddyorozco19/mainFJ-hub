@@ -810,7 +810,7 @@ export function Finance() {
             <div className="flex items-center gap-2">
               <select
                 value={crudTab}
-                onChange={e => { setCrudTab(e.target.value as TabKey); loadRecords(e.target.value as TabKey) }}
+                onChange={e => { setCrudTab(e.target.value as TabKey); setSelectedRows(new Set()); loadRecords(e.target.value as TabKey) }}
                 className="bg-surface border border-border text-sm text-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:border-primary/50"
               >
                 {TABS_CONFIG.map(t => (
