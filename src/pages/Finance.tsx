@@ -23,19 +23,21 @@ const TABS_CONFIG = [
   { key: 'ahorro',     label: 'Salvings',     colorVar: 'success', hex: '#4ADE80' },
   { key: 'debts',      label: 'Debt',     colorVar: 'danger',  hex: '#F87171' },
   { key: 'wishlist',   label: 'Wishlist',   colorVar: 'primary', hex: '#A78BFA' },
+  { key: 'credito',    label: 'Crédito',    colorVar: 'warning', hex: '#F97316' },
 ]
 
 const TAB_COLUMNS: Record<TabKey, string[]> = {
   essentials: ['PRODUCTO', 'DESCRIPCION', 'MONEDA', 'VALOR', 'MEDIO PAGO', 'MODO'],
   ahorro:     ['NOMBRE', 'MEDIO', 'MES', 'VALOR'],
   basket:     ['PRODUCTO', 'DESCRIPCION', 'CATEGORIA', 'MONEDA', 'VALOR', 'CANTIDAD'],
-  shops:      ['PRODUCT', 'DESCRIPTION', 'BRAND', 'CATEGORY', 'STORE', 'STORE2', 'COIN', 'VALUE', 'PAYMENT', 'ACCOUNT', 'DATE'],
+  shops:      ['PRODUCT', 'DESCRIPTION', 'BRAND', 'CATEGORY', 'STORE', 'STORE2', 'COIN', 'VALUE', 'PAYMENT', 'CUOTAS', 'ACCOUNT', 'DATE'],
   wishlist:   ['PRODUCTO', 'DESCRIPCION', 'MONEDA', 'VALOR', 'TIENDA', 'MEDIO', 'SOURCE'],
   debts:      ['PRODUCTO', 'DESCRIPCION', 'MONEDA', 'VALOR', 'PAGO', 'ESTADO', 'FECHA'],
+  credito:    ['PRODUCTO', 'DESCRIPCION', 'ENTIDAD', 'MONEDA', 'VALOR_TOTAL', 'CUOTAS', 'CUOTA_ACTUAL', 'VALOR_CUOTA', 'FECHA_CORTE', 'FECHA_PAGO', 'ESTADO'],
 }
 
 type SubPageKey = 'dashboard' | 'registros' | 'history'
-type TabKey = 'shops' | 'basket' | 'essentials' | 'ahorro' | 'debts' | 'wishlist'
+type TabKey = 'shops' | 'basket' | 'essentials' | 'ahorro' | 'debts' | 'wishlist' | 'credito'
 type Summary = Record<TabKey, { count: number; total_cop: number; error?: string }>
 type Records = Record<string, string | number>[]
 
@@ -56,7 +58,7 @@ function formatCOPFull(value: number): string {
 function renderFormField(col: string, value: string | number, onChange: (val: string) => void) {
   const baseClass = "w-full bg-surface border border-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-primary/50"
 
-  if (col === 'VALOR' || col === 'VALUE' || col === 'CANTIDAD' || col === 'PAGO') {
+  if (col === 'VALOR' || col === 'VALUE' || col === 'CANTIDAD' || col === 'PAGO' || col === 'VALOR_TOTAL' || col === 'CUOTAS' || col === 'CUOTA_ACTUAL' || col === 'VALOR_CUOTA') {
     return (
       <input
         type="number"
@@ -141,6 +143,18 @@ function renderFormField(col: string, value: string | number, onChange: (val: st
         <option value="Alta">Alta</option>
         <option value="Media">Media</option>
         <option value="Baja">Baja</option>
+      </select>
+    )
+  }
+
+  if (col === 'ENTIDAD') {
+    return (
+      <select value={value} onChange={e => onChange(e.target.value)} className={baseClass + ' appearance-none cursor-pointer'}>
+        <option value=''>Seleccionar...</option>
+        <option value='Visa'>Visa</option>
+        <option value='Mastercard'>Mastercard</option>
+        <option value='Amex'>Amex</option>
+        <option value='Otra'>Otra</option>
       </select>
     )
   }
