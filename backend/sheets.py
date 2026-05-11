@@ -37,7 +37,7 @@ COLUMNS = {
 
 # ── Simple in-memory cache with TTL ─────────────────────────────────────────
 _CACHE: dict[str, dict] = {}
-_CACHE_TTL = 45  # segundos
+_CACHE_TTL = 120  # segundos
 
 
 def _client() -> gspread.Client:
