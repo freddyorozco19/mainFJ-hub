@@ -747,17 +747,7 @@ export function Finance() {
               <p className="text-xs text-slate-500 mt-0.5">Agregar, editar o eliminar registros en Google Sheets</p>
             {crudTab === 'credito' && (
               <button
-                onClick={async () => {
-                  try {
-                    const res = await api('/finance/migrate-credito', { method: 'POST' })
-                    const data = await res.json()
-                    alert(`Migración: ${data.created} creados, ${data.skipped} ya existían`)
-                    loadRecords('credito')
-                    loadSummary()
-                  } catch (e: any) {
-                    alert('Error al migrar: ' + (e.message || 'Desconocido'))
-                  }
-                }}
+                onClick={handleMigrateCredito}
                 className="flex items-center gap-1 px-2 py-1 text-xs text-orange-400 border border-orange-400/30 rounded-lg hover:bg-orange-400/10 transition-colors"
               >
                 <RefreshCw size={11} />
