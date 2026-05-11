@@ -229,6 +229,7 @@ export function Finance() {
   const [deleteReason, setDeleteReason]       = useState('')
   const [deleteLoading, setDeleteLoading]     = useState(false)
   const [selectedRows, setSelectedRows]     = useState<Set<number>>(new Set())
+  const [migrating, setMigrating]           = useState(false)
 
   // ── Finance Agent Chat ─────────────────────────────────────────────────────
   const [agentChatOpen, setAgentChatOpen]     = useState(false)
@@ -793,10 +794,11 @@ export function Finance() {
             {crudTab === 'credito' && (
               <button
                 onClick={handleMigrateCredito}
-                className="flex items-center gap-1 px-2 py-1 text-xs text-orange-400 border border-orange-400/30 rounded-lg hover:bg-orange-400/10 transition-colors"
+                disabled={migrating}
+                className={"flex items-center gap-1 px-2 py-1 text-xs border rounded-lg transition-colors " + (migrating ? "opacity-50 cursor-wait" : "text-orange-400 border-orange-400/30 hover:bg-orange-400/10")}
               >
-                <RefreshCw size={11} />
-                Sincronizar Shops → Crédito
+                {migrating ? <Loader2 size={11} className="animate-spin" /> : <RefreshCw size={11} />}
+                {migrating ? "Migrando..." : "Sincronizar Shops → Crédito"}
               </button>
             )}
             </div>
