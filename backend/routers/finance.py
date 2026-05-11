@@ -16,7 +16,7 @@ from dotenv import load_dotenv
 
 from backend.routers.auth import get_current_user
 from backend.db import log_finance_history, get_conn
-from backend.sheets import read_tab, append_row, update_row, delete_row, COLUMNS
+from backend.sheets import read_tab, append_row, append_rows_batch, update_row, delete_row, COLUMNS
 from backend.events import event_manager
 try:
     import pytesseract
@@ -691,7 +691,7 @@ def migrate_credito(current_user = Depends(get_current_user)):
     except:
         existing_keys = set()
     
-    created = 0
+    to_create = []
     skipped = 0
     for r in shops_records:
         payment = str(r.get("PAYMENT", "")).lower()
@@ -734,7 +734,9 @@ def migrate_credito(current_user = Depends(get_current_user)):
         except Exception as e:
             print(f"[MIGRATE] Error en {r.get('PRODUCT')}: {e}")
     
-    return {"status": "ok", "created": created, "skipped": skipped, "total_shops": len(shops_records)}
+    if to_create:
+        append_rows_batch("credito", to_create)
+    return {"status": "ok", "created": len(to_create), "skipped": skipped, "total_shops": len(shops_records)}
 
 
 # ── OCR Helper ─────────────────────────────────────────────────────────────
