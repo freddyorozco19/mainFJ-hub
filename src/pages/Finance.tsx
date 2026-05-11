@@ -333,6 +333,18 @@ export function Finance() {
     setShowDeleteModal(true)
   }
 
+  async function handleMigrateCredito() {
+    try {
+      const res = await api("/finance/migrate-credito", { method: "POST" })
+      const data = await res.json()
+      alert("Migracion: " + data.created + " creados, " + data.skipped + " ya existian")
+      loadRecords("credito")
+      loadSummary()
+    } catch (e: any) {
+      alert("Error: " + (e.message || "Desconocido"))
+    }
+  }
+
   async function handleConfirmDelete() {
     if (deleteIndex === null || !deleteReason.trim()) return
     setDeleteLoading(true)
