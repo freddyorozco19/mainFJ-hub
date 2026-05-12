@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""POST /chat/{slug} — envía mensaje a un agente vía OpenRouter."""
+"""POST /chat/{slug} - envía mensaje a un agente vía OpenRouter."""
 from __future__ import annotations
 import asyncio
 import os
@@ -139,7 +139,7 @@ async def chat(slug: str, req: ChatRequest, current_user = Depends(get_current_u
     messages += history
     messages += [{"role": "user", "content": req.text}]
 
-    _log(slug, "CHAT_START", req.text[:60] + ("…" if len(req.text) > 60 else ""))
+    _log(slug, "CHAT_START", req.text[:60] + ("..." if len(req.text) > 60 else ""))
     await event_manager.agent_status(slug, "busy", CATALOG[slug]["name"])
     await event_manager.chat_typing(slug, True)
     t0 = time.time()
