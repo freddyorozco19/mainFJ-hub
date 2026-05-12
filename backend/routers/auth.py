@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-backend/routers/auth.py — JWT Authentication + Password Reset
+backend/routers/auth.py - JWT Authentication + Password Reset
 """
 from datetime import datetime, timedelta, timezone
 from typing import Optional
