@@ -336,6 +336,10 @@ def get_tab_data(tab: str, current_user = Depends(get_current_user)):
 # ── Analytics por pestaña ──────────────────────────────────────────────────────
 @router.get("/analytics")
 def get_analytics(current_user = Depends(get_current_user)):
+    global _SUMMARY_CACHE_ANALYTICS
+    now = time.time()
+    if _SUMMARY_CACHE_ANALYTICS["data"] is not None and now - _SUMMARY_CACHE_ANALYTICS["timestamp"] < 120:
+        return _SUMMARY_CACHE_ANALYTICS["data"]
     """Devuelve métricas detalladas por pestaña para paneles de análisis."""
     tabs = ["essentials", "ahorro", "basket", "shops", "wishlist", "debts", "credito"]
     result = {}
