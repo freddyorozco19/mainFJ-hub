@@ -69,12 +69,41 @@ def _normalize_key(key: str) -> str:
     return normalized
 
 
+def _col_letter(n: int) -> str:
+    """Convierte número de columna 1-based a letra (1→A, 27→AA)."""
+    result = ""
+    while n > 0:
+        n, rem = divmod(n - 1, 26)
+        result = chr(65 + rem) + result
+    return result
+
+
+def _ensure_columns(ws: gspread.Worksheet, tab: str) -> None:
+    """Verifica que los headers de la hoja coincidan con COLUMNS[tab].
+    Agrega las columnas faltantes al final sin modificar datos existentes."""
+    expected = COLUMNS[tab]
+    try:
+        current_headers = ws.row_values(1)
+    except Exception:
+        current_headers = []
+    missing = [h for h in expected if h not in current_headers]
+    if missing:
+        start_col = len(current_headers) + 1  # 1-based
+        end_col = len(current_headers) + len(missing)
+        start_letter = _col_letter(start_col)
+        end_letter = _col_letter(end_col)
+        ws.update(f"{start_letter}1:{end_letter}1", [missing], value_input_option="USER_ENTERED")
+        invalidate_cache(tab)
+
+
 def get_sheet(tab: str) -> gspread.Worksheet:
     gc = _client()
     sh = gc.open_by_key(SHEET_ID)
     sheet_name = TABS[tab]
     try:
-        return sh.worksheet(sheet_name)
+        ws = sh.worksheet(sheet_name)
+        _ensure_columns(ws, tab)
+        return ws
     except:
         headers = COLUMNS[tab]
         ws = sh.add_worksheet(title=sheet_name, rows=1000, cols=len(headers))
