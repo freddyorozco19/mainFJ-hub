@@ -10,7 +10,7 @@ from backend.routers.auth import get_current_user
 
 router = APIRouter(prefix="/backlog", tags=["backlog"])
 
-STATUSES = ["backlog", "in_progress", "done", "cancelled"]
+STATUSES = ["backlog", "in_progress", "review", "done"]
 PRIORITIES = ["low", "medium", "high", "critical"]
 
 
