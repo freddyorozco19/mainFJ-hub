@@ -16,6 +16,7 @@ from fastapi.responses import StreamingResponse
 
 from backend.routers import chat, agents, metrics, logs, finance, auth, health, search, webhooks, proxy, backlog
 from backend.db import init_db
+from backend.supabase import init_supabase
 from backend.events import event_manager
 
 from contextlib import asynccontextmanager
@@ -23,6 +24,7 @@ from contextlib import asynccontextmanager
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     init_db()
+    init_supabase()
     yield
 
 app = FastAPI(title="MainFJ Dashboard API", version="0.1.0", lifespan=lifespan)
