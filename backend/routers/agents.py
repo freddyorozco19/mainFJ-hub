@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""GET /agents — catálogo de agentes disponibles."""
+"""GET /agents - catálogo de agentes disponibles."""
 from fastapi import APIRouter, Depends
 from backend.routers.auth import get_current_user
 
@@ -7,9 +7,9 @@ router = APIRouter(prefix="/agents", tags=["agents"])
 
 # ── Routing de modelos por agente ─────────────────────────────────────────────
 # Estrategia:
-#   - Trabajo complejo / razonamiento profundo → Claude Sonnet (mejor calidad)
-#   - Trabajo técnico / código / datos         → Gemini Flash (rápido y barato)
-#   - Tareas simples / alta frecuencia         → Llama 3 free (costo $0)
+#   - Trabajo complejo / razonamiento profundo -> Claude Sonnet (mejor calidad)
+#   - Trabajo técnico / código / datos         -> Gemini Flash (rápido y barato)
+#   - Tareas simples / alta frecuencia         -> Llama 3 free (costo $0)
 # ─────────────────────────────────────────────────────────────────────────────
 
 CATALOG = {
