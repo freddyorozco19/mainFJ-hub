@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Módulo de conexión a Google Sheets — fuente de verdad financiera."""
+"""Módulo de conexión a Google Sheets - fuente de verdad financiera."""
 from __future__ import annotations
 from pathlib import Path
 import os
@@ -70,7 +70,7 @@ def _normalize_key(key: str) -> str:
 
 
 def _col_letter(n: int) -> str:
-    """Convierte número de columna 1-based a letra (1→A, 27→AA)."""
+    """Convierte número de columna 1-based a letra (1->A, 27->AA)."""
     result = ""
     while n > 0:
         n, rem = divmod(n - 1, 26)
@@ -179,7 +179,7 @@ def update_row(tab: str, row_index: int, data: dict) -> bool:
     ws = get_sheet(tab)
     cols = COLUMNS[tab]
     row_values = [data.get(col, "") for col in cols]
-    # +2 porque get_all_records() omite la fila 1 (headers); índice 0 → fila 2
+    # +2 porque get_all_records() omite la fila 1 (headers); índice 0 -> fila 2
     ws.update(f"A{row_index + 2}", [row_values], value_input_option="USER_ENTERED")
     invalidate_cache(tab)
     return True
@@ -188,7 +188,7 @@ def update_row(tab: str, row_index: int, data: dict) -> bool:
 def delete_row(tab: str, row_index: int) -> bool:
     """Elimina una fila. row_index es 0-based del array de datos."""
     ws = get_sheet(tab)
-    # +2 porque get_all_records() omite la fila 1 (headers); índice 0 → fila 2
+    # +2 porque get_all_records() omite la fila 1 (headers); índice 0 -> fila 2
     ws.delete_rows(row_index + 2)
     invalidate_cache(tab)
     return True
