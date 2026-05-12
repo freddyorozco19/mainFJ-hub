@@ -184,6 +184,7 @@ export default function App() {
             <Route path="/kronos"  element={<KRONOS />}  />
             <Route path="/health"   element={<Health />}   />
             <Route path="/webhooks" element={<Webhooks />} />
+            <Route path="/backlog"  element={<Backlog />}  />
             <Route path="/profile"  element={<Profile />}  />
           </Route>
         </Route>
