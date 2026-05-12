@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import {
   Plus, Loader2, Search, Trash2, Edit3, CheckCircle2,
-  Circle, ChevronDown, ChevronUp, Calendar, Flag, Tag,
+  Circle, Calendar, Flag,
   Layers, List, Columns3, GripVertical, Eye, ArrowRight,
 } from 'lucide-react'
 import { api } from '../api'
@@ -43,7 +43,6 @@ export function Backlog() {
   const [viewTab, setViewTab] = useState<'info' | 'subtasks' | 'history'>('info')
   const [form, setForm] = useState({ title: '', description: '', status: 'backlog' as Status, priority: 'medium' as Priority, project: '', sprint: '', tags: '', due_date: '' })
   const [saving, setSaving] = useState(false)
-  const [expandedTasks, setExpandedTasks] = useState<Set<number>>(new Set())
   const [newSubtask, setNewSubtask] = useState<Record<number, string>>({})
 
   useEffect(() => { loadTasks(); loadSprints(); loadProjects() }, [filterStatus, filterPriority, filterProject, filterSprint, search])
