@@ -115,7 +115,7 @@ export function Backlog() {
 
   function openCreate() {
     setEditingTask(null)
-    setForm({ title: '', description: '', status: 'backlog', priority: 'medium', sprint: filterSprint, tags: '', due_date: '' })
+    setForm({ title: '', description: '', status: 'backlog', priority: 'medium', project: '', sprint: filterSprint, tags: '', due_date: '' })
     setShowModal(true)
   }
 
