@@ -52,13 +52,13 @@ Requerido para shops con tarjeta de credito: agregar campo CUOTAS (numero de cuo
 - credito:    {COLUMNS['credito']}
 
 Reglas de clasificación:
-- mercado, supermercado, productos del hogar, aseo → basket
-- compra general, tienda, gasto puntual → shops
-- Netflix, arriendo, servicios fijos, suscripciones → essentials
-- ahorro, consignación, retiro, inversión → ahorro
-- deuda, préstamo, me deben, le debo → debts
-- quiero comprar, presupuestar, wishlist → wishlist
-- tarjeta de crédito, cuotas, Visa, Mastercard → credito
+- mercado, supermercado, productos del hogar, aseo -> basket
+- compra general, tienda, gasto puntual -> shops
+- Netflix, arriendo, servicios fijos, suscripciones -> essentials
+- ahorro, consignación, retiro, inversión -> ahorro
+- deuda, préstamo, me deben, le debo -> debts
+- quiero comprar, presupuestar, wishlist -> wishlist
+- tarjeta de crédito, cuotas, Visa, Mastercard -> credito
 
 Reglas de formato:
 - MONEDA: siempre "COP" o "USD"
@@ -524,14 +524,14 @@ Requerido para shops con tarjeta de credito: agregar campo CUOTAS (numero de cuo
 - credito:    {COLUMNS['credito']} - Deudas y préstamos. TIPO "EGRESO" para compras/deudas, "INGRESO" para abonos/pagos.
 
 REGLAS DE CLASIFICACIÓN:
-- mercado, supermercado, productos del hogar, aseo → basket
-- compra general, tienda, gasto puntual → shops
-- Netflix, arriendo, servicios fijos, suscripciones → essentials
-- ahorro, consignación, retiro, inversión → ahorro
-- deuda, préstamo, me deben, le debo → debts
-- quiero comprar, presupuestar, wishlist → wishlist
-- tarjeta de crédito, cuotas, Visa, Mastercard → credito
-- abono, pago a tarjeta, pago de crédito → credito con TIPO "INGRESO"
+- mercado, supermercado, productos del hogar, aseo -> basket
+- compra general, tienda, gasto puntual -> shops
+- Netflix, arriendo, servicios fijos, suscripciones -> essentials
+- ahorro, consignación, retiro, inversión -> ahorro
+- deuda, préstamo, me deben, le debo -> debts
+- quiero comprar, presupuestar, wishlist -> wishlist
+- tarjeta de crédito, cuotas, Visa, Mastercard -> credito
+- abono, pago a tarjeta, pago de crédito -> credito con TIPO "INGRESO"
 
 FORMATO DE RESPUESTA:
 Responde SIEMPRE en JSON con este formato exacto:
@@ -561,13 +561,13 @@ REGLAS IMPORTANTES:
 
 EJEMPLOS:
 Usuario: "gasté 50 mil en ropa en Zara"
-→ {{"text": "Registrando tu compra en Zara por $50,000 COP 👕", "action": {{"type": "create", "tab": "shops", "data": {{"PRODUCT": "Ropa", "DESCRIPTION": "Compra en Zara", "CATEGORY": "Ropa", "STORE": "Zara", "COIN": "COP", "VALUE": 50000, "DATE": "{{today}}"}}, "confirmation": "Compra en Zara por $50,000 COP"}}, "needs_confirmation": false}}
+-> {{"text": "Registrando tu compra en Zara por $50,000 COP 👕", "action": {{"type": "create", "tab": "shops", "data": {{"PRODUCT": "Ropa", "DESCRIPTION": "Compra en Zara", "CATEGORY": "Ropa", "STORE": "Zara", "COIN": "COP", "VALUE": 50000, "DATE": "{{today}}"}}, "confirmation": "Compra en Zara por $50,000 COP"}}, "needs_confirmation": false}}
 
 Usuario: "muéstrame mis deudas"
-→ {{"text": "Aquí están tus deudas pendientes 📋", "action": {{"type": "switch_tab", "tab": "debts"}}, "needs_confirmation": false}}
+-> {{"text": "Aquí están tus deudas pendientes 📋", "action": {{"type": "switch_tab", "tab": "debts"}}, "needs_confirmation": false}}
 
 Usuario: "borra el último registro"
-→ {{"text": "¿Estás seguro de que quieres eliminar el último registro de {{current_tab}}? Esta acción no se puede deshacer.", "action": {{"type": "none"}}, "needs_confirmation": true}}
+-> {{"text": "¿Estás seguro de que quieres eliminar el último registro de {{current_tab}}? Esta acción no se puede deshacer.", "action": {{"type": "none"}}, "needs_confirmation": true}}
 """
 
 
@@ -683,7 +683,7 @@ Registros actuales ({len(context_records)} mostrados):
 
 
 
-# ── Migración: Sincronizar Shops → Crédito ───────────────────────────────────
+# ── Migración: Sincronizar Shops -> Crédito ───────────────────────────────────
 @router.post("/migrate-credito")
 def migrate_credito(current_user = Depends(get_current_user)):
     """Escanea shops y crea/actualiza registros en credito para compras con tarjeta de crédito."""
