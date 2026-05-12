@@ -750,21 +750,21 @@ def migrate_credito(current_user = Depends(get_current_user)):
             else:
                 skipped += 1
         else:
-                credito_data = {
+            credito_data = {
                 "PRODUCTO":     shop_key[0],
-            "DESCRIPCION":  str(r.get("DESCRIPTION", "Compra con tarjeta")),
-            "ENTIDAD":      account,
-            "MONEDA":       str(r.get("COIN", "COP")),
-            "VALOR_TOTAL":  valor,
-            "CUOTAS":       cuotas,
-            "CUOTA_ACTUAL": 1,
-            "VALOR_CUOTA":  valor_cuota,
-            "FECHA_CORTE":  "",
-            "FECHA_PAGO":   "",
-            "ESTADO":       "PENDIENTE",
-            "TIPO":         "EGRESO",
+                "DESCRIPCION":  str(r.get("DESCRIPTION", "Compra con tarjeta")),
+                "ENTIDAD":      account,
+                "MONEDA":       str(r.get("COIN", "COP")),
+                "VALOR_TOTAL":  valor,
+                "CUOTAS":       cuotas,
+                "CUOTA_ACTUAL": 1,
+                "VALOR_CUOTA":  valor_cuota,
+                "FECHA_CORTE":  "",
+                "FECHA_PAGO":   "",
+                "ESTADO":       "PENDIENTE",
+                "TIPO":         "EGRESO",
             }
-                to_create.append(credito_data)
+            to_create.append(credito_data)
 
     if to_create:
         try:
