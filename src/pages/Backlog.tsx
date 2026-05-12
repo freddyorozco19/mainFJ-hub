@@ -380,8 +380,8 @@ export function Backlog() {
                 </div>
                 <div>
                   <label className="text-xs text-slate-400 mb-1 block">Proyecto</label>
-                  <input value={form.project} onChange={e => setForm(p => ({ ...p, project: e.target.value }))} className="w-full bg-surface border border-border rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-primary/50" placeholder="WinStats, ArchiTechIA, Hogar..." list="project-list" />
-                  <datalist id="project-list">{projects.map(p => <option key={p} value={p} />)}</datalist>
+                  <select value={form.project} onChange={e => setForm(p => ({ ...p, project: e.target.value }))} className="w-full bg-surface border border-border rounded-lg px-3 py-2 text-xs text-slate-300 focus:outline-none focus:border-primary/50"><option value="">Seleccionar...</option>{projects.map(p => <option key={p} value={p}>{p}</option>)}</select>
+                  
                 </div>
                 <div>
                   <label className="text-xs text-slate-400 mb-1 block">Sprint</label>
