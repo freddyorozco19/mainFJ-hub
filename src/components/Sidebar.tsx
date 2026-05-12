@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { NavLink } from 'react-router-dom'
-import { Bot, MessageSquare, BarChart3, ScrollText, Wifi, WifiOff, PanelLeftClose, PanelLeft, Home, Trophy, Brain, TrendingUp, Heart, Wallet, LogOut, X, Menu, User, Network, Activity, Webhook } from 'lucide-react'
+import { Bot, MessageSquare, BarChart3, ScrollText, Wifi, WifiOff, PanelLeftClose, PanelLeft, Home, Trophy, Brain, TrendingUp, Heart, Wallet, Layers, LogOut, X, Menu, User, Network, Activity, Webhook } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { getToken } from '../api'
 
@@ -16,6 +16,7 @@ const MAIN_FJ_NAV = [
 const SYSTEMS_NAV = [
   { to: '/home',       icon: Home,        label: 'Home'        },
   { to: '/finance',    icon: Wallet,      label: 'Finanzas'    },
+  { to: '/backlog',    icon: Layers,      label: 'Backlog'     },
   { to: '/kronos',     icon: Network,     label: 'KRONOS'      },
   { to: '/winstats',   icon: Trophy,      label: 'WinStats'    },
   { to: '/expertia',   icon: Brain,       label: 'ArchiTechIA' },
