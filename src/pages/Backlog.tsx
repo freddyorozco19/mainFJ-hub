@@ -22,6 +22,7 @@ interface Task {
   description: string
   status: Status
   priority: Priority
+  project: string
   sprint: string
   tags: string
   due_date: string
@@ -56,10 +57,12 @@ export function Backlog() {
   const [tasks, setTasks] = useState<Task[]>([])
   const [loading, setLoading] = useState(true)
   const [sprints, setSprints] = useState<string[]>([])
+  const [projects, setProjects] = useState<string[]>([])
 
   // Filters
   const [filterStatus, setFilterStatus] = useState('')
   const [filterPriority, setFilterPriority] = useState('')
+  const [filterProject, setFilterProject] = useState('')
   const [filterSprint, setFilterSprint] = useState('')
   const [search, setSearch] = useState('')
 
@@ -71,7 +74,7 @@ export function Backlog() {
   const [editingTask, setEditingTask] = useState<Task | null>(null)
   const [form, setForm] = useState({
     title: '', description: '', status: 'backlog' as Status,
-    priority: 'medium' as Priority, sprint: '', tags: '', due_date: ''
+    priority: 'medium' as Priority, project: '', sprint: '', tags: '', due_date: ''
   })
   const [saving, setSaving] = useState(false)
   const [expandedTasks, setExpandedTasks] = useState<Set<number>>(new Set())
@@ -79,7 +82,7 @@ export function Backlog() {
   // Subtask input per expanded task
   const [newSubtask, setNewSubtask] = useState<Record<number, string>>({})
 
-  useEffect(() => { loadTasks(); loadSprints() }, [filterStatus, filterPriority, filterSprint, search])
+  useEffect(() => { loadTasks(); loadSprints(); loadProjects() }, [filterStatus, filterPriority, filterProject, filterSprint, search])
 
   async function loadTasks() {
     setLoading(true)
@@ -87,6 +90,7 @@ export function Backlog() {
       const params = new URLSearchParams()
       if (filterStatus) params.set('status', filterStatus)
       if (filterPriority) params.set('priority', filterPriority)
+      if (filterProject) params.set('project', filterProject)
       if (filterSprint) params.set('sprint', filterSprint)
       if (search) params.set('search', search)
       const res = await api(`/backlog/tasks?${params}`)
@@ -102,6 +106,13 @@ export function Backlog() {
     } catch {}
   }
 
+  async function loadProjects() {
+    try {
+      const res = await api('/backlog/projects')
+      setProjects(await res.json())
+    } catch {}
+  }
+
   function openCreate() {
     setEditingTask(null)
     setForm({ title: '', description: '', status: 'backlog', priority: 'medium', sprint: filterSprint, tags: '', due_date: '' })
@@ -113,7 +124,7 @@ export function Backlog() {
     setForm({
       title: task.title, description: task.description,
       status: task.status, priority: task.priority,
-      sprint: task.sprint, tags: task.tags, due_date: task.due_date
+      project: task.project, sprint: task.sprint, tags: task.tags, due_date: task.due_date
     })
     setShowModal(true)
   }
@@ -256,7 +267,8 @@ export function Backlog() {
                       <span className="text-[10px] px-1.5 py-0.5 rounded bg-white/5 text-slate-500">{STATUS_LABELS[task.status]}</span>
                     </div>
                     <div className="flex items-center gap-3 mt-1 ml-6">
-                      {task.sprint && <span className="text-[10px] text-slate-500 flex items-center gap-1"><Layers size={10} />{task.sprint}</span>}
+                      {task.project && <span className="text-[10px] text-primary flex items-center gap-1"><Layers size={10} />{task.project}</span>}
+                      {task.sprint && <span className="text-[10px] text-slate-500 flex items-center gap-1"><Calendar size={10} />{task.sprint}</span>}
                       {task.due_date && <span className="text-[10px] text-slate-500 flex items-center gap-1"><Calendar size={10} />{task.due_date}</span>}
                       {task.tags && <span className="text-[10px] text-slate-500 flex items-center gap-1"><Tag size={10} />{task.tags}</span>}
                       {task.subtasks.length > 0 && (
@@ -342,6 +354,7 @@ export function Backlog() {
                       <p className="text-xs font-medium text-white truncate">{task.title}</p>
                       <div className="flex items-center gap-2 mt-1">
                         <span className={`text-[10px] ${PRIORITY_COLORS[task.priority]}`}><Flag size={10} /></span>
+                        {task.project && <span className="text-[10px] text-primary">{task.project}</span>}
                         {task.sprint && <span className="text-[10px] text-slate-600">{task.sprint}</span>}
                         {task.due_date && <span className="text-[10px] text-slate-600 flex items-center gap-1"><Calendar size={9} />{task.due_date}</span>}
                       </div>
@@ -386,7 +399,7 @@ export function Backlog() {
                   </select>
                 </div>
                 <div>
-                  <label className="text-xs text-slate-400 mb-1 block">Sprint</label>
+                  <label className="text-xs text-slate-400 mb-1 block">Proyecto</label>`n                <input value={form.project} onChange={e => setForm(p => ({ ...p, project: e.target.value }))} className="w-full bg-surface border border-border rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-primary/50" placeholder="WinStats, ArchiTechIA, Hogar..." list="project-list" />`n                <datalist id="project-list">{projects.map(p => <option key={p} value={p} />)}</datalist>`n              </div>`n              <div>`n                <label className="text-xs text-slate-400 mb-1 block">Sprint</label>
                   <input value={form.sprint} onChange={e => setForm(p => ({ ...p, sprint: e.target.value }))} className="w-full bg-surface border border-border rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-primary/50" placeholder="ej: Sprint 1" list="sprint-list" />
                   <datalist id="sprint-list">{sprints.map(s => <option key={s} value={s} />)}</datalist>
                 </div>
