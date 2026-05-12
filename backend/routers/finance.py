@@ -65,6 +65,7 @@ Reglas de formato:
 - VALOR: solo número sin puntos ni comas (ej: 45000)
 - FECHA: formato YYYY-MM-DD, si no se menciona usa la fecha de hoy
 - ESTADO (debts): "PENDIENTE", "PAGADO" o "PARCIAL"
+- TIPO (credito): "INGRESO" (abono/pago) o "EGRESO" (deuda/compra)
 - MODO (essentials): "MENSUAL", "BIMENSUAL", "SEMESTRAL", "ANUAL", "ÚNICO"
 
 Responde SIEMPRE en JSON con este formato exacto:
@@ -189,6 +190,7 @@ def _auto_link_credito(tab: str, data: dict):
         "FECHA_CORTE":  "",
         "FECHA_PAGO":   "",
         "ESTADO":       "PENDIENTE",
+        "TIPO":         "EGRESO",
     }
     try:
         append_row("credito", credito_data)
@@ -514,7 +516,7 @@ PESTAÑAS DISPONIBLES Y SUS COLUMNAS:
 Requerido para shops con tarjeta de credito: agregar campo CUOTAS (numero de cuotas) en el JSON data. — Compras generales
 - wishlist:   {COLUMNS['wishlist']} — Lista de deseos
 - debts:      {COLUMNS['debts']}
-- credito:    {COLUMNS['credito']} — Deudas y préstamos
+- credito:    {COLUMNS['credito']} — Deudas y préstamos. TIPO "EGRESO" para compras/deudas, "INGRESO" para abonos/pagos.
 
 REGLAS DE CLASIFICACIÓN:
 - mercado, supermercado, productos del hogar, aseo → basket
@@ -524,6 +526,7 @@ REGLAS DE CLASIFICACIÓN:
 - deuda, préstamo, me deben, le debo → debts
 - quiero comprar, presupuestar, wishlist → wishlist
 - tarjeta de crédito, cuotas, Visa, Mastercard → credito
+- abono, pago a tarjeta, pago de crédito → credito con TIPO "INGRESO"
 
 FORMATO DE RESPUESTA:
 Responde SIEMPRE en JSON con este formato exacto:
@@ -724,9 +727,16 @@ def migrate_credito(current_user = Depends(get_current_user)):
         if shop_key in existing_index:
             row_idx, ex_record = existing_index[shop_key]
             entidad = str(ex_record.get("ENTIDAD", "")).strip()
+            tipo = str(ex_record.get("TIPO", "")).strip()
+            needs_update = False
+            update_data = dict(ex_record)
             if entidad == "Tarjeta" or entidad == "":
-                # Actualizar ENTIDAD con el banco real
-                update_data = {**ex_record, "ENTIDAD": account or entidad}
+                update_data["ENTIDAD"] = account or entidad
+                needs_update = True
+            if tipo == "":
+                update_data["TIPO"] = "EGRESO"
+                needs_update = True
+            if needs_update:
                 try:
                     update_row("credito", row_idx, update_data)
                     updated += 1
@@ -735,20 +745,21 @@ def migrate_credito(current_user = Depends(get_current_user)):
             else:
                 skipped += 1
         else:
-            credito_data = {
-                "PRODUCTO":     shop_key[0],
-                "DESCRIPCION":  str(r.get("DESCRIPTION", "Compra con tarjeta")),
-                "ENTIDAD":      account,
-                "MONEDA":       str(r.get("COIN", "COP")),
-                "VALOR_TOTAL":  valor,
-                "CUOTAS":       cuotas,
-                "CUOTA_ACTUAL": 1,
-                "VALOR_CUOTA":  valor_cuota,
-                "FECHA_CORTE":  "",
-                "FECHA_PAGO":   "",
-                "ESTADO":       "PENDIENTE",
-            }
-            to_create.append(credito_data)
+        credito_data = {
+            "PRODUCTO":     shop_key[0],
+            "DESCRIPCION":  str(r.get("DESCRIPTION", "Compra con tarjeta")),
+            "ENTIDAD":      account,
+            "MONEDA":       str(r.get("COIN", "COP")),
+            "VALOR_TOTAL":  valor,
+            "CUOTAS":       cuotas,
+            "CUOTA_ACTUAL": 1,
+            "VALOR_CUOTA":  valor_cuota,
+            "FECHA_CORTE":  "",
+            "FECHA_PAGO":   "",
+            "ESTADO":       "PENDIENTE",
+            "TIPO":         "EGRESO",
+        }
+        to_create.append(credito_data)
 
     if to_create:
         try:

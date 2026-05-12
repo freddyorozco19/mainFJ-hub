@@ -33,7 +33,7 @@ const TAB_COLUMNS: Record<TabKey, string[]> = {
   shops:      ['PRODUCT', 'DESCRIPTION', 'BRAND', 'CATEGORY', 'STORE', 'STORE2', 'COIN', 'VALUE', 'PAYMENT', 'CUOTAS', 'ACCOUNT', 'DATE'],
   wishlist:   ['PRODUCTO', 'DESCRIPCION', 'MONEDA', 'VALOR', 'TIENDA', 'MEDIO', 'SOURCE'],
   debts:      ['PRODUCTO', 'DESCRIPCION', 'MONEDA', 'VALOR', 'PAGO', 'ESTADO', 'FECHA'],
-  credito:    ['PRODUCTO', 'DESCRIPCION', 'ENTIDAD', 'MONEDA', 'VALOR_TOTAL', 'CUOTAS', 'CUOTA_ACTUAL', 'VALOR_CUOTA', 'FECHA_CORTE', 'FECHA_PAGO', 'ESTADO'],
+  credito:    ['PRODUCTO', 'DESCRIPCION', 'ENTIDAD', 'MONEDA', 'VALOR_TOTAL', 'CUOTAS', 'CUOTA_ACTUAL', 'VALOR_CUOTA', 'FECHA_CORTE', 'FECHA_PAGO', 'ESTADO', 'TIPO'],
 }
 
 type SubPageKey = 'dashboard' | 'registros' | 'history'
@@ -101,6 +101,16 @@ function renderFormField(col: string, value: string | number, onChange: (val: st
         <option value="PENDIENTE">PENDIENTE</option>
         <option value="PAGADO">PAGADO</option>
         <option value="PARCIAL">PARCIAL</option>
+      </select>
+    )
+  }
+
+  if (col === 'TIPO') {
+    return (
+      <select value={value} onChange={e => onChange(e.target.value)} className={baseClass + ' appearance-none cursor-pointer'}>
+        <option value="">Seleccionar...</option>
+        <option value="INGRESO">INGRESO (abono/pago)</option>
+        <option value="EGRESO">EGRESO (deuda/compra)</option>
       </select>
     )
   }
@@ -188,7 +198,7 @@ function renderFormField(col: string, value: string | number, onChange: (val: st
 const TAB_FILTERS: Record<TabKey, string[]> = {
   shops:      ['CATEGORY', 'STORE', 'COIN', 'PAYMENT', 'ACCOUNT'],
   debts:      ['MONEDA', 'ESTADO'],
-  credito:    ['ENTIDAD', 'MONEDA', 'ESTADO'],
+  credito:    ['ENTIDAD', 'MONEDA', 'ESTADO', 'TIPO'],
   basket:     ['CATEGORIA', 'MONEDA'],
   essentials: ['MONEDA', 'MEDIO PAGO', 'MODO'],
   ahorro:     ['MEDIO', 'MONEDA'],
@@ -237,6 +247,9 @@ export function Finance() {
 
   // ── Column Filters (Registros) ─────────────────────────────────────────────
   const [columnFilters, setColumnFilters] = useState<Record<string, string>>({})
+
+  // ── Crédito filter toggle ──────────────────────────────────────────────────
+  const [creditoFilter, setCreditoFilter] = useState<'total' | 'ingreso' | 'egreso'>('total')
 
   // ── CRUD Registros ─────────────────────────────────────────────────────────
   const [showRecordModal, setShowRecordModal] = useState(false)
@@ -454,6 +467,7 @@ export function Finance() {
     setRecords([])
     setSearch('')
     setColumnFilters({})
+    setCreditoFilter('total')
     try {
       const res = await api(`/finance/data/${tab}`)
       const data = await res.json()
@@ -534,6 +548,11 @@ export function Finance() {
     for (const [col, val] of Object.entries(columnFilters)) {
       if (!val) continue
       if (String(row[col] ?? '').trim() !== val) return false
+    }
+    if (crudTab === 'credito' && creditoFilter !== 'total') {
+      const tipo = String(row['TIPO'] ?? '').trim().toLowerCase()
+      if (creditoFilter === 'ingreso' && tipo !== 'ingreso') return false
+      if (creditoFilter === 'egreso' && tipo !== 'egreso') return false
     }
     return true
   })
@@ -869,6 +888,30 @@ export function Finance() {
             </div>
           </div>
 
+          {/* Crédito toggle */}
+          {crudTab === 'credito' && (
+            <div className="flex items-center gap-1 bg-black/20 border border-border rounded-xl p-1 w-fit">
+              {[
+                { key: 'total', label: 'Total' },
+                { key: 'ingreso', label: 'Ingresos' },
+                { key: 'egreso', label: 'Egresos' },
+              ].map(t => (
+                <button
+                  key={t.key}
+                  onClick={() => setCreditoFilter(t.key as any)}
+                  className={`px-3 py-1 rounded-lg text-xs font-medium transition-all ${
+                    creditoFilter === t.key
+                      ? 'text-white'
+                      : 'text-slate-500 hover:text-slate-300'
+                  }`}
+                  style={creditoFilter === t.key ? { backgroundColor: '#F9731622', color: '#F97316' } : {}}
+                >
+                  {t.label}
+                </button>
+              ))}
+            </div>
+          )}
+
           {/* Search + Column Filters */}
           <div className="flex flex-wrap items-center gap-3">
             <div className="relative flex-1 min-w-[200px]">
@@ -898,9 +941,9 @@ export function Finance() {
                 </select>
               )
             })}
-            {(search || Object.values(columnFilters).some(Boolean)) && (
+            {(search || Object.values(columnFilters).some(Boolean) || creditoFilter !== 'total') && (
               <button
-                onClick={() => { setSearch(''); setColumnFilters({}) }}
+                onClick={() => { setSearch(''); setColumnFilters({}); setCreditoFilter('total') }}
                 className="text-xs text-slate-400 hover:text-white px-2 py-1 border border-border rounded-lg transition-colors"
               >
                 Limpiar filtros
