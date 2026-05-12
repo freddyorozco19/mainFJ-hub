@@ -51,7 +51,6 @@ const PRIORITY_COLORS: Record<Priority, string> = {
   critical: 'text-red-400',
 }
 
-const PRIORITY_ORDER: Record<Priority, number> = { critical: 4, high: 3, medium: 2, low: 1 }
 
 export function Backlog() {
   const [tasks, setTasks] = useState<Task[]>([])
