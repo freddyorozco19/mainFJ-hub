@@ -6,7 +6,7 @@ import {
 } from 'lucide-react'
 import { api } from '../api'
 
-type Status = 'backlog' | 'in_progress' | 'done' | 'cancelled'
+type Status = 'backlog' | 'in_progress' | 'review' | 'done'
 type Priority = 'low' | 'medium' | 'high' | 'critical'
 
 interface Subtask {
@@ -33,15 +33,15 @@ interface Task {
 const STATUS_LABELS: Record<Status, string> = {
   backlog: 'Backlog',
   in_progress: 'En Progreso',
+  review: 'Review',
   done: 'Hecho',
-  cancelled: 'Cancelado',
 }
 
 const STATUS_COLORS: Record<Status, string> = {
   backlog: 'bg-slate-600',
   in_progress: 'bg-blue-500',
+  review: 'bg-purple-500',
   done: 'bg-emerald-500',
-  cancelled: 'bg-red-500',
 }
 
 const PRIORITY_COLORS: Record<Priority, string> = {
@@ -179,7 +179,7 @@ export function Backlog() {
   }
 
   const groupedForKanban = () => {
-    const groups: Record<Status, Task[]> = { backlog: [], in_progress: [], done: [], cancelled: [] }
+    const groups: Record<Status, Task[]> = { backlog: [], in_progress: [], review: [], done: [] }
     tasks.forEach(t => groups[t.status].push(t))
     return groups
   }
