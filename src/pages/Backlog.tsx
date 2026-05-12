@@ -231,6 +231,10 @@ export function Backlog() {
           <option value="medium">Media</option>
           <option value="low">Baja</option>
         </select>
+        <select value={filterProject} onChange={e => setFilterProject(e.target.value)} className="bg-surface border border-border text-xs text-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:border-primary/50">
+          <option value="">Todos los proyectos</option>
+          {projects.map(p => <option key={p} value={p}>{p}</option>)}
+        </select>
         <select value={filterSprint} onChange={e => setFilterSprint(e.target.value)} className="bg-surface border border-border text-xs text-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:border-primary/50">
           <option value="">Todos los sprints</option>
           {sprints.map(s => <option key={s} value={s}>{s}</option>)}
