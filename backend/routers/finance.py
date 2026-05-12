@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Rutas financieras — lectura de Sheets + Finance Writer Agent (OpenRouter)."""
+"""Rutas financieras - lectura de Sheets + Finance Writer Agent (OpenRouter)."""
 from __future__ import annotations
 import io
 import json
@@ -37,7 +37,7 @@ router = APIRouter(prefix="/finance", tags=["finance"])
 # Modelo para tareas financieras: Haiku es suficiente y barato
 _FINANCE_MODEL = "anthropic/claude-haiku-4-5"
 
-# ── Finance Writer — system prompt ────────────────────────────────────────────
+# ── Finance Writer - system prompt ────────────────────────────────────────────
 WRITER_PROMPT = f"""Eres el Finance Writer de FJ. Tu única función es interpretar mensajes en lenguaje natural
 y convertirlos en registros estructurados para insertar en Google Sheets.
 
@@ -508,20 +508,20 @@ def get_history(tab: str | None = None, limit: int = 100, current_user = Depends
     }
 
 
-# ── Finance Agent — system prompt ───────────────────────────────────────────
+# ── Finance Agent - system prompt ───────────────────────────────────────────
 FINANCE_AGENT_PROMPT = f"""Eres FINANCE, el agente de gestión financiera personal de FJ. Tienes acceso directo a sus registros financieros en Google Sheets.
 
 Tu personalidad: profesional, eficiente, directo. Hablas en español. Usas emojis ocasionalmente para hacer la conversación amigable.
 
 PESTAÑAS DISPONIBLES Y SUS COLUMNAS:
-- essentials: {COLUMNS['essentials']} — Pagos fijos mensuales (Netflix, arriendo, servicios)
-- ahorro:     {COLUMNS['ahorro']} — Ahorros e inversiones
-- basket:     {COLUMNS['basket']} — Canasta básica y mercado
+- essentials: {COLUMNS['essentials']} - Pagos fijos mensuales (Netflix, arriendo, servicios)
+- ahorro:     {COLUMNS['ahorro']} - Ahorros e inversiones
+- basket:     {COLUMNS['basket']} - Canasta básica y mercado
 - shops:      {COLUMNS['shops']}
-Requerido para shops con tarjeta de credito: agregar campo CUOTAS (numero de cuotas) en el JSON data. — Compras generales
-- wishlist:   {COLUMNS['wishlist']} — Lista de deseos
+Requerido para shops con tarjeta de credito: agregar campo CUOTAS (numero de cuotas) en el JSON data. - Compras generales
+- wishlist:   {COLUMNS['wishlist']} - Lista de deseos
 - debts:      {COLUMNS['debts']}
-- credito:    {COLUMNS['credito']} — Deudas y préstamos. TIPO "EGRESO" para compras/deudas, "INGRESO" para abonos/pagos.
+- credito:    {COLUMNS['credito']} - Deudas y préstamos. TIPO "EGRESO" para compras/deudas, "INGRESO" para abonos/pagos.
 
 REGLAS DE CLASIFICACIÓN:
 - mercado, supermercado, productos del hogar, aseo → basket
@@ -542,11 +542,11 @@ Responde SIEMPRE en JSON con este formato exacto:
 }}
 
 REGLAS DE ACCIONES:
-1. `type: "none"` — Solo conversación, no ejecutes ninguna acción.
-2. `type: "create"` — Cuando el usuario quiere registrar un nuevo gasto/ingreso. Extrae los datos del mensaje y ponlos en `data`.
-3. `type: "update"` — Cuando el usuario quiere editar un registro existente. Pide el índice o identifica por descripción. `row_index` es 0-based.
-4. `type: "delete"` — Cuando el usuario quiere eliminar un registro. Pide confirmación antes de devolver esta acción.
-5. `type: "switch_tab"` — Cuando el usuario quiere ver otra pestaña.
+1. `type: "none"` - Solo conversación, no ejecutes ninguna acción.
+2. `type: "create"` - Cuando el usuario quiere registrar un nuevo gasto/ingreso. Extrae los datos del mensaje y ponlos en `data`.
+3. `type: "update"` - Cuando el usuario quiere editar un registro existente. Pide el índice o identifica por descripción. `row_index` es 0-based.
+4. `type: "delete"` - Cuando el usuario quiere eliminar un registro. Pide confirmación antes de devolver esta acción.
+5. `type: "switch_tab"` - Cuando el usuario quiere ver otra pestaña.
 
 REGLAS IMPORTANTES:
 - Si el usuario pide crear/editar/borrar algo, DEVUELVE la acción correspondiente. No solo hables de ello.
