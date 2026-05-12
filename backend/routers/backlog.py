@@ -189,6 +189,15 @@ def delete_subtask(subtask_id: int, current_user = Depends(get_current_user)):
 
 # ── SPRINTS ───────────────────────────────────────────────────────────────────
 
+
+@router.get("/projects")
+def list_projects(current_user = Depends(get_current_user)):
+    with get_conn() as conn:
+        rows = conn.execute(
+            "SELECT DISTINCT project FROM backlog_tasks WHERE project != '' ORDER BY project"
+        ).fetchall()
+    return [r["project"] for r in rows]
+
 @router.get("/sprints")
 def list_sprints(current_user = Depends(get_current_user)):
     with get_conn() as conn:
