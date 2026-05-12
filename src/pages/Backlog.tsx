@@ -45,6 +45,8 @@ const STATUS_COLORS: Record<Status, string> = {
   done: 'bg-emerald-500',
 }
 
+const DEFAULT_PROJECTS = ['WinStats', 'ArchiTechIA', 'GrowData', 'Academy', 'Finance', 'Hogar']
+
 const PRIORITY_COLORS: Record<Priority, string> = {
   low: 'text-slate-400',
   medium: 'text-yellow-400',
@@ -380,7 +382,7 @@ export function Backlog() {
                 </div>
                 <div>
                   <label className="text-xs text-slate-400 mb-1 block">Proyecto</label>
-                  <select value={form.project} onChange={e => setForm(p => ({ ...p, project: e.target.value }))} className="w-full bg-surface border border-border rounded-lg px-3 py-2 text-xs text-slate-300 focus:outline-none focus:border-primary/50"><option value="">Seleccionar...</option>{projects.map(p => <option key={p} value={p}>{p}</option>)}</select>
+                  <select value={form.project} onChange={e => setForm(p => ({ ...p, project: e.target.value }))} className="w-full bg-surface border border-border rounded-lg px-3 py-2 text-xs text-slate-300 focus:outline-none focus:border-primary/50"><option value="">Seleccionar...</option>{DEFAULT_PROJECTS.map(p => <option key={p} value={p}>{p}</option>)}`n                    {projects.filter(p => !DEFAULT_PROJECTS.includes(p)).map(p => <option key={p} value={p}>{p}</option>)}</select>
                   
                 </div>
                 <div>
