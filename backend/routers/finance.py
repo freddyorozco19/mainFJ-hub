@@ -281,6 +281,7 @@ async def finance_analyze(req: AnalysisRequest, current_user = Depends(get_curre
 
 # ── Resumen agregado de todas las pestañas ─────────────────────────────────────
 _SUMMARY_CACHE = {"data": None, "timestamp": 0}
+_SUMMARY_CACHE_ANALYTICS = {"data": None, "timestamp": 0}
 
 @router.get("/summary")
 def get_summary(current_user = Depends(get_current_user)):
@@ -314,7 +315,7 @@ def get_summary(current_user = Depends(get_current_user)):
             result[tab] = {"count": len(records), "total_cop": total_cop}
         except Exception as e:
             result[tab] = {"count": 0, "total_cop": 0.0, "error": str(e)}
-    _SUMMARY_CACHE = {"data": result, "timestamp": now}
+    _SUMMARY_CACHE_ANALYTICS = {"data": result, "timestamp": now}
     return result
 
 
@@ -405,7 +406,7 @@ def get_analytics(current_user = Depends(get_current_user)):
         except Exception as e:
             result[tab] = {"error": str(e), "count": 0}
 
-    _SUMMARY_CACHE = {"data": result, "timestamp": now}
+    _SUMMARY_CACHE_ANALYTICS = {"data": result, "timestamp": now}
     return result
 
 
