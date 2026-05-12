@@ -109,4 +109,29 @@ def init_db() -> None:
                 received_at TEXT NOT NULL DEFAULT (datetime('now'))
             );
             CREATE INDEX IF NOT EXISTS idx_webhook_received ON webhook_events(received_at);
+            CREATE TABLE IF NOT EXISTS backlog_tasks (
+                id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                title       TEXT NOT NULL,
+                description TEXT DEFAULT '',
+                status      TEXT NOT NULL DEFAULT 'backlog',
+                priority    TEXT NOT NULL DEFAULT 'medium',
+                sprint      TEXT DEFAULT '',
+                tags        TEXT DEFAULT '',
+                due_date    TEXT DEFAULT '',
+                created_at  TEXT NOT NULL DEFAULT (datetime('now')),
+                updated_at  TEXT NOT NULL DEFAULT (datetime('now'))
+            );
+
+            CREATE TABLE IF NOT EXISTS backlog_subtasks (
+                id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                task_id     INTEGER NOT NULL REFERENCES backlog_tasks(id) ON DELETE CASCADE,
+                title       TEXT NOT NULL,
+                done        INTEGER DEFAULT 0,
+                created_at  TEXT NOT NULL DEFAULT (datetime('now'))
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_backlog_status ON backlog_tasks(status);
+            CREATE INDEX IF NOT EXISTS idx_backlog_priority ON backlog_tasks(priority);
+            CREATE INDEX IF NOT EXISTS idx_subtasks_task ON backlog_subtasks(task_id);
+
         """)
