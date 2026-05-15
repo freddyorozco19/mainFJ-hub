@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from typing import Optional
 
-from backend.supabase import get_supabase
+from backend.supabase_client import get_supabase
 from backend.routers.auth import get_current_user
 
 router = APIRouter(prefix="/backlog", tags=["backlog"])
