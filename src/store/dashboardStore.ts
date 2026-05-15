@@ -53,13 +53,11 @@ export interface Notification {
 }
 
 interface DashboardState {
-  // Agents
   agents: Agent[]
   setAgents: (agents: Agent[]) => void
   toggleAgent: (id: string) => void
   updateAgentStatus: (slug: string, status: AgentStatus) => void
 
-  // Chat
   activeAgentSlug: string | null
   chatHistories: Record<string, ChatMessage[]>
   isTyping: boolean
@@ -68,36 +66,33 @@ interface DashboardState {
   setHistory: (slug: string, messages: ChatMessage[]) => void
   setTyping: (v: boolean) => void
 
-  // Metrics
   metrics: MetricEntry[]
   globalMetrics: { totalTokens: number; totalCost: number; totalRequests: number; activeAgents: number }
   addMetricEntry: (entry: MetricEntry) => void
 
-  // Logs
   logs: LogEntry[]
   pushLog: (log: LogEntry) => void
 
-  // Notifications
   notifications: Notification[]
   pushNotification: (n: Omit<Notification, 'id' | 'timestamp' | 'read'>) => void
   markAllRead: () => void
   clearNotifications: () => void
+
+  sseConnected: boolean
+  setSseConnected: (v: boolean) => void
+
+  financeRefreshTick: number
+  tickFinanceRefresh: () => void
 }
 
 export const useDashboard = create<DashboardState>((set) => ({
-  // ── Agents ──────────────────────────────────────────────────────────────
   agents: [],
   setAgents: (agents) => set({ agents }),
   toggleAgent: (id) =>
-    set(s => ({
-      agents: s.agents.map(a => a.id === id ? { ...a, enabled: !a.enabled } : a),
-    })),
+    set(s => ({ agents: s.agents.map(a => a.id === id ? { ...a, enabled: !a.enabled } : a) })),
   updateAgentStatus: (slug, status) =>
-    set(s => ({
-      agents: s.agents.map(a => a.slug === slug ? { ...a, status } : a),
-    })),
+    set(s => ({ agents: s.agents.map(a => a.slug === slug ? { ...a, status } : a) })),
 
-  // ── Chat ────────────────────────────────────────────────────────────────
   activeAgentSlug: null,
   chatHistories: {},
   isTyping: false,
@@ -110,12 +105,9 @@ export const useDashboard = create<DashboardState>((set) => ({
       },
     })),
   setHistory: (slug, messages) =>
-    set(s => ({
-      chatHistories: { ...s.chatHistories, [slug]: messages },
-    })),
+    set(s => ({ chatHistories: { ...s.chatHistories, [slug]: messages } })),
   setTyping: (v) => set({ isTyping: v }),
 
-  // ── Metrics ─────────────────────────────────────────────────────────────
   metrics: [],
   globalMetrics: { totalTokens: 0, totalCost: 0, totalRequests: 0, activeAgents: 0 },
   addMetricEntry: (entry) =>
@@ -129,12 +121,9 @@ export const useDashboard = create<DashboardState>((set) => ({
       },
     })),
 
-  // ── Logs ────────────────────────────────────────────────────────────────
   logs: [],
-  pushLog: (log) =>
-    set(s => ({ logs: [log, ...s.logs].slice(0, 500) })),
+  pushLog: (log) => set(s => ({ logs: [log, ...s.logs].slice(0, 500) })),
 
-  // ── Notifications ───────────────────────────────────────────────────────
   notifications: [],
   pushNotification: (n) =>
     set(s => ({
@@ -143,7 +132,12 @@ export const useDashboard = create<DashboardState>((set) => ({
         ...s.notifications,
       ].slice(0, 50),
     })),
-  markAllRead: () =>
-    set(s => ({ notifications: s.notifications.map(n => ({ ...n, read: true })) })),
+  markAllRead: () => set(s => ({ notifications: s.notifications.map(n => ({ ...n, read: true })) })),
   clearNotifications: () => set({ notifications: [] }),
+
+  sseConnected: false,
+  setSseConnected: (v) => set({ sseConnected: v }),
+
+  financeRefreshTick: 0,
+  tickFinanceRefresh: () => set(s => ({ financeRefreshTick: s.financeRefreshTick + 1 })),
 }))
