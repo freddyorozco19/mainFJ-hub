@@ -106,13 +106,13 @@ export function GlobalSearch({ open, onClose }: GlobalSearchProps) {
   if (!open) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center pt-20 px-4" onClick={onClose}>
-      <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
+    <div className="fixed inset-0 z-50 flex items-start justify-center pt-20 px-4 animate-fade-in" onClick={onClose}>
+      <div className="absolute inset-0 bg-black/75 backdrop-blur-md" />
       <div
-        className="relative w-full max-w-xl bg-surface border border-border rounded-2xl shadow-2xl overflow-hidden"
+        className="relative w-full max-w-xl bg-surface/85 backdrop-blur-xl border border-white/10 rounded-2xl shadow-[0_24px_64px_rgba(0,0,0,0.7),0_0_0_1px_rgba(255,255,255,0.05)] overflow-hidden"
         onClick={e => e.stopPropagation()}
       >
-        <div className="flex items-center gap-3 px-4 py-3 border-b border-border">
+        <div className="flex items-center gap-3 px-4 py-3 border-b border-white/8">
           <Command size={15} className="text-slate-500 flex-shrink-0" />
           <input
             ref={inputRef}
@@ -213,7 +213,7 @@ export function GlobalSearch({ open, onClose }: GlobalSearchProps) {
           )}
         </div>
 
-        <div className="px-4 py-2 border-t border-border flex items-center gap-4 text-[10px] text-slate-600">
+        <div className="px-4 py-2 border-t border-white/8 flex items-center gap-4 text-[10px] text-slate-600 bg-white/[0.02]">
           <span>↑↓ navegar</span>
           <span>↵ ir</span>
           <span>Esc cerrar</span>
