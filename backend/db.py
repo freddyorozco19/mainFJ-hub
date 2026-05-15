@@ -1,11 +1,15 @@
 # -*- coding: utf-8 -*-
 """SQLite setup — single file for all dashboard data."""
 import json
+import os
 import sqlite3
 from datetime import datetime
 from pathlib import Path
 
-DB_PATH = Path(__file__).parent.parent / "data" / "dashboard.db"
+# En Render, montar el disco persistente en /var/data y set RENDER_DATA_DIR=/var/data
+# En desarrollo local usa la carpeta data/ del proyecto
+_DATA_DIR = Path(os.environ.get("RENDER_DATA_DIR", "")) or Path(__file__).parent.parent / "data"
+DB_PATH = _DATA_DIR / "dashboard.db"
 
 
 def get_conn() -> sqlite3.Connection:
