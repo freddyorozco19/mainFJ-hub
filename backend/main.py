@@ -16,7 +16,7 @@ from fastapi.responses import StreamingResponse
 
 from backend.routers import chat, agents, metrics, logs, finance, auth, health, search, webhooks, proxy, backlog
 from backend.db import init_db
-from backend.supabase import init_supabase
+from backend.supabase_client import init_supabase
 from backend.events import event_manager
 
 from contextlib import asynccontextmanager
