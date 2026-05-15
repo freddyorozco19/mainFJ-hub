@@ -6,6 +6,7 @@ import os
 import json
 import time
 import gspread
+from gspread.exceptions import WorksheetNotFound, APIError
 import unicodedata
 from google.oauth2.service_account import Credentials
 
@@ -102,13 +103,18 @@ def get_sheet(tab: str) -> gspread.Worksheet:
     sheet_name = TABS[tab]
     try:
         ws = sh.worksheet(sheet_name)
-        _ensure_columns(ws, tab)
-        return ws
-    except:
+    except WorksheetNotFound:
+        # Solo creamos la hoja si REALMENTE no existe
         headers = COLUMNS[tab]
         ws = sh.add_worksheet(title=sheet_name, rows=1000, cols=len(headers))
         ws.append_row(headers, value_input_option="USER_ENTERED")
         return ws
+    # _ensure_columns fuera del bloque try para no crear hojas vacías por error de API
+    try:
+        _ensure_columns(ws, tab)
+    except Exception as e:
+        print(f"[SHEETS] _ensure_columns warning for {tab}: {e}")
+    return ws
 
 
 def read_tab(tab: str, use_cache: bool = True) -> list[dict]:
