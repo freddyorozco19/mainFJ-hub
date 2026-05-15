@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 import { Outlet, NavLink, useLocation } from 'react-router-dom'
 import { Sidebar, MobileMenuButton } from './Sidebar'
 import { GlobalSearch } from './Search'
@@ -60,8 +61,8 @@ function MobileMoreSheet({ open, onClose }: { open: boolean; onClose: () => void
   if (!open) return null
   return (
     <>
-      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 md:hidden" onClick={onClose} />
-      <div className="fixed bottom-16 left-0 right-0 z-50 md:hidden bg-surface border-t border-border rounded-t-2xl p-4 animate-fade-in">
+      <div className="fixed inset-0 bg-black/70 backdrop-blur-md z-40 md:hidden" onClick={onClose} />
+      <div className="fixed bottom-16 left-0 right-0 z-50 md:hidden bg-surface/90 backdrop-blur-xl border-t border-white/10 rounded-t-2xl p-4 shadow-[0_-16px_40px_rgba(0,0,0,0.5)]">
         <div className="flex items-center justify-between mb-3">
           <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Más módulos</span>
           <button onClick={onClose} className="p-1 text-slate-500 hover:text-white"><X size={16} /></button>
@@ -182,13 +183,22 @@ export function Layout() {
           </div>
         </div>
 
-        <div key={location.pathname} className="flex-1 flex flex-col animate-fade-in">
-          <Outlet />
-        </div>
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.div
+            key={location.pathname}
+            className="flex-1 flex flex-col"
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -4 }}
+            transition={{ duration: 0.18, ease: 'easeOut' }}
+          >
+            <Outlet />
+          </motion.div>
+        </AnimatePresence>
       </main>
 
       {/* Mobile bottom nav */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-30 bg-surface border-t border-border flex items-center justify-around px-2 py-1.5">
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-30 bg-surface/90 backdrop-blur-lg border-t border-white/8 flex items-center justify-around px-2 py-1.5">
         {MOBILE_NAV.map(({ to, icon: Icon, label }) => (
           <NavLink
             key={to}
