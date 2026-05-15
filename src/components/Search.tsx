@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  Search as SearchIcon, X, MessageSquare, ScrollText, Loader2,
+  X, MessageSquare, ScrollText, Loader2,
   Home, Bot, Wallet, BarChart3, Layers, Activity, Trophy, Brain,
   TrendingUp, Heart, Network, Webhook, User, Command,
 } from 'lucide-react'
@@ -69,7 +69,7 @@ export function GlobalSearch({ open, onClose }: GlobalSearchProps) {
   const allItems = [
     ...filteredPages.map((p, i) => ({ ...p, _type: 'page' as const, _idx: i })),
     ...filteredAgents.map((a, i) => ({ to: '/chat', label: a.name, icon: Bot, section: 'agent', slug: a.slug, _type: 'agent' as const, _idx: filteredPages.length + i })),
-    ...results.map((r, i) => ({ ...r, _type: 'result' as const, _idx: totalQuick + i })),
+    ...results.map((r, i) => ({ ...r, to: r.link, _type: 'result' as const, _idx: totalQuick + i })),
   ]
 
   useEffect(() => {
