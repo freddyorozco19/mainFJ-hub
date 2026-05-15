@@ -32,8 +32,8 @@ function AgentModal({ agent, onClose, onToggle }: { agent: Agent; onClose: () =>
   const status = STATUS_COLOR[agent.status] ?? STATUS_COLOR.offline
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-card border border-border rounded-2xl w-full max-w-lg shadow-2xl animate-fade-in">
+      <div className="absolute inset-0 bg-black/75 backdrop-blur-md" onClick={onClose} />
+      <div className="relative bg-card/90 backdrop-blur-xl border border-white/10 rounded-2xl w-full max-w-lg shadow-[0_24px_64px_rgba(0,0,0,0.7)] animate-fade-in">
         <div className="flex items-start justify-between p-6 border-b border-border">
           <div className="flex items-center gap-4">
             <div className="w-14 h-14 rounded-2xl bg-surface flex items-center justify-center text-3xl">{agent.icon}</div>
@@ -42,7 +42,7 @@ function AgentModal({ agent, onClose, onToggle }: { agent: Agent; onClose: () =>
               <div className="flex items-center gap-2 mt-1">
                 <span className={`inline-flex items-center text-xs font-medium px-2 py-0.5 rounded border ${CATEGORY_COLOR[agent.category] ?? 'text-slate-400'}`}>{agent.category}</span>
                 <span className={`inline-flex items-center gap-1.5 text-xs font-medium px-2 py-0.5 rounded ${status.bg} ${status.text}`}>
-                  <span className={`w-1.5 h-1.5 rounded-full ${agent.status === 'online' ? 'bg-success' : agent.status === 'busy' ? 'bg-warning animate-pulse' : agent.status === 'error' ? 'bg-danger' : 'bg-slate-500'}`} />
+                  <span className={`relative w-1.5 h-1.5 rounded-full ${agent.status === 'online' ? 'bg-success' : agent.status === 'busy' ? 'bg-warning' : agent.status === 'error' ? 'bg-danger' : 'bg-slate-500'}`} />
                   {status.label}
                 </span>
               </div>
@@ -86,7 +86,7 @@ function AgentModal({ agent, onClose, onToggle }: { agent: Agent; onClose: () =>
 
 function AgentCard({ agent, onToggle, onClick }: { agent: Agent; onToggle: () => void; onClick: () => void }) {
   return (
-    <div className={`bg-card border rounded-xl p-4 flex flex-col gap-3 transition-all cursor-pointer hover:border-primary/40 ${agent.enabled ? 'border-border' : 'border-border/50 opacity-60'}`} onClick={onClick}>
+    <div className={`bg-card border rounded-xl p-4 flex flex-col gap-3 transition-all duration-200 cursor-pointer hover:border-primary/40 hover:-translate-y-0.5 hover:shadow-glow-hover ${agent.enabled ? 'border-border' : 'border-border/50 opacity-60'}`} onClick={onClick}>
       <div className="flex items-start justify-between">
         <div className="flex items-center gap-3">
           <div className="text-2xl leading-none">{agent.icon}</div>
@@ -96,7 +96,11 @@ function AgentCard({ agent, onToggle, onClick }: { agent: Agent; onToggle: () =>
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <div className={`w-2 h-2 rounded-full ${agent.status==='online'?'bg-success':agent.status==='busy'?'bg-warning animate-pulse':agent.status==='error'?'bg-danger':'bg-slate-600'}`} />
+          <div className="relative flex items-center justify-center w-3 h-3 flex-shrink-0">
+            {agent.status === 'online' && <span className="absolute inline-flex w-full h-full rounded-full bg-success/40 animate-ping" />}
+            {agent.status === 'busy'   && <span className="absolute inline-flex w-full h-full rounded-full bg-warning/40 animate-ping" />}
+            <span className={`relative w-2 h-2 rounded-full ${agent.status==='online'?'bg-success':agent.status==='busy'?'bg-warning':agent.status==='error'?'bg-danger':'bg-slate-600'}`} />
+          </div>
           <button onClick={e => { e.stopPropagation(); onToggle() }} className={`p-1.5 rounded-lg transition-colors ${agent.enabled ? 'text-primary bg-primary/10 hover:bg-primary/20' : 'text-slate-600 bg-white/5 hover:bg-white/10'}`}><Power size={13} /></button>
         </div>
       </div>
