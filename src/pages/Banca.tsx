@@ -337,16 +337,24 @@ export function Banca() {
               <button onClick={() => { setShowModal(false); setConnectErr(''); setInstitutions([]) }} className="text-slate-500 hover:text-white"><X size={18} /></button>
             </div>
             <form onSubmit={connect} className="px-6 py-5 space-y-4">
-              <div className="bg-accent/10 border border-accent/20 rounded-xl px-4 py-2.5 text-xs text-accent">
-                Modo Sandbox · usuario: <code>bnk:sandbox</code> · contraseña: <code>full</code>
+              <div className="bg-accent/10 border border-accent/20 rounded-xl px-4 py-2.5 text-xs text-accent space-y-1">
+                <p>Modo Sandbox · institución: <code>erebus_co_retail</code></p>
+                <p>Usuario: <code>bnk:sandbox</code> · Contraseña: <code>full</code></p>
               </div>
               <div>
                 <label className="block text-xs text-slate-400 mb-1">Institución</label>
-                <select required value={form.institution} onChange={e => setForm({...form, institution: e.target.value})}
-                  className="w-full bg-card border border-border rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-primary">
-                  <option value="">{loadingInst ? 'Cargando instituciones...' : 'Seleccionar...'}</option>
-                  {institutions.map(i => <option key={i.id} value={i.id}>{i.name}</option>)}
-                </select>
+                {institutions.length > 0 ? (
+                  <select required value={form.institution} onChange={e => setForm({...form, institution: e.target.value})}
+                    className="w-full bg-card border border-border rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-primary">
+                    <option value="">Seleccionar...</option>
+                    {institutions.map(i => <option key={i.id} value={i.id}>{i.name} ({i.country})</option>)}
+                  </select>
+                ) : (
+                  <input required value={form.institution} onChange={e => setForm({...form, institution: e.target.value})}
+                    placeholder="Ej: erebus_co_retail"
+                    className="w-full bg-card border border-border rounded-xl px-3 py-2 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-primary" />
+                )}
+                {loadingInst && <p className="text-[10px] text-slate-500 mt-1">Cargando instituciones disponibles...</p>}
               </div>
               <div>
                 <label className="block text-xs text-slate-400 mb-1">Usuario del banco</label>

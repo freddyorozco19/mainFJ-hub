@@ -79,15 +79,30 @@ class SyncRequest(BaseModel):
 
 @router.get("/institutions")
 async def list_institutions(current_user=Depends(get_current_user)):
-    data = await _belvo("GET", "/api/institutions/")
-    institutions = data if isinstance(data, list) else data.get("results", [])
+    all_institutions = []
+    url = "/api/institutions/?page_size=100"
+    # Recorre todas las páginas
+    while url:
+        data = await _belvo("GET", url)
+        results = data if isinstance(data, list) else data.get("results", [])
+        all_institutions.extend(results)
+        next_url = data.get("next") if isinstance(data, dict) else None
+        if next_url:
+            # Extrae solo el path relativo
+            from urllib.parse import urlparse
+            parsed = urlparse(next_url)
+            url = parsed.path + ("?" + parsed.query if parsed.query else "")
+        else:
+            url = None
+
     return [
         {
             "id":      i["name"],
             "name":    i.get("display_name") or i["name"],
             "country": i.get("country_code", ""),
+            "type":    i.get("type", ""),
         }
-        for i in institutions
+        for i in all_institutions
     ]
 
 
