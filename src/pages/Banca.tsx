@@ -5,11 +5,8 @@ import { Building2, Plus, RefreshCw, Trash2, X, Loader2, CreditCard, Layers } fr
 interface BelvoLink   { id: number; belvo_id: string; institution: string; status: string; created_at: string }
 interface BelvoAccount { belvo_id: string; link_id: string; institution: string; name: string; type: string; currency: string; balance: number; credit_data: string | null; synced_at: string; bank: string }
 interface BelvoTx     { belvo_id: string; account_id: string; amount: number; currency: string; description: string | null; category: string | null; type: string; status: string; value_date: string; installment_number: number | null; installment_total: number | null; merchant: string | null }
+interface BelvoInstitution { id: string; name: string; country: string }
 
-const SANDBOX_INSTITUTIONS = [
-  { id: 'erebus_co_retail',  name: 'Erebus · Banco de prueba Colombia' },
-  { id: 'erebus_mx_retail',  name: 'Erebus · Banco de prueba México'   },
-]
 
 const COP = (n: number) => new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(n)
 
@@ -21,10 +18,12 @@ export function Banca() {
   const [syncing, setSyncing]     = useState<string | null>(null)
   const [tab, setTab]             = useState<'cuentas' | 'movimientos' | 'cuotas'>('cuentas')
   const [filterAccount, setFilterAccount] = useState('')
-  const [showModal, setShowModal] = useState(false)
-  const [form, setForm]           = useState({ institution: '', username: '', password: '' })
-  const [connecting, setConnecting] = useState(false)
-  const [connectErr, setConnectErr] = useState('')
+  const [showModal, setShowModal]       = useState(false)
+  const [form, setForm]                 = useState({ institution: '', username: '', password: '' })
+  const [connecting, setConnecting]     = useState(false)
+  const [connectErr, setConnectErr]     = useState('')
+  const [institutions, setInstitutions] = useState<BelvoInstitution[]>([])
+  const [loadingInst, setLoadingInst]   = useState(false)
 
   const load = async () => {
     setLoading(true)
@@ -50,6 +49,17 @@ export function Banca() {
     if (tab === 'movimientos') loadTxs(filterAccount)
     if (tab === 'cuotas')      loadTxs(filterAccount, true)
   }, [tab, filterAccount])
+
+  const openConnect = async () => {
+    setShowModal(true)
+    setLoadingInst(true)
+    try {
+      const r = await api('/belvo/institutions?country=CO')
+      const data = await r.json()
+      setInstitutions(Array.isArray(data) ? data : [])
+    } catch { setInstitutions([]) }
+    finally { setLoadingInst(false) }
+  }
 
   const connect = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -104,7 +114,7 @@ export function Banca() {
           </h1>
           <p className="text-sm text-slate-500 mt-0.5">Conexión bancaria vía Belvo · Sandbox</p>
         </div>
-        <button onClick={() => setShowModal(true)} className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-violet-500 text-white rounded-xl text-sm font-medium transition-colors">
+        <button onClick={openConnect} className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-violet-500 text-white rounded-xl text-sm font-medium transition-colors">
           <Plus size={15} /> Conectar banco
         </button>
       </div>
@@ -131,7 +141,7 @@ export function Banca() {
           <Building2 size={40} className="mx-auto mb-4 text-slate-700" />
           <p className="text-slate-400 font-medium mb-1">No hay bancos conectados</p>
           <p className="text-slate-600 text-sm mb-4">Conecta tu banco para ver saldos y movimientos</p>
-          <button onClick={() => setShowModal(true)} className="px-4 py-2 bg-primary hover:bg-violet-500 text-white rounded-xl text-sm transition-colors">
+          <button onClick={openConnect} className="px-4 py-2 bg-primary hover:bg-violet-500 text-white rounded-xl text-sm transition-colors">
             + Conectar primer banco
           </button>
         </div>
@@ -316,7 +326,7 @@ export function Banca() {
           <div className="bg-surface border border-border rounded-2xl w-full max-w-md shadow-2xl">
             <div className="flex items-center justify-between px-6 py-5 border-b border-border">
               <h2 className="text-lg font-bold text-white">Conectar banco</h2>
-              <button onClick={() => { setShowModal(false); setConnectErr('') }} className="text-slate-500 hover:text-white"><X size={18} /></button>
+              <button onClick={() => { setShowModal(false); setConnectErr(''); setInstitutions([]) }} className="text-slate-500 hover:text-white"><X size={18} /></button>
             </div>
             <form onSubmit={connect} className="px-6 py-5 space-y-4">
               <div className="bg-accent/10 border border-accent/20 rounded-xl px-4 py-2.5 text-xs text-accent">
@@ -326,8 +336,8 @@ export function Banca() {
                 <label className="block text-xs text-slate-400 mb-1">Institución</label>
                 <select required value={form.institution} onChange={e => setForm({...form, institution: e.target.value})}
                   className="w-full bg-card border border-border rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-primary">
-                  <option value="">Seleccionar...</option>
-                  {SANDBOX_INSTITUTIONS.map(i => <option key={i.id} value={i.id}>{i.name}</option>)}
+                  <option value="">{loadingInst ? 'Cargando instituciones...' : 'Seleccionar...'}</option>
+                  {institutions.map(i => <option key={i.id} value={i.id}>{i.name}</option>)}
                 </select>
               </div>
               <div>
