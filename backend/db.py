@@ -105,6 +105,44 @@ def init_db() -> None:
             CREATE INDEX IF NOT EXISTS idx_fin_hist_action ON finance_history(action);
             CREATE INDEX IF NOT EXISTS idx_health_date    ON health_daily(date);
 
+            CREATE TABLE IF NOT EXISTS belvo_links (
+                id           INTEGER PRIMARY KEY AUTOINCREMENT,
+                belvo_id     TEXT NOT NULL UNIQUE,
+                institution  TEXT NOT NULL,
+                status       TEXT NOT NULL DEFAULT 'valid',
+                created_at   TEXT NOT NULL DEFAULT (datetime('now'))
+            );
+
+            CREATE TABLE IF NOT EXISTS belvo_accounts (
+                id             INTEGER PRIMARY KEY AUTOINCREMENT,
+                belvo_id       TEXT NOT NULL UNIQUE,
+                link_id        TEXT NOT NULL,
+                institution    TEXT NOT NULL,
+                name           TEXT NOT NULL,
+                type           TEXT NOT NULL,
+                currency       TEXT NOT NULL DEFAULT 'COP',
+                balance        REAL NOT NULL DEFAULT 0,
+                credit_data    TEXT,
+                synced_at      TEXT NOT NULL DEFAULT (datetime('now'))
+            );
+
+            CREATE TABLE IF NOT EXISTS belvo_transactions (
+                id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+                belvo_id            TEXT NOT NULL UNIQUE,
+                account_id          TEXT NOT NULL,
+                amount              REAL NOT NULL,
+                currency            TEXT NOT NULL DEFAULT 'COP',
+                description         TEXT,
+                category            TEXT,
+                type                TEXT NOT NULL,
+                status              TEXT NOT NULL,
+                value_date          TEXT NOT NULL,
+                installment_number  INTEGER,
+                installment_total   INTEGER,
+                merchant            TEXT,
+                created_at          TEXT NOT NULL DEFAULT (datetime('now'))
+            );
+
             CREATE TABLE IF NOT EXISTS webhook_events (
                 id          INTEGER PRIMARY KEY AUTOINCREMENT,
                 source      TEXT NOT NULL DEFAULT 'external',
