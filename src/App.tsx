@@ -16,6 +16,7 @@ import { Profile } from './pages/Profile'
 import { Health } from './pages/Health'
 import { Webhooks } from './pages/Webhooks'
 import { Banca } from './pages/Banca'
+import { Backlog } from './pages/Backlog'
 import { Login } from './pages/Login'
 import { ForgotPassword } from './pages/ForgotPassword'
 import { ResetPassword } from './pages/ResetPassword'
@@ -185,6 +186,7 @@ export default function App() {
             <Route path="/health"   element={<Health />}   />
             <Route path="/webhooks" element={<Webhooks />} />
             <Route path="/banca"    element={<Banca />}    />
+            <Route path="/backlog"  element={<Backlog />}  />
             <Route path="/profile"  element={<Profile />}  />
           </Route>
         </Route>
