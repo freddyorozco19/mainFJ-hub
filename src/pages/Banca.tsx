@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { api } from '../api'
-import { Building2, Plus, RefreshCw, Trash2, X, Loader2, CreditCard, TrendingDown, Layers } from 'lucide-react'
+import { Building2, Plus, RefreshCw, Trash2, X, Loader2, CreditCard, Layers } from 'lucide-react'
 
 interface BelvoLink   { id: number; belvo_id: string; institution: string; status: string; created_at: string }
 interface BelvoAccount { belvo_id: string; link_id: string; institution: string; name: string; type: string; currency: string; balance: number; credit_data: string | null; synced_at: string; bank: string }
