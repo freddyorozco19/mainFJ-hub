@@ -78,10 +78,17 @@ class SyncRequest(BaseModel):
 # ── Institutions ─────────────────────────────────────────────────────────────
 
 @router.get("/institutions")
-async def list_institutions(country: str = "CO", current_user=Depends(get_current_user)):
-    data = await _belvo("GET", f"/api/institutions/?country_code={country}&type=retail")
+async def list_institutions(current_user=Depends(get_current_user)):
+    data = await _belvo("GET", "/api/institutions/")
     institutions = data if isinstance(data, list) else data.get("results", [])
-    return [{"id": i["name"], "name": i.get("display_name") or i["name"], "country": i.get("country_code")} for i in institutions]
+    return [
+        {
+            "id":      i["name"],
+            "name":    i.get("display_name") or i["name"],
+            "country": i.get("country_code", ""),
+        }
+        for i in institutions
+    ]
 
 
 # ── Links ─────────────────────────────────────────────────────────────────────

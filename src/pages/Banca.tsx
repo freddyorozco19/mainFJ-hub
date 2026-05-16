@@ -53,11 +53,19 @@ export function Banca() {
   const openConnect = async () => {
     setShowModal(true)
     setLoadingInst(true)
+    setConnectErr('')
     try {
-      const r = await api('/belvo/institutions?country=CO')
+      const r = await api('/belvo/institutions')
       const data = await r.json()
+      if (!r.ok) throw new Error(data.detail ?? JSON.stringify(data))
       setInstitutions(Array.isArray(data) ? data : [])
-    } catch { setInstitutions([]) }
+      if (!Array.isArray(data) || data.length === 0) {
+        setConnectErr('No se encontraron instituciones. Verifica que las variables BELVO_SECRET_ID y BELVO_SECRET_PASSWORD estén configuradas en Render.')
+      }
+    } catch (e: any) {
+      setConnectErr(`Error cargando instituciones: ${e.message}`)
+      setInstitutions([])
+    }
     finally { setLoadingInst(false) }
   }
 
