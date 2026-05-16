@@ -117,12 +117,12 @@ def list_links(current_user=Depends(get_current_user)):
 
 @router.post("/links")
 async def create_link(req: LinkCreate, current_user=Depends(get_current_user)):
-    data = await _belvo("POST", "/api/links/", {
+    body: dict = {
         "institution": req.institution,
         "username":    req.username,
         "password":    req.password,
-        "access_mode": "single",
-    })
+    }
+    data = await _belvo("POST", "/api/links/", body)
     with get_conn() as conn:
         conn.execute(
             "INSERT OR REPLACE INTO belvo_links (belvo_id, institution, status) VALUES (?,?,?)",

@@ -337,9 +337,11 @@ export function Banca() {
               <button onClick={() => { setShowModal(false); setConnectErr(''); setInstitutions([]) }} className="text-slate-500 hover:text-white"><X size={18} /></button>
             </div>
             <form onSubmit={connect} className="px-6 py-5 space-y-4">
-              <div className="bg-accent/10 border border-accent/20 rounded-xl px-4 py-2.5 text-xs text-accent space-y-1">
-                <p>Modo Sandbox · institución: <code>erebus_co_retail</code></p>
-                <p>Usuario: <code>bnk:sandbox</code> · Contraseña: <code>full</code></p>
+              <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-xl px-4 py-3 text-xs text-yellow-300 space-y-1.5">
+                <p className="font-medium">⚠️ Modo Sandbox — sin bancos colombianos</p>
+                <p>Bancolombia y Nubank solo están disponibles en <strong>Producción</strong>.</p>
+                <p className="mt-1">Para probar usa <strong>OF Mock Bank by Raidiam (BR)</strong>:</p>
+                <p>Usuario: <code className="bg-black/20 px-1 rounded">user</code> · Contraseña: <code className="bg-black/20 px-1 rounded">user</code></p>
               </div>
               <div>
                 <label className="block text-xs text-slate-400 mb-1">Institución</label>
