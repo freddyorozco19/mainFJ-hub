@@ -7,9 +7,8 @@ interface BelvoAccount { belvo_id: string; link_id: string; institution: string;
 interface BelvoTx     { belvo_id: string; account_id: string; amount: number; currency: string; description: string | null; category: string | null; type: string; status: string; value_date: string; installment_number: number | null; installment_total: number | null; merchant: string | null }
 
 const SANDBOX_INSTITUTIONS = [
-  { id: 'bancolombia_co_retail',  name: 'Bancolombia (Sandbox)' },
-  { id: 'erebus_co_retail',       name: 'Erebus (Test bank)'    },
-  { id: 'nucolombia_co_retail',   name: 'Nubank Colombia (Sandbox)' },
+  { id: 'erebus_co_retail',  name: 'Erebus · Banco de prueba Colombia' },
+  { id: 'erebus_mx_retail',  name: 'Erebus · Banco de prueba México'   },
 ]
 
 const COP = (n: number) => new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(n)
