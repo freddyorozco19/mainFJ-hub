@@ -30,7 +30,7 @@ const TAB_COLUMNS: Record<TabKey, string[]> = {
   essentials: ['PRODUCTO', 'DESCRIPCION', 'MONEDA', 'VALOR', 'MEDIO PAGO', 'MODO'],
   ahorro:     ['NOMBRE', 'MEDIO', 'MES', 'VALOR'],
   basket:     ['PRODUCTO', 'DESCRIPCION', 'CATEGORIA', 'MONEDA', 'VALOR', 'CANTIDAD'],
-  shops:      ['PRODUCT', 'DESCRIPTION', 'BRAND', 'CATEGORY', 'STORE', 'STORE2', 'COIN', 'VALUE', 'PAYMENT', 'CUOTAS', 'ACCOUNT', 'DATE'],
+  shops:      ['PRODUCT', 'DESCRIPTION', 'BRAND', 'CATEGORY', 'STORE', 'STORE2', 'COIN', 'VALUE', 'OFFER', 'PAYMENT', 'CUOTAS', 'ACCOUNT', 'DATE'],
   wishlist:   ['PRODUCTO', 'DESCRIPCION', 'MONEDA', 'VALOR', 'TIENDA', 'MEDIO', 'SOURCE'],
   debts:      ['PRODUCTO', 'DESCRIPCION', 'MONEDA', 'VALOR', 'PAGO', 'ESTADO', 'FECHA'],
   credito:    ['PRODUCTO', 'DESCRIPCION', 'ENTIDAD', 'MONEDA', 'VALOR_TOTAL', 'CUOTAS', 'CUOTA_ACTUAL', 'VALOR_CUOTA', 'FECHA_CORTE', 'FECHA_PAGO', 'ESTADO', 'TIPO'],
@@ -168,6 +168,16 @@ function renderFormField(col: string, value: string | number, onChange: (val: st
         <option value='Nequi'>Nequi</option>
         <option value='Nu'>Nu</option>
         <option value='Otra'>Otra</option>
+      </select>
+    )
+  }
+
+  if (col === 'OFFER') {
+    return (
+      <select value={value} onChange={e => onChange(e.target.value)} className={baseClass + ' appearance-none cursor-pointer'}>
+        <option value="">Seleccionar...</option>
+        <option value="SÍ">SÍ</option>
+        <option value="NO">NO</option>
       </select>
     )
   }
