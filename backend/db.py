@@ -16,10 +16,9 @@ import psycopg2.extras
 from psycopg2 import pool
 
 # ── Connection pool ──────────────────────────────────────────────────────────
-_DATABASE_URL = os.environ.get(
-    "DATABASE_URL",
-    "postgresql://postgres.hzabwlxgihwaidgjtach:FJHub2026%2AAdmin@aws-1-us-east-1.pooler.supabase.com:6543/postgres"
-)
+_DATABASE_URL = os.environ.get("DATABASE_URL", "")
+if not _DATABASE_URL:
+    raise RuntimeError("DATABASE_URL is not set. Add it to backend/.env or environment variables.")
 
 _pool: pool.SimpleConnectionPool | None = None
 
