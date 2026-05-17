@@ -11,13 +11,15 @@ router = APIRouter(prefix="/logs", tags=["logs"])
 def get_logs(current_user = Depends(get_current_user), limit: int = Query(100, le=500), level: str | None = None, agent: str | None = None):
     query  = "SELECT * FROM logs WHERE 1=1"
     params: list = []
-    if level: query += " AND level=?";       params.append(level)
-    if agent: query += " AND agent_slug=?";  params.append(agent)
-    query += " ORDER BY id DESC LIMIT ?"
+    if level: query += " AND level=%s";       params.append(level)
+    if agent: query += " AND agent_slug=%s";  params.append(agent)
+    query += " ORDER BY id DESC LIMIT %s"
     params.append(limit)
 
     with get_conn() as conn:
-        rows = conn.execute(query, params).fetchall()
+        cur = conn.cursor()
+        cur.execute(query, params)
+        rows = cur.fetchall()
 
     return [dict(r) for r in rows]
 
@@ -25,5 +27,6 @@ def get_logs(current_user = Depends(get_current_user), limit: int = Query(100, l
 @router.delete("/")
 def clear_logs(current_user = Depends(get_current_user)):
     with get_conn() as conn:
-        conn.execute("DELETE FROM logs")
+        cur = conn.cursor()
+        cur.execute("DELETE FROM logs")
     return {"deleted": True}

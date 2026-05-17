@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""GET /search?q= — búsqueda global en logs y mensajes."""
+"""GET /search?q= — busqueda global en logs y mensajes."""
 from fastapi import APIRouter, Depends, Query
 from backend.db import get_conn
 from backend.routers.auth import get_current_user
@@ -13,12 +13,14 @@ def search(q: str = Query(..., min_length=1), current_user=Depends(get_current_u
     results = []
 
     with get_conn() as conn:
-        rows = conn.execute(
+        cur = conn.cursor()
+        cur.execute(
             """SELECT id, level, agent_slug, action, detail, created_at
-               FROM logs WHERE action LIKE ? OR detail LIKE ?
+               FROM logs WHERE action LIKE %s OR detail LIKE %s
                ORDER BY id DESC LIMIT 15""",
             (like, like),
-        ).fetchall()
+        )
+        rows = cur.fetchall()
         for r in rows:
             results.append({
                 "type": "log",
@@ -31,12 +33,13 @@ def search(q: str = Query(..., min_length=1), current_user=Depends(get_current_u
                 "link": "/logs",
             })
 
-        rows = conn.execute(
+        cur.execute(
             """SELECT id, agent_slug, role, content, created_at
-               FROM messages WHERE content LIKE ?
+               FROM messages WHERE content LIKE %s
                ORDER BY id DESC LIMIT 15""",
             (like,),
-        ).fetchall()
+        )
+        rows = cur.fetchall()
         for r in rows:
             results.append({
                 "type": "message",

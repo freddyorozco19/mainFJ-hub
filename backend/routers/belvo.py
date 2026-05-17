@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Integración con Belvo API para datos bancarios."""
+"""Integracion con Belvo API para datos bancarios."""
 from __future__ import annotations
 import os
 import json
@@ -81,7 +81,7 @@ class SyncRequest(BaseModel):
 async def list_institutions(current_user=Depends(get_current_user)):
     all_institutions = []
     url = "/api/institutions/?page_size=100"
-    # Recorre todas las páginas
+    # Recorre todas las paginas
     while url:
         data = await _belvo("GET", url)
         results = data if isinstance(data, list) else data.get("results", [])
@@ -111,7 +111,9 @@ async def list_institutions(current_user=Depends(get_current_user)):
 @router.get("/links")
 def list_links(current_user=Depends(get_current_user)):
     with get_conn() as conn:
-        rows = conn.execute("SELECT * FROM belvo_links ORDER BY created_at DESC").fetchall()
+        cur = conn.cursor()
+        cur.execute("SELECT * FROM belvo_links ORDER BY created_at DESC")
+        rows = cur.fetchall()
     return [dict(r) for r in rows]
 
 
@@ -124,8 +126,11 @@ async def create_link(req: LinkCreate, current_user=Depends(get_current_user)):
     }
     data = await _belvo("POST", "/api/links/", body)
     with get_conn() as conn:
-        conn.execute(
-            "INSERT OR REPLACE INTO belvo_links (belvo_id, institution, status) VALUES (?,?,?)",
+        cur = conn.cursor()
+        cur.execute(
+            """INSERT INTO belvo_links (belvo_id, institution, status)
+               VALUES (%s, %s, %s)
+               ON CONFLICT (belvo_id) DO UPDATE SET institution=EXCLUDED.institution, status=EXCLUDED.status""",
             (data["id"], req.institution, data.get("status", "valid"))
         )
     return {"belvo_id": data["id"], "institution": req.institution, "status": data.get("status")}
@@ -134,7 +139,9 @@ async def create_link(req: LinkCreate, current_user=Depends(get_current_user)):
 @router.delete("/links/{link_db_id}")
 async def delete_link(link_db_id: int, current_user=Depends(get_current_user)):
     with get_conn() as conn:
-        row = conn.execute("SELECT belvo_id FROM belvo_links WHERE id=?", (link_db_id,)).fetchone()
+        cur = conn.cursor()
+        cur.execute("SELECT belvo_id FROM belvo_links WHERE id=%s", (link_db_id,))
+        row = cur.fetchone()
         if not row:
             raise HTTPException(404, "Link no encontrado")
         belvo_id = row["belvo_id"]
@@ -146,7 +153,8 @@ async def delete_link(link_db_id: int, current_user=Depends(get_current_user)):
         )
 
     with get_conn() as conn:
-        conn.execute("DELETE FROM belvo_links WHERE id=?", (link_db_id,))
+        cur = conn.cursor()
+        cur.execute("DELETE FROM belvo_links WHERE id=%s", (link_db_id,))
     return {"ok": True}
 
 
@@ -155,19 +163,23 @@ async def delete_link(link_db_id: int, current_user=Depends(get_current_user)):
 @router.get("/accounts")
 def list_accounts(current_user=Depends(get_current_user)):
     with get_conn() as conn:
-        rows = conn.execute("""
+        cur = conn.cursor()
+        cur.execute("""
             SELECT a.*, l.institution as bank
             FROM belvo_accounts a
             JOIN belvo_links l ON l.belvo_id = a.link_id
             ORDER BY a.synced_at DESC
-        """).fetchall()
+        """)
+        rows = cur.fetchall()
     return [dict(r) for r in rows]
 
 
 @router.post("/accounts/{link_db_id}")
 async def sync_accounts(link_db_id: int, current_user=Depends(get_current_user)):
     with get_conn() as conn:
-        row = conn.execute("SELECT belvo_id, institution FROM belvo_links WHERE id=?", (link_db_id,)).fetchone()
+        cur = conn.cursor()
+        cur.execute("SELECT belvo_id, institution FROM belvo_links WHERE id=%s", (link_db_id,))
+        row = cur.fetchone()
         if not row:
             raise HTTPException(404, "Link no encontrado")
         belvo_link_id = row["belvo_id"]
@@ -178,14 +190,20 @@ async def sync_accounts(link_db_id: int, current_user=Depends(get_current_user))
 
     saved = 0
     with get_conn() as conn:
+        cur = conn.cursor()
         for acc in accounts:
             balance     = acc.get("balance", {})
             bal_current = balance.get("current") or balance.get("available") or 0
             credit_data = json.dumps(acc.get("credit_data")) if acc.get("credit_data") else None
-            conn.execute("""
-                INSERT OR REPLACE INTO belvo_accounts
+            cur.execute("""
+                INSERT INTO belvo_accounts
                     (belvo_id, link_id, institution, name, type, currency, balance, credit_data, synced_at)
-                VALUES (?,?,?,?,?,?,?,?,?)
+                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                ON CONFLICT (belvo_id) DO UPDATE SET
+                    link_id=EXCLUDED.link_id, institution=EXCLUDED.institution,
+                    name=EXCLUDED.name, type=EXCLUDED.type, currency=EXCLUDED.currency,
+                    balance=EXCLUDED.balance, credit_data=EXCLUDED.credit_data,
+                    synced_at=EXCLUDED.synced_at
             """, (
                 acc["id"], belvo_link_id, institution,
                 acc.get("name", ""), acc.get("type", ""),
@@ -206,28 +224,32 @@ def list_transactions(
     current_user=Depends(get_current_user)
 ):
     with get_conn() as conn:
+        cur = conn.cursor()
         where = []
         params: list = []
         if account_id:
-            where.append("account_id=?")
+            where.append("account_id=%s")
             params.append(account_id)
         if cuotas:
             where.append("installment_total > 1")
         clause = "WHERE " + " AND ".join(where) if where else ""
-        rows = conn.execute(
+        cur.execute(
             f"SELECT * FROM belvo_transactions {clause} ORDER BY value_date DESC LIMIT 300",
             params
-        ).fetchall()
+        )
+        rows = cur.fetchall()
     return [dict(r) for r in rows]
 
 
 @router.post("/sync")
 async def sync_transactions(req: SyncRequest, current_user=Depends(get_current_user)):
     with get_conn() as conn:
-        acc = conn.execute(
-            "SELECT a.*, l.belvo_id as link_belvo_id FROM belvo_accounts a JOIN belvo_links l ON l.belvo_id=a.link_id WHERE a.belvo_id=?",
+        cur = conn.cursor()
+        cur.execute(
+            "SELECT a.*, l.belvo_id as link_belvo_id FROM belvo_accounts a JOIN belvo_links l ON l.belvo_id=a.link_id WHERE a.belvo_id=%s",
             (req.account_id,)
-        ).fetchone()
+        )
+        acc = cur.fetchone()
         if not acc:
             raise HTTPException(404, "Cuenta no encontrada")
 
@@ -245,16 +267,18 @@ async def sync_transactions(req: SyncRequest, current_user=Depends(get_current_u
 
     created = 0
     with get_conn() as conn:
+        cur = conn.cursor()
         for tx in txs:
             desc = tx.get("description") or ""
             inst_num, inst_total = _parse_installments(desc)
             merchant = (tx.get("merchant") or {}).get("name")
             try:
-                conn.execute("""
-                    INSERT OR IGNORE INTO belvo_transactions
+                cur.execute("""
+                    INSERT INTO belvo_transactions
                         (belvo_id, account_id, amount, currency, description, category,
                          type, status, value_date, installment_number, installment_total, merchant)
-                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
+                    VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                    ON CONFLICT (belvo_id) DO NOTHING
                 """, (
                     tx["id"], req.account_id,
                     abs(tx.get("amount") or 0),

@@ -490,18 +490,20 @@ def delete_record(req: RecordDelete, current_user = Depends(get_current_user)):
 def get_history(tab: str | None = None, limit: int = 100, current_user = Depends(get_current_user)):
     """Devuelve el historial de operaciones CRUD en finanzas."""
     with get_conn() as conn:
+        cur = conn.cursor()
         if tab:
-            rows = conn.execute(
+            cur.execute(
                 """SELECT id, action, tab, row_index, data, reason, user_email, created_at
-                   FROM finance_history WHERE tab = ? ORDER BY id DESC LIMIT ?""",
+                   FROM finance_history WHERE tab = %s ORDER BY id DESC LIMIT %s""",
                 (tab, limit)
-            ).fetchall()
+            )
         else:
-            rows = conn.execute(
+            cur.execute(
                 """SELECT id, action, tab, row_index, data, reason, user_email, created_at
-                   FROM finance_history ORDER BY id DESC LIMIT ?""",
+                   FROM finance_history ORDER BY id DESC LIMIT %s""",
                 (limit,)
-            ).fetchall()
+            )
+        rows = cur.fetchall()
     return {
         "count": len(rows),
         "history": [dict(r) for r in rows]

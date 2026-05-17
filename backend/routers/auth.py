@@ -76,7 +76,7 @@ def get_user(email: str) -> Optional[dict]:
 async def get_current_user(token: str = Depends(oauth2_scheme)) -> User:
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Credenciales inválidas",
+        detail="Credenciales invalidas",
         headers={"WWW-Authenticate": "Bearer"},
     )
     try:
@@ -102,19 +102,21 @@ def generate_reset_token() -> str:
 def store_reset_token(email: str, token: str) -> None:
     expires = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(minutes=RESET_TOKEN_EXPIRE_MINUTES)
     with get_conn() as conn:
-        conn.execute(
-            "INSERT INTO reset_tokens (email, token, expires_at) VALUES (?, ?, ?)",
+        cur = conn.cursor()
+        cur.execute(
+            "INSERT INTO reset_tokens (email, token, expires_at) VALUES (%s, %s, %s)",
             (email, token, expires.isoformat()),
         )
-        conn.commit()
 
 
 def validate_reset_token(token: str) -> Optional[str]:
     with get_conn() as conn:
-        row = conn.execute(
-            "SELECT email, expires_at, used FROM reset_tokens WHERE token = ?",
+        cur = conn.cursor()
+        cur.execute(
+            "SELECT email, expires_at, used FROM reset_tokens WHERE token = %s",
             (token,),
-        ).fetchone()
+        )
+        row = cur.fetchone()
         if not row:
             return None
         if row["used"]:
@@ -127,11 +129,11 @@ def validate_reset_token(token: str) -> Optional[str]:
 
 def mark_token_used(token: str) -> None:
     with get_conn() as conn:
-        conn.execute(
-            "UPDATE reset_tokens SET used = 1 WHERE token = ?",
+        cur = conn.cursor()
+        cur.execute(
+            "UPDATE reset_tokens SET used = 1 WHERE token = %s",
             (token,),
         )
-        conn.commit()
 
 
 def send_reset_email(to_email: str, reset_token: str) -> bool:
@@ -151,18 +153,18 @@ def send_reset_email(to_email: str, reset_token: str) -> bool:
         reset_url = f"{app_url}/reset-password?token={reset_token}"
 
         msg = MIMEMultipart("alternative")
-        msg["Subject"] = "Recuperación de contraseña - MainFJ Hub"
+        msg["Subject"] = "Recuperacion de contrasena - MainFJ Hub"
         msg["From"] = smtp_user
         msg["To"] = to_email
 
         text_body = f"""Hola,
 
-Has solicitado restablecer tu contraseña de MainFJ Hub.
+Has solicitado restablecer tu contrasena de MainFJ Hub.
 
-Haz clic en el siguiente enlace para crear una nueva contraseña:
+Haz clic en el siguiente enlace para crear una nueva contrasena:
 {reset_url}
 
-Este enlace expirará en 1 hora.
+Este enlace expirara en 1 hora.
 
 Si no solicitaste este cambio, ignora este correo.
 
@@ -176,12 +178,12 @@ MainFJ Hub
   <div style="max-width: 500px; margin: 0 auto; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; padding: 32px;">
     <h2 style="color: #60A5FA; margin-top: 0;">MainFJ Hub</h2>
     <p style="color: #94A3B8;">Hola,</p>
-    <p style="color: #94A3B8;">Has solicitado restablecer tu contraseña. Haz clic en el botón de abajo para continuar:</p>
+    <p style="color: #94A3B8;">Has solicitado restablecer tu contrasena. Haz clic en el boton de abajo para continuar:</p>
     <div style="text-align: center; margin: 32px 0;">
-      <a href="{reset_url}" style="display: inline-block; background: linear-gradient(90deg, #2563EB, #9333EA); color: white; text-decoration: none; padding: 14px 28px; border-radius: 12px; font-weight: 600;">Restablecer contraseña</a>
+      <a href="{reset_url}" style="display: inline-block; background: linear-gradient(90deg, #2563EB, #9333EA); color: white; text-decoration: none; padding: 14px 28px; border-radius: 12px; font-weight: 600;">Restablecer contrasena</a>
     </div>
     <p style="color: #64748B; font-size: 12px;">O copia y pega este enlace:<br><code style="color: #94A3B8;">{reset_url}</code></p>
-    <p style="color: #64748B; font-size: 12px;">Este enlace expirará en 1 hora. Si no solicitaste este cambio, ignora este correo.</p>
+    <p style="color: #64748B; font-size: 12px;">Este enlace expirara en 1 hora. Si no solicitaste este cambio, ignora este correo.</p>
   </div>
 </body>
 </html>"""
@@ -209,7 +211,7 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()) -> Token:
     if not user or not verify_password(form_data.password, user["password"]):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Email o contraseña incorrectos",
+            detail="Email o contrasena incorrectos",
             headers={"WWW-Authenticate": "Bearer"},
         )
     access_token = create_access_token(data={"sub": user["email"]})
@@ -227,14 +229,14 @@ async def forgot_password(req: ForgotPasswordRequest):
     user = get_user(req.email)
     if not user:
         # Always return success to prevent email enumeration
-        return {"message": "Si el correo existe, recibirás instrucciones para restablecer tu contraseña."}
+        return {"message": "Si el correo existe, recibiras instrucciones para restablecer tu contrasena."}
 
     token = generate_reset_token()
     store_reset_token(req.email, token)
     sent = send_reset_email(req.email, token)
 
     if sent:
-        return {"message": "Si el correo existe, recibirás instrucciones para restablecer tu contraseña."}
+        return {"message": "Si el correo existe, recibiras instrucciones para restablecer tu contrasena."}
     else:
         # If SMTP not configured, return token in response for testing
         return {
@@ -251,7 +253,7 @@ async def reset_password(req: ResetPasswordRequest):
     if not email:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Token inválido o expirado",
+            detail="Token invalido o expirado",
         )
 
     # Update password in memory DB
@@ -260,4 +262,4 @@ async def reset_password(req: ResetPasswordRequest):
 
     mark_token_used(req.token)
 
-    return {"message": "Contraseña actualizada correctamente. Inicia sesión con tu nueva contraseña."}
+    return {"message": "Contrasena actualizada correctamente. Inicia sesion con tu nueva contrasena."}

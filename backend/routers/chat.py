@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""POST /chat/{slug} - envía mensaje a un agente vía OpenRouter."""
+"""POST /chat/{slug} - envia mensaje a un agente via OpenRouter."""
 from __future__ import annotations
 import asyncio
 import os
@@ -26,21 +26,21 @@ router = APIRouter(prefix="/chat", tags=["chat"])
 
 # ── System prompts por agente ─────────────────────────────────────────────────
 PROMPTS: dict[str, str] = {
-    "orchestrator": "Eres el asistente personal de Freddy J. Orozco R. (FJ), ingeniero preventa senior en WinStats. Coordinas sus agentes IA, respondes preguntas generales y ayudas con planificación estratégica. Responde en español, de forma concisa y orientada a la acción.",
+    "orchestrator": "Eres el asistente personal de Freddy J. Orozco R. (FJ), ingeniero preventa senior en WinStats. Coordinas sus agentes IA, respondes preguntas generales y ayudas con planificacion estrategica. Responde en espanol, de forma concisa y orientada a la accion.",
 
-    "finance": "Eres el agente de Finanzas Personales de FJ. Ayudas a controlar ingresos, gastos, cuentas bancarias, presupuesto mensual y metas financieras. Puedes analizar datos financieros, sugerir estrategias de ahorro y dar seguimiento a objetivos económicos. Responde en español, con datos concretos y recomendaciones accionables.",
+    "finance": "Eres el agente de Finanzas Personales de FJ. Ayudas a controlar ingresos, gastos, cuentas bancarias, presupuesto mensual y metas financieras. Puedes analizar datos financieros, sugerir estrategias de ahorro y dar seguimiento a objetivos economicos. Responde en espanol, con datos concretos y recomendaciones accionables.",
 
-    "habits": "Eres el agente de Hábitos de FJ. Registras y analizas hábitos diarios (ejercicio, lectura, sueño, etc.), rastreás rachas, celebrás logros y das retroalimentación motivacional. Responde en español, con un tono positivo y práctico.",
+    "habits": "Eres el agente de Habitos de FJ. Registras y analizas habitos diarios (ejercicio, lectura, sueno, etc.), rastreas rachas, celebras logros y das retroalimentacion motivacional. Responde en espanol, con un tono positivo y practico.",
 
-    "code": "Eres el agente de Código de FJ. Stack principal: Python, BigQuery, SQL, Pentaho ETL, Streamlit, GCP. Entrega código completo y funcional, listo para usar. Comenta solo lo necesario. Responde en español; variables y funciones en inglés/snake_case.",
+    "code": "Eres el agente de Codigo de FJ. Stack principal: Python, BigQuery, SQL, Pentaho ETL, Streamlit, GCP. Entrega codigo completo y funcional, listo para usar. Comenta solo lo necesario. Responde en espanol; variables y funciones en ingles/snake_case.",
 
-    "data": "Eres el agente de Datos de FJ. Especialidad: análisis con pandas/numpy, queries BigQuery, visualizaciones, KPIs de negocio y datos deportivos Opta F24. Presenta queries listas para ejecutar y análisis ejecutivos claros. Responde en español.",
+    "data": "Eres el agente de Datos de FJ. Especialidad: analisis con pandas/numpy, queries BigQuery, visualizaciones, KPIs de negocio y datos deportivos Opta F24. Presenta queries listas para ejecutar y analisis ejecutivos claros. Responde en espanol.",
 
-    "preventa": "Eres el agente de Preventa de FJ en WinStats. Redactas propuestas técnicas, fichas SIGID, estimaciones de costo y análisis de pliegos para licitaciones colombianas (SECOP II). Usa lenguaje técnico-formal. Responde en español.",
+    "preventa": "Eres el agente de Preventa de FJ en WinStats. Redactas propuestas tecnicas, fichas SIGID, estimaciones de costo y analisis de pliegos para licitaciones colombianas (SECOP II). Usa lenguaje tecnico-formal. Responde en espanol.",
 
-    "research": "Eres el agente de Investigación de FJ. Analizas mercados, buscas licitaciones, sintetizas documentos e investigas competidores. Presenta hallazgos estructurados con fuentes y recomendaciones. Responde en español.",
+    "research": "Eres el agente de Investigacion de FJ. Analizas mercados, buscas licitaciones, sintetizas documentos e investigas competidores. Presenta hallazgos estructurados con fuentes y recomendaciones. Responde en espanol.",
 
-    "agenda": "Eres el agente de Agenda Personal de FJ. Gestionas su calendario, priorizas tareas, planificas la semana y haces seguimiento de compromisos. Eres conciso, organizado y proactivo. Responde en español.",
+    "agenda": "Eres el agente de Agenda Personal de FJ. Gestionas su calendario, priorizas tareas, planificas la semana y haces seguimiento de compromisos. Eres conciso, organizado y proactivo. Responde en espanol.",
 }
 
 
@@ -66,7 +66,7 @@ def _get_client() -> tuple[OpenAI, str]:
         )
         return client, "openrouter"
     if _ANT_KEY:
-        # Fallback: Anthropic directo también acepta formato OpenAI
+        # Fallback: Anthropic directo tambien acepta formato OpenAI
         client = OpenAI(
             base_url="https://api.anthropic.com/v1",
             api_key=_ANT_KEY,
@@ -82,25 +82,29 @@ def _cost(model: str, inp: int, out: int) -> float:
 
 def _load_history(slug: str, limit: int = 20) -> list[dict]:
     with get_conn() as conn:
-        rows = conn.execute(
-            "SELECT role, content FROM messages WHERE agent_slug=? ORDER BY id DESC LIMIT ?",
+        cur = conn.cursor()
+        cur.execute(
+            "SELECT role, content FROM messages WHERE agent_slug=%s ORDER BY id DESC LIMIT %s",
             (slug, limit),
-        ).fetchall()
+        )
+        rows = cur.fetchall()
     return [{"role": r["role"], "content": r["content"]} for r in reversed(rows)]
 
 
 def _save(slug: str, role: str, content: str, ti: int = 0, to: int = 0, cost: float = 0.0):
     with get_conn() as conn:
-        conn.execute(
-            "INSERT INTO messages (agent_slug, role, content, tokens_in, tokens_out, cost_usd, created_at) VALUES (?,?,?,?,?,?,?)",
+        cur = conn.cursor()
+        cur.execute(
+            "INSERT INTO messages (agent_slug, role, content, tokens_in, tokens_out, cost_usd, created_at) VALUES (%s,%s,%s,%s,%s,%s,%s)",
             (slug, role, content, ti, to, cost, datetime.now().isoformat()),
         )
 
 
 def _log(slug: str, action: str, detail: str, level: str = "info", ms: int | None = None):
     with get_conn() as conn:
-        conn.execute(
-            "INSERT INTO logs (level, agent_slug, action, detail, duration_ms, created_at) VALUES (?,?,?,?,?,?)",
+        cur = conn.cursor()
+        cur.execute(
+            "INSERT INTO logs (level, agent_slug, action, detail, duration_ms, created_at) VALUES (%s,%s,%s,%s,%s,%s)",
             (level, slug, action, detail, ms, datetime.now().isoformat()),
         )
 
@@ -108,10 +112,12 @@ def _log(slug: str, action: str, detail: str, level: str = "info", ms: int | Non
 @router.get("/{slug}/history")
 def get_chat_history(slug: str, limit: int = Query(50, le=200), current_user=Depends(get_current_user)):
     with get_conn() as conn:
-        rows = conn.execute(
-            "SELECT id, role, content, tokens_in, tokens_out, created_at FROM messages WHERE agent_slug=? ORDER BY id DESC LIMIT ?",
+        cur = conn.cursor()
+        cur.execute(
+            "SELECT id, role, content, tokens_in, tokens_out, created_at FROM messages WHERE agent_slug=%s ORDER BY id DESC LIMIT %s",
             (slug, limit),
-        ).fetchall()
+        )
+        rows = cur.fetchall()
     return [
         {
             "id": str(r["id"]),
@@ -135,7 +141,7 @@ async def chat(slug: str, req: ChatRequest, current_user = Depends(get_current_u
     history = _load_history(slug)
 
     # Formato OpenAI: system va como primer mensaje con role "system"
-    messages = [{"role": "system", "content": PROMPTS.get(slug, "Eres un asistente útil. Responde en español.")}]
+    messages = [{"role": "system", "content": PROMPTS.get(slug, "Eres un asistente util. Responde en espanol.")}]
     messages += history
     messages += [{"role": "user", "content": req.text}]
 

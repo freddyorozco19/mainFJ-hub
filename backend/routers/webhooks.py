@@ -19,7 +19,7 @@ WEBHOOK_SECRET = os.getenv("WEBHOOK_SECRET", "wh-secret-mainfj-2026")
 @router.post("/trigger")
 async def trigger(request: Request, x_webhook_secret: str = Header(None)):
     if x_webhook_secret != WEBHOOK_SECRET:
-        raise HTTPException(status_code=401, detail="Webhook secret inválido")
+        raise HTTPException(status_code=401, detail="Webhook secret invalido")
 
     try:
         body = await request.json()
@@ -32,8 +32,9 @@ async def trigger(request: Request, x_webhook_secret: str = Header(None)):
     payload_str = json.dumps(body, ensure_ascii=False)
 
     with get_conn() as conn:
-        conn.execute(
-            "INSERT INTO webhook_events (source, event_type, payload, received_at) VALUES (?, ?, ?, ?)",
+        cur = conn.cursor()
+        cur.execute(
+            "INSERT INTO webhook_events (source, event_type, payload, received_at) VALUES (%s, %s, %s, %s)",
             (source, event_type, payload_str, datetime.now().isoformat()),
         )
 
@@ -45,10 +46,12 @@ async def trigger(request: Request, x_webhook_secret: str = Header(None)):
 @router.get("/events")
 def get_webhook_events(limit: int = 50, current_user=Depends(get_current_user)):
     with get_conn() as conn:
-        rows = conn.execute(
-            "SELECT id, source, event_type, payload, received_at FROM webhook_events ORDER BY id DESC LIMIT ?",
+        cur = conn.cursor()
+        cur.execute(
+            "SELECT id, source, event_type, payload, received_at FROM webhook_events ORDER BY id DESC LIMIT %s",
             (limit,),
-        ).fetchall()
+        )
+        rows = cur.fetchall()
     return [dict(r) for r in rows]
 
 
@@ -59,5 +62,5 @@ def get_config(current_user=Depends(get_current_user)):
         "webhook_url": f"{render_url}/webhooks/trigger",
         "header_name": "X-Webhook-Secret",
         "secret_hint": "Configura WEBHOOK_SECRET en Render env vars",
-        "example_body": {"event": "mi-evento", "source": "mi-sistema", "message": "Descripción del evento"},
+        "example_body": {"event": "mi-evento", "source": "mi-sistema", "message": "Descripcion del evento"},
     }

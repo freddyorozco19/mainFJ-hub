@@ -2,6 +2,7 @@ node_modules/
 dist/
 .env
 .env.local
+backend/.env
 *.db
 __pycache__/
 *.pyc
