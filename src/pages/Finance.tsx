@@ -1312,7 +1312,7 @@ export function Finance() {
 
         {/* Form fields */}
               {(editingIndex !== null
-                ? Object.keys(records[0] || {})
+                ? [...new Set([...TAB_COLUMNS[crudTab], ...Object.keys(records[0] || {})])]
                 : TAB_COLUMNS[crudTab]
               ).map(col => (
                 <div key={col}>
