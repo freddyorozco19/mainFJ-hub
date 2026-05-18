@@ -993,57 +993,98 @@ def _parse_nubank_credit(text: str) -> list[dict]:
     return transactions
 
 
+def _parse_lulobank_credit(text: str) -> list[dict]:
+    """Parsea extracto de tarjeta de crédito Lulo Bank.
+
+    Formato:
+      Abr 1, 2026 $32,200.00 RAPPI COLOMBIA*DL 0.00% 1 de 1 $00.00
+    """
+    transactions: list[dict] = []
+
+    MONTHS = {
+        'Ene': '01', 'Feb': '02', 'Mar': '03', 'Abr': '04',
+        'May': '05', 'Jun': '06', 'Jul': '07', 'Ago': '08',
+        'Sep': '09', 'Oct': '10', 'Nov': '11', 'Dic': '12',
+    }
+
+    pattern = re.compile(
+        r'(Ene|Feb|Mar|Abr|May|Jun|Jul|Ago|Sep|Oct|Nov|Dic)\s+'
+        r'(\d{1,2}),\s*(\d{4})\s+'
+        r'\$([\d,.]+)\s+'
+        r'(.+?)\s+'
+        r'[\d.]+%\s+'
+        r'(\d+)\s+de\s+(\d+)\s+'
+        r'\$([\d,.]+)'
+    )
+
+    for match in pattern.finditer(text):
+        month_name = match.group(1)
+        day = match.group(2).zfill(2)
+        year = match.group(3)
+        month = MONTHS.get(month_name, '01')
+        fecha = f"{day}/{month}/{year}"
+
+        valor_raw = match.group(4).replace(',', '').replace('.', '')
+        # Lulo uses $32,200.00 format — last 2 digits are cents
+        try:
+            valor = int(float(match.group(4).replace(',', '')))
+        except ValueError:
+            valor = 0
+
+        descripcion = match.group(5).strip()
+        cuota_actual = match.group(6)
+        cuota_total = match.group(7)
+        cuotas_str = f"{cuota_actual}/{cuota_total}" if cuota_total != '0' else ''
+
+        saldo_raw = match.group(8).replace(',', '')
+        try:
+            saldo = int(float(saldo_raw))
+        except ValueError:
+            saldo = 0
+
+        # Skip payment entries (Pago PSE) — cuotas "0 de 0"
+        if cuota_total == '0' and cuota_actual == '0':
+            continue
+
+        transactions.append({
+            'FECHA': fecha,
+            'DESCRIPCION': descripcion,
+            'VALOR': valor,
+            'VALOR_CUOTA': valor,
+            'CUOTAS': cuotas_str,
+            'SALDO_PENDIENTE': saldo,
+            'ENTIDAD': 'Lulo Bank',
+        })
+
+    return transactions
+
+
 def _parse_generic_statement(text: str, entity: str) -> list[dict]:
-    """Parseo genérico usando IA para extractos de cualquier entidad."""
-    try:
-        client = _get_client()
-        prompt = f"""Eres un parser de extractos bancarios. Analiza el siguiente texto extraído de un PDF
-de la entidad "{entity}" y extrae TODAS las transacciones/compras/movimientos.
+    """Parseo genérico regex para extractos no soportados."""
+    transactions: list[dict] = []
 
-Responde SOLO con un JSON array. Cada elemento debe tener exactamente estos campos:
-- FECHA: formato DD/MM/YYYY
-- DESCRIPCION: nombre del comercio o descripción de la transacción
-- VALOR: número sin puntos ni símbolos (ej: 45000, no $45.000,00)
-- CUOTAS: formato "X/N" si aplica (ej: "1/3"), vacío si no tiene cuotas
-- VALOR_CUOTA: valor de la cuota sin puntos ni símbolos, igual a VALOR si no hay cuotas
+    pattern = re.compile(
+        r'(\d{1,2}[/\-]\d{1,2}[/\-]\d{2,4})\s+(.+?)\s+\$?([\d.,]+)\s*$',
+        re.MULTILINE,
+    )
+    for match in pattern.finditer(text):
+        fecha = match.group(1)
+        desc = match.group(2).strip()
+        valor_raw = match.group(3).replace('.', '').replace(',', '.')
+        try:
+            valor = abs(float(valor_raw))
+        except ValueError:
+            valor = 0
+        transactions.append({
+            'FECHA': fecha,
+            'DESCRIPCION': desc,
+            'VALOR': valor,
+            'VALOR_CUOTA': valor,
+            'CUOTAS': '',
+            'ENTIDAD': entity,
+        })
 
-Ignora headers, totales, intereses, seguros y líneas que no sean transacciones individuales.
-Si no encuentras transacciones, responde con un array vacío [].
-
-Texto del extracto:
-{text[:4000]}"""
-
-        resp = client.chat.completions.create(
-            model=_FINANCE_MODEL,
-            max_tokens=2048,
-            messages=[
-                {"role": "system", "content": "Eres un parser preciso de extractos bancarios. Solo devuelves JSON válido."},
-                {"role": "user", "content": prompt},
-            ],
-            extra_headers=_extra_headers(),
-        )
-
-        raw = resp.choices[0].message.content.strip()
-        if "```" in raw:
-            raw = raw.split("```")[1].lstrip("json").strip()
-
-        parsed = json.loads(raw)
-        for t in parsed:
-            t['ENTIDAD'] = entity
-            try:
-                t['VALOR'] = abs(float(str(t.get('VALOR', 0)).replace('.', '').replace(',', '.')))
-            except (ValueError, TypeError):
-                t['VALOR'] = 0
-            try:
-                t['VALOR_CUOTA'] = abs(float(str(t.get('VALOR_CUOTA', t['VALOR'])).replace('.', '').replace(',', '.')))
-            except (ValueError, TypeError):
-                t['VALOR_CUOTA'] = t['VALOR']
-
-        return parsed
-
-    except Exception as e:
-        print(f"[EXTRACTO] AI parse error for {entity}: {e}")
-        raise RuntimeError(f"Error parseando con IA ({entity}): {e}")
+    return transactions
 
 
 @router.post("/extract-statement")
@@ -1080,6 +1121,8 @@ async def extract_statement(
     try:
         if entity_lower == "nubank":
             transactions = _parse_nubank_credit(full_text)
+        elif entity_lower == "lulobank":
+            transactions = _parse_lulobank_credit(full_text)
         else:
             transactions = _parse_generic_statement(full_text, entity)
     except RuntimeError as e:
@@ -1183,6 +1226,8 @@ def drive_parse(
     try:
         if entity_lower == "nubank":
             transactions = _parse_nubank_credit(full_text)
+        elif entity_lower == "lulobank":
+            transactions = _parse_lulobank_credit(full_text)
         else:
             transactions = _parse_generic_statement(full_text, entity)
     except RuntimeError as e:
