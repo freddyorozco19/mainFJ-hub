@@ -282,8 +282,8 @@ export function Finance() {
   const [bulkSaving, setBulkSaving]         = useState(false)
   const [bulkError, setBulkError]           = useState('')
 
-  const BULK_COMMON_FIELDS = ['STORE', 'STORE2', 'COIN', 'PAYMENT', 'ACCOUNT', 'DATE']
-  const BULK_ITEM_FIELDS   = ['PRODUCT', 'DESCRIPTION', 'BRAND', 'CATEGORY', 'VALUE', 'OFFER', 'CUOTAS']
+  const BULK_COMMON_FIELDS = ['STORE', 'STORE2', 'COIN', 'PAYMENT', 'CUOTAS', 'ACCOUNT', 'DATE']
+  const BULK_ITEM_FIELDS   = ['PRODUCT', 'DESCRIPTION', 'BRAND', 'CATEGORY', 'VALUE', 'OFFER']
 
   async function handleBulkSave() {
     if (bulkItems.every(item => !item['PRODUCT'])) {
