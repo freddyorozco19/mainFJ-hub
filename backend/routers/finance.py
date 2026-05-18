@@ -879,7 +879,15 @@ except ImportError:
 
 
 def _parse_nubank_credit(text: str) -> list[dict]:
-    """Parsea extracto de tarjeta de crédito Nubank."""
+    """Parsea extracto de tarjeta de crédito Nubank.
+
+    PyPDF2 extrae el PDF en formato:
+      DD MMM\\n
+      YYYYDescripcion $VALOR X de N $CUOTA $CUOTA $RESTANTE TASA% $INTERES
+    o para compras sin cuotas:
+      DD MMM\\n
+      YYYYDescripcion
+    """
     lines = text.split('\n')
     transactions: list[dict] = []
 
@@ -893,69 +901,75 @@ def _parse_nubank_credit(text: str) -> list[dict]:
     while i < len(lines):
         line = lines[i].strip()
         date_match = re.match(r'^(\d{1,2})\s+(ENE|FEB|MAR|ABR|MAY|JUN|JUL|AGO|SEP|OCT|NOV|DIC)$', line, re.I)
-        if date_match:
-            day = date_match.group(1).zfill(2)
-            month_name = date_match.group(2).upper()
-            month = MONTHS.get(month_name, '01')
-
-            year = None
-            if i + 1 < len(lines) and re.match(r'^\d{4}$', lines[i + 1].strip()):
-                year = lines[i + 1].strip()
-                i += 2
-            else:
-                year = str(datetime.now().year)
-                i += 1
-
-            fecha = f"{day}/{month}/{year}"
-
-            if i < len(lines):
-                descripcion = lines[i].strip()
-                i += 1
-            else:
-                i += 1
-                continue
-
-            amounts: list[str] = []
-            while i < len(lines):
-                val_line = lines[i].strip()
-                if re.match(r'^-?\$[\d.,]+$', val_line):
-                    amounts.append(val_line)
-                    i += 1
-                elif re.match(r'^\d+/\d+$', val_line):
-                    amounts.append(val_line)
-                    i += 1
-                elif re.match(r'^\d+[.,]\d+\s*%?$', val_line):
-                    amounts.append(val_line)
-                    i += 1
-                elif re.match(r'^\d{1,2}\s+(ENE|FEB|MAR|ABR|MAY|JUN|JUL|AGO|SEP|OCT|NOV|DIC)$', val_line, re.I):
-                    break
-                elif val_line == '' or re.match(r'^[A-Z\s]{3,}$', val_line):
-                    break
-                else:
-                    break
-
-            valor_str = amounts[0] if amounts else '$0'
-            valor_clean = valor_str.replace('$', '').replace('.', '').replace(',', '.')
-            try:
-                valor = abs(float(valor_clean))
-            except ValueError:
-                valor = 0
-
-            cuotas_str = ''
-            for a in amounts:
-                if re.match(r'^\d+/\d+$', a):
-                    cuotas_str = a
-                    break
-
-            transactions.append({
-                'FECHA': fecha,
-                'DESCRIPCION': descripcion,
-                'VALOR': valor,
-                'CUOTAS': cuotas_str,
-                'ENTIDAD': 'Nubank',
-            })
-        else:
+        if not date_match:
             i += 1
+            continue
+
+        day = date_match.group(1).zfill(2)
+        month = MONTHS.get(date_match.group(2).upper(), '01')
+        i += 1
+
+        if i >= len(lines):
+            break
+        next_line = lines[i].strip()
+        i += 1
+
+        # Next line starts with 4-digit year glued to description + amounts
+        year_match = re.match(r'^(\d{4})(.+)$', next_line)
+        if not year_match:
+            continue
+
+        year = year_match.group(1)
+        rest = year_match.group(2).strip()
+        fecha = f"{day}/{month}/{year}"
+
+        # Split description from first $ sign (amounts start there)
+        dollar_pos = rest.find('$')
+        if dollar_pos > 0:
+            descripcion = rest[:dollar_pos].strip()
+            amounts_part = rest[dollar_pos:]
+        else:
+            descripcion = rest
+            amounts_part = ''
+
+        # Parse valor (first $amount)
+        valor = 0.0
+        valor_match = re.search(r'\$([\d.,]+)', amounts_part)
+        if valor_match:
+            raw = valor_match.group(1)
+            # Colombian format: $202.676,00 -> dots are thousands, comma is decimal
+            clean = raw.replace('.', '').replace(',', '.')
+            try:
+                valor = abs(float(clean))
+            except ValueError:
+                valor = 0.0
+
+        # Parse cuotas (pattern "X de N")
+        cuotas_str = ''
+        cuotas_match = re.search(r'(\d+)\s+de\s+(\d+)', amounts_part)
+        if cuotas_match:
+            cuotas_str = f"{cuotas_match.group(1)}/{cuotas_match.group(2)}"
+
+        # Parse valor_cuota (second $amount after "X de N")
+        valor_cuota = valor
+        if cuotas_match:
+            after_cuotas = amounts_part[cuotas_match.end():]
+            cuota_val_match = re.search(r'\$([\d.,]+)', after_cuotas)
+            if cuota_val_match:
+                raw = cuota_val_match.group(1).replace('.', '').replace(',', '.')
+                try:
+                    valor_cuota = abs(float(raw))
+                except ValueError:
+                    valor_cuota = valor
+
+        transactions.append({
+            'FECHA': fecha,
+            'DESCRIPCION': descripcion,
+            'VALOR': valor,
+            'VALOR_CUOTA': valor_cuota,
+            'CUOTAS': cuotas_str,
+            'ENTIDAD': 'Nubank',
+        })
 
     return transactions
 
@@ -1031,4 +1045,5 @@ async def extract_statement(
         "count": len(transactions),
         "transactions": transactions,
         "raw_pages": len(reader.pages),
+        "raw_text_preview": full_text[:2000],
     }

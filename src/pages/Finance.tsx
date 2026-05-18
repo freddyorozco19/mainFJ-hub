@@ -458,7 +458,7 @@ export function Finance() {
         VALOR_TOTAL: t.VALOR,
         CUOTAS: t.CUOTAS ? String(t.CUOTAS).split('/')[1] || t.CUOTAS : '1',
         CUOTA_ACTUAL: t.CUOTAS ? String(t.CUOTAS).split('/')[0] || '1' : '1',
-        VALOR_CUOTA: t.VALOR,
+        VALOR_CUOTA: t.VALOR_CUOTA || t.VALOR,
         FECHA_CORTE: '',
         FECHA_PAGO: t.FECHA,
         ESTADO: 'PENDIENTE',
@@ -1614,8 +1614,9 @@ export function Finance() {
                         <th className="px-3 py-2 text-left w-8"></th>
                         <th className="px-3 py-2 text-left">Fecha</th>
                         <th className="px-3 py-2 text-left">Descripción</th>
-                        <th className="px-3 py-2 text-right">Valor</th>
+                        <th className="px-3 py-2 text-right">Valor Total</th>
                         <th className="px-3 py-2 text-center">Cuotas</th>
+                        <th className="px-3 py-2 text-right">Valor Cuota</th>
                         <th className="px-3 py-2 text-left">Entidad</th>
                       </tr>
                     </thead>
@@ -1645,6 +1646,9 @@ export function Finance() {
                             {formatCOPFull(t.VALOR)}
                           </td>
                           <td className="px-3 py-2 text-center text-slate-400">{t.CUOTAS || '—'}</td>
+                          <td className="px-3 py-2 text-right text-slate-300 font-mono">
+                            {t.VALOR_CUOTA ? formatCOPFull(t.VALOR_CUOTA) : '—'}
+                          </td>
                           <td className="px-3 py-2 text-slate-300">{t.ENTIDAD}</td>
                         </tr>
                       ))}
