@@ -275,6 +275,46 @@ export function Finance() {
   const [ocrImage, setOcrImage]               = useState<string | null>(null)
   const [ocrLoading, setOcrLoading]           = useState(false)
 
+  // ── Bulk Purchase Modal ─────────────────────────────────────────────────────
+  const [showBulkModal, setShowBulkModal]   = useState(false)
+  const [bulkCommon, setBulkCommon]         = useState<Record<string, string>>({})
+  const [bulkItems, setBulkItems]           = useState<Record<string, string>[]>([{}])
+  const [bulkSaving, setBulkSaving]         = useState(false)
+  const [bulkError, setBulkError]           = useState('')
+
+  const BULK_COMMON_FIELDS = ['STORE', 'STORE2', 'COIN', 'PAYMENT', 'ACCOUNT', 'DATE']
+  const BULK_ITEM_FIELDS   = ['PRODUCT', 'DESCRIPTION', 'BRAND', 'CATEGORY', 'VALUE', 'OFFER', 'CUOTAS']
+
+  async function handleBulkSave() {
+    if (bulkItems.every(item => !item['PRODUCT'])) {
+      setBulkError('Agrega al menos un producto')
+      return
+    }
+    setBulkSaving(true)
+    setBulkError('')
+    try {
+      const rows = bulkItems
+        .filter(item => item['PRODUCT'])
+        .map(item => ({ ...bulkCommon, ...item }))
+      const res = await api('/finance/records/batch', {
+        method: 'POST',
+        body: { tab: 'shops', rows },
+      })
+      if (!res.ok) {
+        const err = await res.json()
+        throw new Error(err.detail || 'Error al crear los registros')
+      }
+      await loadRecords(crudTab === 'shops' ? 'shops' : crudTab)
+      setShowBulkModal(false)
+      setBulkCommon({})
+      setBulkItems([{}])
+    } catch (e: any) {
+      setBulkError(e.message || 'Error de conexión')
+    } finally {
+      setBulkSaving(false)
+    }
+  }
+
   // ── Delete Confirmation Modal ──────────────────────────────────────────────
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [deleteIndex, setDeleteIndex]         = useState<number | null>(null)
@@ -907,6 +947,14 @@ export function Finance() {
                 <Bot size={13} />
                 Agente
               </button>
+              {crudTab === 'shops' && (
+                <button
+                  onClick={() => { setShowBulkModal(true); setBulkCommon({}); setBulkItems([{}]); setBulkError('') }}
+                  className="px-3 py-2 bg-accent/20 hover:bg-accent/30 border border-accent/30 text-accent text-xs font-medium rounded-lg transition-colors"
+                >
+                  + Agregar Compra
+                </button>
+              )}
               <button
                 onClick={openCreateModal}
                 className="px-3 py-2 bg-primary hover:bg-primary/80 text-white text-xs font-medium rounded-lg transition-colors"
@@ -1492,6 +1540,90 @@ export function Finance() {
                     Eliminar Registro
                   </>
                 )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Bulk Purchase Modal ──────────────────────────────────────────── */}
+      {showBulkModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="bg-card border border-border rounded-2xl w-full max-w-2xl shadow-2xl p-6 space-y-4 max-h-[90vh] overflow-y-auto">
+            <h3 className="text-lg font-bold text-white">Agregar Compra</h3>
+            <p className="text-xs text-slate-500">Llena los datos comunes una vez y agrega los productos de esta compra.</p>
+
+            {/* Datos comunes */}
+            <div className="p-4 rounded-xl border border-border bg-surface/50 space-y-3">
+              <p className="text-xs text-slate-400 font-semibold uppercase tracking-wide">Datos de la compra</p>
+              <div className="grid grid-cols-2 gap-3">
+                {BULK_COMMON_FIELDS.map(col => (
+                  <div key={col}>
+                    <label className="text-xs text-slate-400 mb-1 block">{col}</label>
+                    {renderFormField(col, bulkCommon[col] ?? '', val => setBulkCommon(prev => ({ ...prev, [col]: val })))}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Items */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <p className="text-xs text-slate-400 font-semibold uppercase tracking-wide">Productos ({bulkItems.length})</p>
+                <button
+                  onClick={() => setBulkItems(prev => [...prev, {}])}
+                  className="text-xs text-accent hover:text-accent/80 font-medium transition-colors"
+                >
+                  + Agregar producto
+                </button>
+              </div>
+              {bulkItems.map((item, idx) => (
+                <div key={idx} className="p-4 rounded-xl border border-border bg-surface/30 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-slate-500 font-medium">Producto {idx + 1}</span>
+                    {bulkItems.length > 1 && (
+                      <button
+                        onClick={() => setBulkItems(prev => prev.filter((_, i) => i !== idx))}
+                        className="text-xs text-danger hover:text-danger/80 transition-colors"
+                      >
+                        Eliminar
+                      </button>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    {BULK_ITEM_FIELDS.map(col => (
+                      <div key={col} className={col === 'DESCRIPTION' ? 'col-span-2' : ''}>
+                        <label className="text-xs text-slate-400 mb-1 block">{col}</label>
+                        {renderFormField(col, item[col] ?? '', val =>
+                          setBulkItems(prev => prev.map((it, i) => i === idx ? { ...it, [col]: val } : it))
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {bulkError && (
+              <div className="p-3 bg-danger/10 border border-danger/20 rounded-lg">
+                <p className="text-sm text-danger">{bulkError}</p>
+              </div>
+            )}
+
+            <div className="flex gap-3 pt-2 border-t border-border">
+              <button
+                onClick={() => setShowBulkModal(false)}
+                disabled={bulkSaving}
+                className="flex-1 py-2 text-sm text-slate-400 hover:text-white border border-border rounded-lg hover:bg-white/5 transition-colors disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleBulkSave}
+                disabled={bulkSaving}
+                className="flex-1 py-2 text-sm bg-accent hover:bg-accent/80 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {bulkSaving ? 'Guardando...' : `Crear ${bulkItems.filter(i => i['PRODUCT']).length} registro(s)`}
               </button>
             </div>
           </div>

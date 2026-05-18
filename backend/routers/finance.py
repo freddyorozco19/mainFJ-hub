@@ -124,6 +124,11 @@ class RecordCreate(BaseModel):
     data: dict
 
 
+class RecordBatchCreate(BaseModel):
+    tab: str
+    rows: list[dict]
+
+
 class RecordUpdate(BaseModel):
     tab: str
     row_index: int
@@ -428,6 +433,27 @@ def create_record(req: RecordCreate, current_user = Depends(get_current_user)):
             user_email=getattr(current_user, 'email', None)
         )
         return {"status": "created", "tab": req.tab, "data": req.data}
+    except Exception as e:
+        raise HTTPException(500, str(e))
+
+
+# ── CRUD: Batch create ────────────────────────────────────────────────────────
+@router.post("/records/batch")
+def create_records_batch(req: RecordBatchCreate, current_user = Depends(get_current_user)):
+    """Crea múltiples registros de una sola vez (ej. compra con varios items)."""
+    if req.tab not in COLUMNS:
+        raise HTTPException(400, f"Tab '{req.tab}' no válido")
+    if not req.rows:
+        raise HTTPException(400, "No hay registros para crear")
+    try:
+        count = append_rows_batch(req.tab, req.rows)
+        for row in req.rows:
+            log_finance_history(
+                action="CREATE", tab=req.tab,
+                data=row,
+                user_email=getattr(current_user, 'email', None)
+            )
+        return {"status": "created", "tab": req.tab, "count": count}
     except Exception as e:
         raise HTTPException(500, str(e))
 
