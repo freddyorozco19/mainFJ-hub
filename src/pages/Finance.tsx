@@ -3,7 +3,7 @@ import {
   DollarSign, ShoppingCart,
   Send, Loader2, Bot, Search, PiggyBank,
   AlertCircle, RefreshCw, Sparkles, ChevronDown,
-  BarChart3, Table2, History, FileText, CreditCard, Building2, Upload, Check, X,
+  BarChart3, Table2, History, FileText, CreditCard, Building2, Upload, Check,
 } from 'lucide-react'
 
 import { api } from '../api'
