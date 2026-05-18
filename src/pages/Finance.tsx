@@ -1830,9 +1830,11 @@ export function Finance() {
             )}
           </div>
 
-          {/* ═══ Panel de importación (colapsable) ═══ */}
+          {/* ═══ Modal de importación ═══ */}
           {extractoImportOpen && (
-            <div className="bg-card border border-blue-500/20 rounded-xl p-5 space-y-5">
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+              <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => { setExtractoImportOpen(false); setExtractoTransactions([]); setExtractoMetadata({}); setExtractoError('') }} />
+              <div className="relative bg-card border border-blue-500/20 rounded-xl p-5 space-y-5 w-full max-w-3xl max-h-[85vh] overflow-y-auto">
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="text-sm font-semibold text-white">
@@ -2176,6 +2178,7 @@ export function Finance() {
                   </div>
                 </div>
               )}
+              </div>
             </div>
           )}
         </div>
