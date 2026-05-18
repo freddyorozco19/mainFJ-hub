@@ -1073,6 +1073,7 @@ def _parse_nubank_credit(text: str) -> list[dict]:
             'DESCRIPCION': descripcion,
             'VALOR': valor,
             'VALOR_CUOTA': valor_cuota,
+            'INTERES': '',
             'CUOTAS': cuotas_str,
             'ENTIDAD': 'Nubank',
         })
@@ -1219,6 +1220,7 @@ def _parse_lulobank_credit(text: str) -> list[dict]:
                     'DESCRIPCION': descripcion,
                     'VALOR': valor,
                     'VALOR_CUOTA': valor,
+                    'INTERES': '0.00%',
                     'CUOTAS': cuotas_str,
                     'SALDO_PENDIENTE': saldo,
                     'ENTIDAD': 'Lulo Bank',
@@ -1262,6 +1264,7 @@ def _build_lulo_tx(match: re.Match, months: dict) -> dict | None:
         'DESCRIPCION': descripcion,
         'VALOR': valor,
         'VALOR_CUOTA': valor,
+        'INTERES': '0.00%',
         'CUOTAS': cuotas_str,
         'SALDO_PENDIENTE': saldo,
         'ENTIDAD': 'Lulo Bank',
@@ -1283,13 +1286,13 @@ def _parse_bancolombia_credit(text: str) -> list[dict]:
         pesos_idx = text.find('Moneda: PESOS')
     search_text = text[pesos_idx:] if pesos_idx >= 0 else text
 
-    # Transaction lines: DESCRIPTION[AUTH] DATE $ AMOUNT [CUOTAS] $ CUOTA [%s] $ SALDO
+    # Transaction lines: DESCRIPTION[AUTH] DATE $ AMOUNT [CUOTAS] $ CUOTA [INTERES% ANUAL%] $ SALDO
     pattern = re.compile(
         r'(.+?)\s*(\d{2}/\d{2}/\d{4})\s+'
         r'\$\s*(-?[\d.]+,\d{2})\s+'
         r'(?:(\d+/\d+)\s+)?'
         r'\$\s*(-?[\d.]+,\d{2})\s+'
-        r'(?:[\d,]+\s*%\s+[\d,]+\s*%\s+)?'
+        r'(?:([\d,]+)\s*%\s+[\d,]+\s*%\s+)?'
         r'\$\s*([\d.]+,\d{2})'
     )
 
@@ -1299,7 +1302,8 @@ def _parse_bancolombia_credit(text: str) -> list[dict]:
         valor_str = match.group(3)
         cuotas = match.group(4) or ''
         cuota_str = match.group(5)
-        saldo_str = match.group(6)
+        interes_str = match.group(6) or ''
+        saldo_str = match.group(7)
 
         # Skip header/noise lines
         if any(kw in raw_desc.upper() for kw in [
@@ -1328,12 +1332,14 @@ def _parse_bancolombia_credit(text: str) -> list[dict]:
         valor_cuota = abs(parse_cop(cuota_str))
         saldo = parse_cop(saldo_str)
 
-        # Date is DD/MM/YYYY — keep as is
+        interes = f'{interes_str}%' if interes_str else ''
+
         transactions.append({
             'FECHA': fecha_raw,
             'DESCRIPCION': desc_clean,
             'VALOR': valor,
             'VALOR_CUOTA': valor_cuota,
+            'INTERES': interes,
             'CUOTAS': cuotas,
             'SALDO_PENDIENTE': saldo,
             'ENTIDAD': 'Bancolombia',

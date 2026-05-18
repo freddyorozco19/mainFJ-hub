@@ -33,7 +33,7 @@ COLUMNS = {
     "shops":      ["PRODUCT", "DESCRIPTION", "BRAND", "CATEGORY", "STORE", "STORE2", "COIN", "VALUE", "PAYMENT", "ACCOUNT", "CUOTAS", "OFFER", "DATE", "SHOP_ID"],
     "wishlist":   ["PRODUCTO", "DESCRIPCION", "MONEDA", "VALOR", "TIENDA", "MEDIO", "SOURCE"],
     "debts":      ["PRODUCTO", "DESCRIPCION", "MONEDA", "VALOR", "PAGO", "ESTADO", "FECHA"],
-    "credito":    ["PRODUCTO", "DESCRIPCION", "ENTIDAD", "MONEDA", "VALOR_TOTAL", "CUOTAS", "CUOTA_ACTUAL", "VALOR_CUOTA", "FECHA_CORTE", "FECHA_PAGO", "ESTADO", "TIPO"],
+    "credito":    ["PRODUCTO", "DESCRIPCION", "ENTIDAD", "MONEDA", "VALOR_TOTAL", "CUOTAS", "CUOTA_ACTUAL", "VALOR_CUOTA", "INTERES", "FECHA_CORTE", "FECHA_PAGO", "ESTADO", "TIPO"],
 }
 
 # ── Simple in-memory cache with TTL ─────────────────────────────────────────

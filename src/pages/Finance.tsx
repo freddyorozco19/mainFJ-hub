@@ -34,7 +34,7 @@ const TAB_COLUMNS: Record<TabKey, string[]> = {
   shops:      ['PRODUCT', 'DESCRIPTION', 'BRAND', 'CATEGORY', 'STORE', 'STORE2', 'COIN', 'VALUE', 'PAYMENT', 'ACCOUNT', 'CUOTAS', 'OFFER', 'DATE', 'SHOP_ID'],
   wishlist:   ['PRODUCTO', 'DESCRIPCION', 'MONEDA', 'VALOR', 'TIENDA', 'MEDIO', 'SOURCE'],
   debts:      ['PRODUCTO', 'DESCRIPCION', 'MONEDA', 'VALOR', 'PAGO', 'ESTADO', 'FECHA'],
-  credito:    ['PRODUCTO', 'DESCRIPCION', 'ENTIDAD', 'MONEDA', 'VALOR_TOTAL', 'CUOTAS', 'CUOTA_ACTUAL', 'VALOR_CUOTA', 'FECHA_CORTE', 'FECHA_PAGO', 'ESTADO', 'TIPO'],
+  credito:    ['PRODUCTO', 'DESCRIPCION', 'ENTIDAD', 'MONEDA', 'VALOR_TOTAL', 'CUOTAS', 'CUOTA_ACTUAL', 'VALOR_CUOTA', 'INTERES', 'FECHA_CORTE', 'FECHA_PAGO', 'ESTADO', 'TIPO'],
 }
 
 type SubPageKey = 'dashboard' | 'registros' | 'extractos' | 'history'
@@ -581,6 +581,7 @@ export function Finance() {
         CUOTAS: t.CUOTAS ? String(t.CUOTAS).split('/')[1] || t.CUOTAS : '1',
         CUOTA_ACTUAL: t.CUOTAS ? String(t.CUOTAS).split('/')[0] || '1' : '1',
         VALOR_CUOTA: Math.round(t.VALOR_CUOTA || t.VALOR || 0),
+        INTERES: t.INTERES || '',
         FECHA_CORTE: '',
         FECHA_PAGO: t.FECHA,
         ESTADO: 'PENDIENTE',
