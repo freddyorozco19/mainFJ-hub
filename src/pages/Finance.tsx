@@ -409,6 +409,7 @@ export function Finance() {
   const [extractoSelected, setExtractoSelected]   = useState<Set<number>>(new Set())
   const [extractoSaving, setExtractoSaving]       = useState(false)
   const [extractoSource, setExtractoSource]       = useState<'upload' | 'drive'>('upload')
+  const [extractoMetadata, setExtractoMetadata]   = useState<Record<string, string>>({})
 
   // Drive state
   const [driveAvailable, setDriveAvailable]       = useState(false)
@@ -495,6 +496,7 @@ export function Finance() {
     setExtractoParsing(true)
     setExtractoError('')
     setExtractoTransactions([])
+    setExtractoMetadata({})
     try {
       const formData = new FormData()
       formData.append('file', extractoFile)
@@ -513,6 +515,7 @@ export function Finance() {
       const data = await res.json()
       const txns = data.transactions || []
       setExtractoTransactions(txns)
+      setExtractoMetadata(data.metadata || {})
       setExtractoSelected(new Set(txns.map((_: any, i: number) => i)))
       if (txns.length === 0) {
         const preview = data.raw_text_preview ? `\n\nTexto extraído:\n${data.raw_text_preview}` : ''
@@ -530,6 +533,7 @@ export function Finance() {
     setExtractoParsing(true)
     setExtractoError('')
     setExtractoTransactions([])
+    setExtractoMetadata({})
     try {
       const formData = new FormData()
       formData.append('file_id', driveSelectedFile.id)
@@ -548,6 +552,7 @@ export function Finance() {
       const data = await res.json()
       const txns = data.transactions || []
       setExtractoTransactions(txns)
+      setExtractoMetadata(data.metadata || {})
       setExtractoSelected(new Set(txns.map((_: any, i: number) => i)))
       if (txns.length === 0) {
         const preview = data.raw_text_preview ? `\n\nTexto extraído:\n${data.raw_text_preview}` : ''
@@ -1633,7 +1638,7 @@ export function Finance() {
             {(['creditos', 'cuentas'] as const).map(tab => (
               <button
                 key={tab}
-                onClick={() => { setExtractoTab(tab); setExtractoTransactions([]); setExtractoError('') }}
+                onClick={() => { setExtractoTab(tab); setExtractoTransactions([]); setExtractoMetadata({}); setExtractoError('') }}
                 className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                   extractoTab === tab
                     ? 'bg-blue-500/20 text-blue-400 border border-blue-500/40'
@@ -1685,7 +1690,7 @@ export function Finance() {
               <label className="block text-xs text-slate-400 mb-2">Origen</label>
               <div className="flex gap-2">
                 <button
-                  onClick={() => { setExtractoSource('drive'); setExtractoTransactions([]); setExtractoError('') }}
+                  onClick={() => { setExtractoSource('drive'); setExtractoTransactions([]); setExtractoMetadata({}); setExtractoError('') }}
                   className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                     extractoSource === 'drive'
                       ? 'bg-blue-500/20 text-blue-400 border border-blue-500/40'
@@ -1696,7 +1701,7 @@ export function Finance() {
                   Google Drive
                 </button>
                 <button
-                  onClick={() => { setExtractoSource('upload'); setExtractoTransactions([]); setExtractoError('') }}
+                  onClick={() => { setExtractoSource('upload'); setExtractoTransactions([]); setExtractoMetadata({}); setExtractoError('') }}
                   className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                     extractoSource === 'upload'
                       ? 'bg-blue-500/20 text-blue-400 border border-blue-500/40'
@@ -1811,7 +1816,7 @@ export function Finance() {
                     type="file"
                     accept=".pdf"
                     className="hidden"
-                    onChange={e => { setExtractoFile(e.target.files?.[0] || null); setExtractoTransactions([]); setExtractoError('') }}
+                    onChange={e => { setExtractoFile(e.target.files?.[0] || null); setExtractoTransactions([]); setExtractoMetadata({}); setExtractoError('') }}
                   />
                 </label>
               </div>
@@ -1846,6 +1851,65 @@ export function Finance() {
             {extractoError && (
               <div className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2 whitespace-pre-wrap max-h-[200px] overflow-y-auto">
                 {extractoError}
+              </div>
+            )}
+
+            {/* Metadata panel */}
+            {Object.keys(extractoMetadata).length > 0 && (
+              <div
+                className="rounded-xl border p-4"
+                style={{
+                  borderColor: (EXTRACTO_ENTITIES[extractoEntity]?.color || '#3B82F6') + '40',
+                  backgroundColor: (EXTRACTO_ENTITIES[extractoEntity]?.color || '#3B82F6') + '08',
+                }}
+              >
+                <div className="flex items-center gap-2 mb-3">
+                  <CreditCard size={15} style={{ color: EXTRACTO_ENTITIES[extractoEntity]?.color }} />
+                  <span className="text-sm font-semibold text-white">
+                    {EXTRACTO_ENTITIES[extractoEntity]?.label || extractoEntity}
+                  </span>
+                  {extractoMetadata.cuenta && (
+                    <span className="text-xs text-slate-400 font-mono ml-1">{extractoMetadata.cuenta}</span>
+                  )}
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                  {extractoMetadata.periodo && (
+                    <div>
+                      <div className="text-[10px] uppercase tracking-wider text-slate-500 mb-0.5">Periodo</div>
+                      <div className="text-xs text-slate-200 font-medium">{extractoMetadata.periodo}</div>
+                    </div>
+                  )}
+                  {extractoMetadata.vencimiento && (
+                    <div>
+                      <div className="text-[10px] uppercase tracking-wider text-slate-500 mb-0.5">Vencimiento</div>
+                      <div className="text-xs text-amber-400 font-medium">{extractoMetadata.vencimiento}</div>
+                    </div>
+                  )}
+                  {extractoMetadata.cupo_total && (
+                    <div>
+                      <div className="text-[10px] uppercase tracking-wider text-slate-500 mb-0.5">Cupo Total</div>
+                      <div className="text-xs text-slate-200 font-mono">{extractoMetadata.cupo_total}</div>
+                    </div>
+                  )}
+                  {extractoMetadata.cupo_disponible && (
+                    <div>
+                      <div className="text-[10px] uppercase tracking-wider text-slate-500 mb-0.5">Disponible</div>
+                      <div className="text-xs text-emerald-400 font-mono">{extractoMetadata.cupo_disponible}</div>
+                    </div>
+                  )}
+                  {extractoMetadata.total_pagar && (
+                    <div>
+                      <div className="text-[10px] uppercase tracking-wider text-slate-500 mb-0.5">Total a Pagar</div>
+                      <div className="text-xs text-red-400 font-mono font-semibold">{extractoMetadata.total_pagar}</div>
+                    </div>
+                  )}
+                  {extractoMetadata.pago_minimo && (
+                    <div>
+                      <div className="text-[10px] uppercase tracking-wider text-slate-500 mb-0.5">Pago Mínimo</div>
+                      <div className="text-xs text-orange-400 font-mono">{extractoMetadata.pago_minimo}</div>
+                    </div>
+                  )}
+                </div>
               </div>
             )}
 

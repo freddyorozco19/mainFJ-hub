@@ -878,6 +878,93 @@ except ImportError:
     _PDF_AVAILABLE = False
 
 
+def _extract_statement_metadata(text: str, entity: str) -> dict:
+    """Extrae información general del extracto (cuenta, periodo, vencimiento, cupo, etc.)."""
+    meta: dict = {}
+    entity_lower = entity.lower()
+
+    if entity_lower == 'nubank':
+        # Nubank: "Tarjeta de crédito terminada en •••• 5741"
+        card_m = re.search(r'terminada en[^\d]*(\d{4})', text)
+        if card_m:
+            meta['cuenta'] = f'**** {card_m.group(1)}'
+        # Periodo: "26 MAR - 25 ABR 2026"
+        period_m = re.search(r'(\d{1,2}\s+\w{3})\s*-\s*(\d{1,2}\s+\w{3}\s+\d{4})', text, re.I)
+        if period_m:
+            meta['periodo'] = f'{period_m.group(1)} - {period_m.group(2)}'
+        # Vencimiento: "Fecha limite de pago\n15\nMAY\n2026" or "Fecha de pago ... DD MMM YYYY"
+        venc_m = re.search(r'[Ff]echa\s+(?:l[ií]mite\s+de\s+)?pago[:\s]*(\d{1,2})\s*(\w{3})\s*(\d{4})', text, re.I)
+        if venc_m:
+            meta['vencimiento'] = f'{venc_m.group(1)} {venc_m.group(2)} {venc_m.group(3)}'
+        else:
+            venc_lines = re.search(r'[Ff]echa\s+(?:l[ií]mite\s+de\s+)?pago\s*\n\s*(\d{1,2})\s*\n\s*(\w{3})\s*\n\s*(\d{4})', text)
+            if venc_lines:
+                meta['vencimiento'] = f'{venc_lines.group(1)} {venc_lines.group(2)} {venc_lines.group(3)}'
+        # Cupo / Saldo
+        cupo_m = re.search(r'[Ll][ií]mite.*?\$([\d.,]+)', text)
+        if cupo_m:
+            meta['cupo_total'] = f'${cupo_m.group(1)}'
+        total_m = re.search(r'[Tt]otal\s+a\s+pagar.*?\$([\d.,]+)', text)
+        if total_m:
+            meta['total_pagar'] = f'${total_m.group(1)}'
+
+    elif entity_lower == 'lulobank':
+        # Lulo: periodo "Mar 22, 2026 - Abr 21, 2026"
+        period_m = re.search(r'(\w{3}\s+\d{1,2},\s*\d{4})\s*-\s*(\w{3}\s+\d{1,2},\s*\d{4})', text)
+        if period_m:
+            meta['periodo'] = f'{period_m.group(1)} - {period_m.group(2)}'
+        # Vencimiento: "Fecha de pago\nMay 4, 2026"
+        venc_m = re.search(r'[Ff]echa de pago\s*\n?\s*(\w{3}\s+\d{1,2},\s*\d{4})', text)
+        if venc_m:
+            meta['vencimiento'] = venc_m.group(1)
+        # Cupo
+        cupo_m = re.search(r'Cupo\s+[Tt]otal\s*\$?([\d,.]+)', text)
+        if cupo_m:
+            meta['cupo_total'] = f'${cupo_m.group(1)}'
+        disp_m = re.search(r'Cupo\s+disponible\s*\$?([\d,.]+)', text)
+        if disp_m:
+            meta['cupo_disponible'] = f'${disp_m.group(1)}'
+        total_m = re.search(r'Valor\s+a\s+pagar.*?\$([\d,.]+)', text, re.DOTALL)
+        if total_m:
+            meta['total_pagar'] = f'${total_m.group(1)}'
+        pago_min = re.search(r'Pago\s+m[ií]nimo\s*\$?([\d,.]+)', text)
+        if pago_min:
+            meta['pago_minimo'] = f'${pago_min.group(1)}'
+
+    elif entity_lower == 'bancolombia':
+        card_m = re.search(r'Tarjeta:\s*\*+(\d{4})', text)
+        if card_m:
+            meta['cuenta'] = f'**** {card_m.group(1)}'
+        # Use "Moneda: PESOS" section for summary data
+        pesos_idx = text.find('Moneda: PESOS')
+        if pesos_idx < 0:
+            pesos_idx = text.find('ESTADO DE CUENTA EN: PESOS')
+        pesos_text = text[pesos_idx:] if pesos_idx >= 0 else text
+        # Periodo: "15 abr - 18 may. 2026" (after "Periodo facturado\n")
+        period_m = re.search(r'Periodo\s+facturado\s*\n\s*(\d{1,2}\s+\w{3}\.?)\s*-\s*(\d{1,2}\s+\w{3}\.?\s+\d{4})', pesos_text, re.I)
+        if period_m:
+            meta['periodo'] = f'{period_m.group(1)} - {period_m.group(2)}'
+        # Vencimiento: "Pagar antes de:\njun. 02, 2026"
+        venc_m = re.search(r'Pagar\s+antes\s+de:\s*\n\s*(\w{3}\.?\s+\d{2},\s*\d{4})', pesos_text, re.I)
+        if venc_m:
+            meta['vencimiento'] = venc_m.group(1)
+        cupo_m = re.search(r'Cupo\s+total:\s*\$\s*([\d.,]+)', pesos_text, re.I)
+        if cupo_m:
+            meta['cupo_total'] = f'${cupo_m.group(1)}'
+        disp_m = re.search(r'Disponible:\s*\$\s*([\d.,]+)', pesos_text, re.I)
+        if disp_m:
+            meta['cupo_disponible'] = f'${disp_m.group(1)}'
+        # "Pago Total:\n$ 2.510.890,00$ 2.510.890,00..." — grab first occurrence
+        total_m = re.search(r'Pago\s+Total:\s*\n\s*\$\s*([\d.,]+)', pesos_text, re.I)
+        if total_m:
+            meta['total_pagar'] = f'${total_m.group(1)}'
+        pmin_m = re.search(r'Pago\s+m[ií]nimo:\s*\n\s*\$\s*([\d.,]+)', pesos_text, re.I)
+        if pmin_m:
+            meta['pago_minimo'] = f'${pmin_m.group(1)}'
+
+    return meta
+
+
 def _parse_nubank_credit(text: str) -> list[dict]:
     """Parsea extracto de tarjeta de crédito Nubank.
 
@@ -1326,6 +1413,8 @@ async def extract_statement(
     except RuntimeError as e:
         raise HTTPException(500, str(e))
 
+    metadata = _extract_statement_metadata(full_text, entity)
+
     mov_idx = full_text.find('Movimientos')
     debug_text = full_text[mov_idx:mov_idx + 2000] if mov_idx >= 0 else full_text[:2000]
 
@@ -1334,6 +1423,7 @@ async def extract_statement(
         "type": statement_type,
         "count": len(transactions),
         "transactions": transactions,
+        "metadata": metadata,
         "raw_pages": len(reader.pages),
         "raw_text_preview": debug_text,
     }
@@ -1436,11 +1526,14 @@ def drive_parse(
     except RuntimeError as e:
         raise HTTPException(500, str(e))
 
+    metadata = _extract_statement_metadata(full_text, entity)
+
     return {
         "entity": entity,
         "type": statement_type,
         "count": len(transactions),
         "transactions": transactions,
+        "metadata": metadata,
         "raw_pages": len(reader.pages),
         "raw_text_preview": (full_text[full_text.find('Movimientos'):full_text.find('Movimientos') + 2000]
                              if full_text.find('Movimientos') >= 0 else full_text[:2000]),
