@@ -515,7 +515,8 @@ export function Finance() {
       setExtractoTransactions(txns)
       setExtractoSelected(new Set(txns.map((_: any, i: number) => i)))
       if (txns.length === 0) {
-        setExtractoError(`No se encontraron transacciones en el PDF. Páginas: ${data.raw_pages || '?'}`)
+        const preview = data.raw_text_preview ? `\n\nTexto extraído (primeros 500 chars):\n${data.raw_text_preview.substring(0, 500)}` : ''
+        setExtractoError(`No se encontraron transacciones en el PDF. Páginas: ${data.raw_pages || '?'}${preview}`)
       }
     } catch (e: any) {
       setExtractoError(e.message || 'Error de conexión')
@@ -549,7 +550,8 @@ export function Finance() {
       setExtractoTransactions(txns)
       setExtractoSelected(new Set(txns.map((_: any, i: number) => i)))
       if (txns.length === 0) {
-        setExtractoError(`No se encontraron transacciones en el PDF. Páginas: ${data.raw_pages || '?'}`)
+        const preview = data.raw_text_preview ? `\n\nTexto extraído (primeros 500 chars):\n${data.raw_text_preview.substring(0, 500)}` : ''
+        setExtractoError(`No se encontraron transacciones en el PDF. Páginas: ${data.raw_pages || '?'}${preview}`)
       }
     } catch (e: any) {
       setExtractoError(e.message || 'Error de conexión')
@@ -1842,7 +1844,7 @@ export function Finance() {
             </button>
 
             {extractoError && (
-              <div className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">
+              <div className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2 whitespace-pre-wrap max-h-[200px] overflow-y-auto">
                 {extractoError}
               </div>
             )}
