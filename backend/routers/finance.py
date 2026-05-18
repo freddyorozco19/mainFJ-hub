@@ -1239,6 +1239,7 @@ def drive_parse(
         "count": len(transactions),
         "transactions": transactions,
         "raw_pages": len(reader.pages),
+        "raw_text_preview": full_text[:2000],
     }
 
 
