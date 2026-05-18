@@ -1038,42 +1038,52 @@ def _parse_nubank_credit(text: str) -> list[dict]:
                 else:
                     descripcion += ' ' + continuation
 
-        # Parse valor (first $amount)
+        # Parse all $amounts and interest from amounts_part
+        # Format: $VALOR 1 de N $CUOTA $CUOTA $SALDOPCT% $VALOR_INTERES
+        def _parse_cop(s: str) -> float:
+            try:
+                return abs(float(s.replace('.', '').replace(',', '.')))
+            except ValueError:
+                return 0.0
+
         valor = 0.0
         valor_match = re.search(r'\$([\d.,]+)', amounts_part)
         if valor_match:
-            raw = valor_match.group(1)
-            # Colombian format: $202.676,00 -> dots are thousands, comma is decimal
-            clean = raw.replace('.', '').replace(',', '.')
-            try:
-                valor = abs(float(clean))
-            except ValueError:
-                valor = 0.0
+            valor = _parse_cop(valor_match.group(1))
 
-        # Parse cuotas (pattern "X de N")
         cuotas_str = ''
         cuotas_match = re.search(r'(\d+)\s+de\s+(\d+)', amounts_part)
         if cuotas_match:
             cuotas_str = f"{cuotas_match.group(1)}/{cuotas_match.group(2)}"
 
-        # Parse valor_cuota (second $amount after "X de N")
         valor_cuota = valor
+        pct_interes = ''
+        valor_interes = 0.0
+
         if cuotas_match:
             after_cuotas = amounts_part[cuotas_match.end():]
-            cuota_val_match = re.search(r'\$([\d.,]+)', after_cuotas)
-            if cuota_val_match:
-                raw = cuota_val_match.group(1).replace('.', '').replace(',', '.')
-                try:
-                    valor_cuota = abs(float(raw))
-                except ValueError:
-                    valor_cuota = valor
+            # All $amounts after cuotas: $CUOTA $CUOTA $SALDO[PCT%] $VALOR_INTERES
+            dollar_amounts = list(re.finditer(r'\$([\d.,]+)', after_cuotas))
+
+            if len(dollar_amounts) >= 1:
+                valor_cuota = _parse_cop(dollar_amounts[0].group(1))
+
+            # Interest % is glued to a $amount: "$135.117,332.06%"
+            pct_match = re.search(r'([\d.]+)%', after_cuotas)
+            if pct_match:
+                pct_interes = f"{pct_match.group(1)}%"
+
+            # Last $amount is valor_interes
+            if len(dollar_amounts) >= 3:
+                valor_interes = _parse_cop(dollar_amounts[-1].group(1))
 
         transactions.append({
             'FECHA': fecha,
             'DESCRIPCION': descripcion,
             'VALOR': valor,
             'VALOR_CUOTA': valor_cuota,
-            'INTERES': '',
+            'PCT_INTERES': pct_interes,
+            'VALOR_INTERES': valor_interes,
             'CUOTAS': cuotas_str,
             'ENTIDAD': 'Nubank',
         })
@@ -1220,7 +1230,8 @@ def _parse_lulobank_credit(text: str) -> list[dict]:
                     'DESCRIPCION': descripcion,
                     'VALOR': valor,
                     'VALOR_CUOTA': valor,
-                    'INTERES': '0.00%',
+                    'PCT_INTERES': '0.00%',
+        'VALOR_INTERES': 0,
                     'CUOTAS': cuotas_str,
                     'SALDO_PENDIENTE': saldo,
                     'ENTIDAD': 'Lulo Bank',
@@ -1264,7 +1275,8 @@ def _build_lulo_tx(match: re.Match, months: dict) -> dict | None:
         'DESCRIPCION': descripcion,
         'VALOR': valor,
         'VALOR_CUOTA': valor,
-        'INTERES': '0.00%',
+        'PCT_INTERES': '0.00%',
+        'VALOR_INTERES': 0,
         'CUOTAS': cuotas_str,
         'SALDO_PENDIENTE': saldo,
         'ENTIDAD': 'Lulo Bank',
@@ -1332,14 +1344,15 @@ def _parse_bancolombia_credit(text: str) -> list[dict]:
         valor_cuota = abs(parse_cop(cuota_str))
         saldo = parse_cop(saldo_str)
 
-        interes = f'{interes_str}%' if interes_str else ''
+        pct_interes = f'{interes_str}%' if interes_str else ''
 
         transactions.append({
             'FECHA': fecha_raw,
             'DESCRIPCION': desc_clean,
             'VALOR': valor,
             'VALOR_CUOTA': valor_cuota,
-            'INTERES': interes,
+            'PCT_INTERES': pct_interes,
+            'VALOR_INTERES': 0,
             'CUOTAS': cuotas,
             'SALDO_PENDIENTE': saldo,
             'ENTIDAD': 'Bancolombia',
