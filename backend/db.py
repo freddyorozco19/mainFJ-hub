@@ -230,6 +230,22 @@ def init_db() -> None:
             )
         """)
 
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS extracto_imports (
+                id              SERIAL PRIMARY KEY,
+                entity          TEXT NOT NULL,
+                statement_type  TEXT NOT NULL DEFAULT 'credito',
+                period          TEXT NOT NULL,
+                file_name       TEXT NOT NULL,
+                drive_file_id   TEXT,
+                transactions    INTEGER NOT NULL DEFAULT 0,
+                total_amount    DOUBLE PRECISION NOT NULL DEFAULT 0,
+                currency        TEXT NOT NULL DEFAULT 'COP',
+                user_email      TEXT,
+                created_at      TEXT NOT NULL DEFAULT NOW()::TEXT
+            )
+        """)
+
         # ── Indexes ──────────────────────────────────────────────────────
         indexes = [
             ("idx_msg_agent",        "messages(agent_slug)"),
@@ -243,6 +259,9 @@ def init_db() -> None:
             ("idx_backlog_status",   "backlog_tasks(status)"),
             ("idx_backlog_priority", "backlog_tasks(priority)"),
             ("idx_subtasks_task",    "backlog_subtasks(task_id)"),
+            ("idx_extracto_entity", "extracto_imports(entity)"),
+            ("idx_extracto_period", "extracto_imports(period)"),
+            ("idx_extracto_drive",  "extracto_imports(drive_file_id)"),
         ]
         for idx_name, idx_def in indexes:
             cur.execute(f"CREATE INDEX IF NOT EXISTS {idx_name} ON {idx_def}")

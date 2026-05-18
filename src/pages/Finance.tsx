@@ -419,6 +419,9 @@ export function Finance() {
   const [driveBreadcrumb, setDriveBreadcrumb]     = useState<{ id: string | null; name: string }[]>([{ id: null, name: 'Extractos' }])
   const [driveLoading, setDriveLoading]           = useState(false)
   const [driveSelectedFile, setDriveSelectedFile] = useState<any | null>(null)
+  const [driveImportedIds, setDriveImportedIds]   = useState<Set<string>>(new Set())
+  const [extractoImports, setExtractoImports]     = useState<any[]>([])
+  const [extractoImportsLoading, setExtractoImportsLoading] = useState(false)
 
   const EXTRACTO_ENTITIES: Record<string, { label: string; color: string }> = {
     nubank:       { label: 'Nubank',       color: '#820AD1' },
@@ -436,6 +439,28 @@ export function Finance() {
         setDriveEmail(data.service_account_email || '')
       }
     } catch { /* ignore */ }
+  }
+
+  async function loadImportedDriveIds() {
+    try {
+      const res = await api('/finance/extracto-imports/drive-ids')
+      if (res.ok) {
+        const data = await res.json()
+        setDriveImportedIds(new Set(data.imported_ids || []))
+      }
+    } catch { /* ignore */ }
+  }
+
+  async function loadExtractoImports() {
+    setExtractoImportsLoading(true)
+    try {
+      const res = await api('/finance/extracto-imports')
+      if (res.ok) {
+        const data = await res.json()
+        setExtractoImports(data.imports || [])
+      }
+    } catch { /* ignore */ }
+    setExtractoImportsLoading(false)
   }
 
   async function loadDriveFolder(folderId: string | null) {
@@ -551,9 +576,29 @@ export function Finance() {
         const err = await res.json()
         throw new Error(err.detail || 'Error al importar')
       }
+
+      // Registrar importación
+      const totalAmount = selected.reduce((s, t) => s + (t.VALOR || 0), 0)
+      const firstDate = selected[0]?.FECHA || ''
+      const period = firstDate ? firstDate.split('/').slice(1).reverse().join('-') : new Date().toISOString().slice(0, 7)
+      const fileName = extractoSource === 'drive' && driveSelectedFile ? driveSelectedFile.name : (extractoFile?.name || 'upload.pdf')
+      const driveId = extractoSource === 'drive' && driveSelectedFile ? driveSelectedFile.id : ''
+
+      const importForm = new FormData()
+      importForm.append('entity', extractoEntity)
+      importForm.append('statement_type', extractoTab === 'creditos' ? 'credito' : 'cuenta')
+      importForm.append('period', period)
+      importForm.append('file_name', fileName)
+      importForm.append('drive_file_id', driveId)
+      importForm.append('transactions', String(selected.length))
+      importForm.append('total_amount', String(Math.round(totalAmount)))
+      await api('/finance/extracto-imports', { method: 'POST', body: importForm }).catch(() => {})
+
+      if (driveId) setDriveImportedIds(prev => new Set([...prev, driveId]))
       setExtractoTransactions([])
       setExtractoFile(null)
       setExtractoSelected(new Set())
+      loadExtractoImports()
     } catch (e: any) {
       setExtractoError(e.message || 'Error al importar')
     } finally {
@@ -575,6 +620,8 @@ export function Finance() {
     if (activeSubPage === 'extractos') {
       loadDriveStatus()
       loadDriveFolder(null)
+      loadImportedDriveIds()
+      loadExtractoImports()
     }
   }, [activeSubPage])
 
@@ -1700,7 +1747,9 @@ export function Finance() {
                           </button>
                         ))}
                         {/* PDF Files */}
-                        {driveFiles.map(f => (
+                        {driveFiles.map(f => {
+                          const imported = driveImportedIds.has(f.id)
+                          return (
                           <button
                             key={f.id}
                             onClick={() => setDriveSelectedFile(driveSelectedFile?.id === f.id ? null : f)}
@@ -1708,9 +1757,16 @@ export function Finance() {
                               driveSelectedFile?.id === f.id ? 'bg-blue-500/15' : 'hover:bg-white/5'
                             }`}
                           >
-                            <FileText size={16} className="text-red-400 shrink-0" />
+                            <FileText size={16} className={imported ? 'text-emerald-400 shrink-0' : 'text-red-400 shrink-0'} />
                             <div className="flex-1 min-w-0">
-                              <span className="text-sm text-white block truncate">{f.name}</span>
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm text-white block truncate">{f.name}</span>
+                                {imported && (
+                                  <span className="text-[10px] bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded font-medium shrink-0">
+                                    Importado
+                                  </span>
+                                )}
+                              </div>
                               <span className="text-xs text-slate-500">
                                 {f.size ? `${(Number(f.size) / 1024).toFixed(0)} KB` : ''}
                                 {f.modifiedTime ? ` · ${new Date(f.modifiedTime).toLocaleDateString('es-CO')}` : ''}
@@ -1718,7 +1774,8 @@ export function Finance() {
                             </div>
                             {driveSelectedFile?.id === f.id && <Check size={14} className="text-blue-400 shrink-0" />}
                           </button>
-                        ))}
+                          )
+                        })}
                         {driveFolders.length === 0 && driveFiles.length === 0 && (
                           <div className="text-xs text-slate-500 text-center py-6">Carpeta vacía</div>
                         )}
@@ -1876,6 +1933,57 @@ export function Finance() {
                     {extractoSaving ? 'Importando...' : `Importar ${extractoSelected.size} registros a Crédito`}
                   </button>
                 </div>
+              </div>
+            )}
+          </div>
+
+          {/* Historial de importaciones */}
+          <div className="bg-card border border-border rounded-xl p-5 space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-sm font-semibold text-white">Historial de Importaciones</h3>
+                <p className="text-xs text-slate-500 mt-0.5">Extractos importados previamente</p>
+              </div>
+              <button
+                onClick={loadExtractoImports}
+                className="text-xs text-slate-400 hover:text-white transition-colors"
+              >
+                <RefreshCw size={12} className={extractoImportsLoading ? 'animate-spin' : ''} />
+              </button>
+            </div>
+
+            {extractoImports.length === 0 ? (
+              <p className="text-xs text-slate-500 py-4 text-center">No hay importaciones registradas</p>
+            ) : (
+              <div className="overflow-x-auto rounded-lg border border-border">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="bg-surface/80 text-slate-400">
+                      <th className="px-3 py-2 text-left">Entidad</th>
+                      <th className="px-3 py-2 text-left">Periodo</th>
+                      <th className="px-3 py-2 text-left">Archivo</th>
+                      <th className="px-3 py-2 text-center">Txns</th>
+                      <th className="px-3 py-2 text-right">Total</th>
+                      <th className="px-3 py-2 text-left">Fecha</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {extractoImports.map((imp, i) => (
+                      <tr key={imp.id || i} className="border-t border-border/50 hover:bg-white/3">
+                        <td className="px-3 py-2 text-white font-medium">{imp.entity}</td>
+                        <td className="px-3 py-2 text-slate-300">{imp.period}</td>
+                        <td className="px-3 py-2 text-slate-300 max-w-[200px] truncate">{imp.file_name}</td>
+                        <td className="px-3 py-2 text-center text-slate-400">{imp.transactions}</td>
+                        <td className="px-3 py-2 text-right text-emerald-400 font-mono">
+                          {formatCOPFull(imp.total_amount || 0)}
+                        </td>
+                        <td className="px-3 py-2 text-slate-500">
+                          {imp.created_at ? new Date(imp.created_at).toLocaleDateString('es-CO') : ''}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             )}
           </div>

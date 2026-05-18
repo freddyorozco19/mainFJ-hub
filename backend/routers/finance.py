@@ -994,32 +994,56 @@ def _parse_nubank_credit(text: str) -> list[dict]:
 
 
 def _parse_generic_statement(text: str, entity: str) -> list[dict]:
-    """Parseo genérico para extractos no soportados específicamente."""
-    lines = text.split('\n')
-    transactions: list[dict] = []
+    """Parseo genérico usando IA para extractos de cualquier entidad."""
+    try:
+        client = _get_client()
+        prompt = f"""Eres un parser de extractos bancarios. Analiza el siguiente texto extraído de un PDF
+de la entidad "{entity}" y extrae TODAS las transacciones/compras/movimientos.
 
-    for line in lines:
-        match = re.search(
-            r'(\d{1,2}[/\-]\d{1,2}[/\-]\d{2,4})\s+(.+?)\s+[\$]?([\d.,]+)\s*$',
-            line.strip()
+Responde SOLO con un JSON array. Cada elemento debe tener exactamente estos campos:
+- FECHA: formato DD/MM/YYYY
+- DESCRIPCION: nombre del comercio o descripción de la transacción
+- VALOR: número sin puntos ni símbolos (ej: 45000, no $45.000,00)
+- CUOTAS: formato "X/N" si aplica (ej: "1/3"), vacío si no tiene cuotas
+- VALOR_CUOTA: valor de la cuota sin puntos ni símbolos, igual a VALOR si no hay cuotas
+
+Ignora headers, totales, intereses, seguros y líneas que no sean transacciones individuales.
+Si no encuentras transacciones, responde con un array vacío [].
+
+Texto del extracto:
+{text[:4000]}"""
+
+        resp = client.chat.completions.create(
+            model=_FINANCE_MODEL,
+            max_tokens=2048,
+            messages=[
+                {"role": "system", "content": "Eres un parser preciso de extractos bancarios. Solo devuelves JSON válido."},
+                {"role": "user", "content": prompt},
+            ],
+            extra_headers=_extra_headers(),
         )
-        if match:
-            fecha = match.group(1)
-            desc = match.group(2).strip()
-            valor_raw = match.group(3).replace('.', '').replace(',', '.')
-            try:
-                valor = abs(float(valor_raw))
-            except ValueError:
-                valor = 0
-            transactions.append({
-                'FECHA': fecha,
-                'DESCRIPCION': desc,
-                'VALOR': valor,
-                'CUOTAS': '',
-                'ENTIDAD': entity,
-            })
 
-    return transactions
+        raw = resp.choices[0].message.content.strip()
+        if "```" in raw:
+            raw = raw.split("```")[1].lstrip("json").strip()
+
+        parsed = json.loads(raw)
+        for t in parsed:
+            t['ENTIDAD'] = entity
+            try:
+                t['VALOR'] = abs(float(str(t.get('VALOR', 0)).replace('.', '').replace(',', '.')))
+            except (ValueError, TypeError):
+                t['VALOR'] = 0
+            try:
+                t['VALOR_CUOTA'] = abs(float(str(t.get('VALOR_CUOTA', t['VALOR'])).replace('.', '').replace(',', '.')))
+            except (ValueError, TypeError):
+                t['VALOR_CUOTA'] = t['VALOR']
+
+        return parsed
+
+    except Exception as e:
+        print(f"[EXTRACTO] AI parse error for {entity}: {e}")
+        return []
 
 
 @router.post("/extract-statement")
@@ -1165,3 +1189,61 @@ def drive_parse(
         "transactions": transactions,
         "raw_pages": len(reader.pages),
     }
+
+
+# ── Extracto imports tracking ─────────────────────────────────────────────
+@router.post("/extracto-imports")
+def save_extracto_import(
+    entity: str = Form(...),
+    statement_type: str = Form("credito"),
+    period: str = Form(...),
+    file_name: str = Form(...),
+    drive_file_id: str = Form(""),
+    transactions: int = Form(0),
+    total_amount: float = Form(0),
+    current_user=Depends(get_current_user),
+):
+    """Registra un extracto importado."""
+    with get_conn() as conn:
+        cur = conn.cursor()
+        cur.execute(
+            """INSERT INTO extracto_imports
+               (entity, statement_type, period, file_name, drive_file_id, transactions, total_amount, user_email)
+               VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+               RETURNING id""",
+            (entity, statement_type, period, file_name, drive_file_id or None,
+             transactions, total_amount,
+             getattr(current_user, 'email', None)),
+        )
+        row = cur.fetchone()
+    return {"status": "saved", "id": row["id"] if row else None}
+
+
+@router.get("/extracto-imports")
+def list_extracto_imports(entity: str | None = None, current_user=Depends(get_current_user)):
+    """Lista extractos importados, opcionalmente filtrados por entidad."""
+    with get_conn() as conn:
+        cur = conn.cursor()
+        if entity:
+            cur.execute(
+                """SELECT * FROM extracto_imports WHERE entity = %s ORDER BY created_at DESC LIMIT 200""",
+                (entity,),
+            )
+        else:
+            cur.execute(
+                """SELECT * FROM extracto_imports ORDER BY created_at DESC LIMIT 200"""
+            )
+        rows = cur.fetchall()
+    return {"imports": [dict(r) for r in rows]}
+
+
+@router.get("/extracto-imports/drive-ids")
+def list_imported_drive_ids(current_user=Depends(get_current_user)):
+    """Devuelve los drive_file_id ya importados para marcarlos en la UI."""
+    with get_conn() as conn:
+        cur = conn.cursor()
+        cur.execute(
+            """SELECT drive_file_id FROM extracto_imports WHERE drive_file_id IS NOT NULL"""
+        )
+        rows = cur.fetchall()
+    return {"imported_ids": [r["drive_file_id"] for r in rows]}
