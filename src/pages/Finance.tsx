@@ -410,6 +410,7 @@ export function Finance() {
   const [extractoSaving, setExtractoSaving]       = useState(false)
   const [extractoSource, setExtractoSource]       = useState<'upload' | 'drive'>('upload')
   const [extractoMetadata, setExtractoMetadata]   = useState<Record<string, string>>({})
+  const [extractoImportOpen, setExtractoImportOpen] = useState(false)
 
   // Drive state
   const [driveAvailable, setDriveAvailable]       = useState(false)
@@ -1654,17 +1655,8 @@ export function Finance() {
             ))}
           </div>
 
-          <div className="bg-card border border-border rounded-xl p-5 space-y-5">
-            <div>
-              <h3 className="text-sm font-semibold text-white">
-                Importar Extracto — {extractoTab === 'creditos' ? 'Tarjeta de Crédito' : 'Cuenta Bancaria'}
-              </h3>
-              <p className="text-xs text-slate-500 mt-0.5">
-                Selecciona un extracto desde Google Drive o sube un PDF directamente
-              </p>
-            </div>
-
-            {/* Entity selector */}
+          {/* ═══ Entity selector + Card info ═══ */}
+          <div className="bg-card border border-border rounded-xl p-5 space-y-4">
             <div>
               <label className="block text-xs text-slate-400 mb-2">Entidad Bancaria</label>
               <div className="flex gap-2">
@@ -1722,385 +1714,470 @@ export function Finance() {
                 </div>
               )
             })()}
+          </div>
 
-            {/* Source toggle: Drive / Upload */}
-            <div>
-              <label className="block text-xs text-slate-400 mb-2">Origen</label>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => { setExtractoSource('drive'); setExtractoTransactions([]); setExtractoMetadata({}); setExtractoError('') }}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    extractoSource === 'drive'
-                      ? 'bg-blue-500/20 text-blue-400 border border-blue-500/40'
-                      : 'text-slate-400 border border-border hover:text-white hover:bg-white/5'
-                  }`}
-                >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2L2 19.5h20L12 2z"/></svg>
-                  Google Drive
-                </button>
-                <button
-                  onClick={() => { setExtractoSource('upload'); setExtractoTransactions([]); setExtractoMetadata({}); setExtractoError('') }}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    extractoSource === 'upload'
-                      ? 'bg-blue-500/20 text-blue-400 border border-blue-500/40'
-                      : 'text-slate-400 border border-border hover:text-white hover:bg-white/5'
-                  }`}
-                >
-                  <Upload size={14} />
-                  Subir PDF
-                </button>
-              </div>
-            </div>
-
-            {/* ── Drive browser ── */}
-            {extractoSource === 'drive' && (
-              <div className="space-y-3">
-                {!driveAvailable ? (
-                  <div className="text-xs text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded-lg px-4 py-3 space-y-2">
-                    <p className="font-medium">Google Drive no configurado</p>
-                    <p className="text-slate-400">
-                      1. Agrega <code className="text-amber-300">DRIVE_EXTRACTOS_FOLDER_ID</code> al <code>.env</code> del backend con el ID de la carpeta de extractos.
-                    </p>
-                    {driveEmail && (
-                      <p className="text-slate-400">
-                        2. Comparte la carpeta con: <code className="text-amber-300 select-all">{driveEmail}</code>
-                      </p>
-                    )}
-                  </div>
-                ) : (
-                  <>
-                    {/* Breadcrumb */}
-                    <div className="flex items-center gap-1 text-xs text-slate-400 flex-wrap">
-                      {driveBreadcrumb.map((b, idx) => (
-                        <span key={idx} className="flex items-center gap-1">
-                          {idx > 0 && <span className="text-slate-600">/</span>}
-                          <button
-                            onClick={() => navigateBreadcrumb(idx)}
-                            className={`hover:text-white transition-colors ${idx === driveBreadcrumb.length - 1 ? 'text-white font-medium' : ''}`}
-                          >
-                            {b.name}
-                          </button>
-                        </span>
-                      ))}
-                    </div>
-
-                    {driveLoading ? (
-                      <div className="flex items-center gap-2 text-sm text-slate-400 py-4">
-                        <Loader2 size={14} className="animate-spin" /> Cargando archivos...
-                      </div>
-                    ) : (
-                      <div className="border border-border rounded-lg overflow-hidden max-h-[300px] overflow-y-auto">
-                        {/* Folders */}
-                        {driveFolders.map(f => (
-                          <button
-                            key={f.id}
-                            onClick={() => navigateDriveFolder(f.id, f.name)}
-                            className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-white/5 transition-colors text-left border-b border-border/50"
-                          >
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" className="text-blue-400 shrink-0"><path d="M10 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg>
-                            <span className="text-sm text-white">{f.name}</span>
-                          </button>
-                        ))}
-                        {/* PDF Files */}
-                        {driveFiles.map(f => {
-                          const imported = driveImportedIds.has(f.id)
-                          return (
-                          <button
-                            key={f.id}
-                            onClick={() => setDriveSelectedFile(driveSelectedFile?.id === f.id ? null : f)}
-                            className={`w-full flex items-center gap-3 px-4 py-2.5 transition-colors text-left border-b border-border/50 ${
-                              driveSelectedFile?.id === f.id ? 'bg-blue-500/15' : 'hover:bg-white/5'
-                            }`}
-                          >
-                            <FileText size={16} className={imported ? 'text-emerald-400 shrink-0' : 'text-red-400 shrink-0'} />
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2">
-                                <span className="text-sm text-white block truncate">{f.name}</span>
-                                {imported && (
-                                  <span className="text-[10px] bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded font-medium shrink-0">
-                                    Importado
-                                  </span>
-                                )}
-                              </div>
-                              <span className="text-xs text-slate-500">
-                                {f.size ? `${(Number(f.size) / 1024).toFixed(0)} KB` : ''}
-                                {f.modifiedTime ? ` · ${new Date(f.modifiedTime).toLocaleDateString('es-CO')}` : ''}
-                              </span>
-                            </div>
-                            {driveSelectedFile?.id === f.id && <Check size={14} className="text-blue-400 shrink-0" />}
-                          </button>
-                          )
-                        })}
-                        {driveFolders.length === 0 && driveFiles.length === 0 && (
-                          <div className="text-xs text-slate-500 text-center py-6">Carpeta vacía</div>
-                        )}
-                      </div>
-                    )}
-                  </>
-                )}
-              </div>
-            )}
-
-            {/* ── Upload local ── */}
-            {extractoSource === 'upload' && (
+          {/* ═══ Extractos importados (vista principal) ═══ */}
+          <div className="bg-card border border-border rounded-xl p-5 space-y-4">
+            <div className="flex items-center justify-between">
               <div>
-                <label className="block text-xs text-slate-400 mb-2">Archivo PDF</label>
-                <label className="flex items-center gap-2 px-4 py-3 bg-surface border border-dashed border-border rounded-lg cursor-pointer hover:border-blue-500/50 hover:bg-blue-500/5 transition-colors">
-                  <Upload size={16} className="text-slate-400" />
-                  <span className="text-sm text-slate-300 truncate">
-                    {extractoFile ? extractoFile.name : 'Seleccionar extracto PDF...'}
-                  </span>
-                  <input
-                    type="file"
-                    accept=".pdf"
-                    className="hidden"
-                    onChange={e => { setExtractoFile(e.target.files?.[0] || null); setExtractoTransactions([]); setExtractoMetadata({}); setExtractoError('') }}
-                  />
-                </label>
+                <h3 className="text-sm font-semibold text-white">Extractos — {EXTRACTO_ENTITIES[extractoEntity]?.label || extractoEntity}</h3>
+                <p className="text-xs text-slate-500 mt-0.5">Historial de extractos importados para esta entidad</p>
               </div>
-            )}
-
-            {/* Password */}
-            <div className="max-w-xs">
-              <label className="block text-xs text-slate-400 mb-2">Contraseña del PDF (si tiene)</label>
-              <input
-                type="password"
-                value={extractoPassword}
-                onChange={e => setExtractoPassword(e.target.value)}
-                placeholder="Contraseña..."
-                className="w-full bg-surface border border-border rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500/50"
-              />
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setExtractoImportOpen(!extractoImportOpen)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-medium rounded-lg transition-colors"
+                >
+                  <Upload size={12} />
+                  Importar Extracto
+                </button>
+                <button
+                  onClick={loadExtractoImports}
+                  className="text-xs text-slate-400 hover:text-white transition-colors p-1.5"
+                >
+                  <RefreshCw size={12} className={extractoImportsLoading ? 'animate-spin' : ''} />
+                </button>
+              </div>
             </div>
 
-            {/* Parse button */}
-            <button
-              onClick={extractoSource === 'drive' ? handleDriveParse : handleExtractoParse}
-              disabled={
-                extractoParsing ||
-                (extractoSource === 'upload' && !extractoFile) ||
-                (extractoSource === 'drive' && !driveSelectedFile)
-              }
-              className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-500 disabled:bg-blue-600/30 disabled:text-slate-500 text-white text-sm font-medium rounded-lg transition-colors"
-            >
-              {extractoParsing ? <Loader2 size={14} className="animate-spin" /> : <FileText size={14} />}
-              {extractoParsing ? 'Procesando...' : 'Analizar Extracto'}
-            </button>
-
-            {extractoError && (
-              <div className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2 whitespace-pre-wrap max-h-[200px] overflow-y-auto">
-                {extractoError}
-              </div>
-            )}
-
-            {/* Metadata panel */}
-            {Object.keys(extractoMetadata).length > 0 && (
-              <div
-                className="rounded-xl border p-4"
-                style={{
-                  borderColor: (EXTRACTO_ENTITIES[extractoEntity]?.color || '#3B82F6') + '40',
-                  backgroundColor: (EXTRACTO_ENTITIES[extractoEntity]?.color || '#3B82F6') + '08',
-                }}
-              >
-                <div className="flex items-center gap-2 mb-3">
-                  <CreditCard size={15} style={{ color: EXTRACTO_ENTITIES[extractoEntity]?.color }} />
-                  <span className="text-sm font-semibold text-white">
-                    {EXTRACTO_ENTITIES[extractoEntity]?.label || extractoEntity}
-                  </span>
-                  {extractoMetadata.cuenta && (
-                    <span className="text-xs text-slate-400 font-mono ml-1">{extractoMetadata.cuenta}</span>
-                  )}
+            {/* Filter by selected entity */}
+            {(() => {
+              const entityLabel = EXTRACTO_ENTITIES[extractoEntity]?.label || extractoEntity
+              const filtered = extractoImports.filter(imp =>
+                imp.entity?.toLowerCase() === entityLabel.toLowerCase() ||
+                imp.entity?.toLowerCase() === extractoEntity.toLowerCase()
+              )
+              return filtered.length === 0 ? (
+                <div className="text-center py-8 space-y-2">
+                  <FileText size={28} className="mx-auto text-slate-600" />
+                  <p className="text-sm text-slate-500">No hay extractos importados para {entityLabel}</p>
+                  <button
+                    onClick={() => setExtractoImportOpen(true)}
+                    className="text-xs text-blue-400 hover:text-blue-300 transition-colors"
+                  >
+                    Importar primer extracto
+                  </button>
                 </div>
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-                  {extractoMetadata.periodo && (
-                    <div>
-                      <div className="text-[10px] uppercase tracking-wider text-slate-500 mb-0.5">Periodo</div>
-                      <div className="text-xs text-slate-200 font-medium">{extractoMetadata.periodo}</div>
-                    </div>
-                  )}
-                  {extractoMetadata.vencimiento && (
-                    <div>
-                      <div className="text-[10px] uppercase tracking-wider text-slate-500 mb-0.5">Vencimiento</div>
-                      <div className="text-xs text-amber-400 font-medium">{extractoMetadata.vencimiento}</div>
-                    </div>
-                  )}
-                  {extractoMetadata.cupo_total && (
-                    <div>
-                      <div className="text-[10px] uppercase tracking-wider text-slate-500 mb-0.5">Cupo Total</div>
-                      <div className="text-xs text-slate-200 font-mono">{extractoMetadata.cupo_total}</div>
-                    </div>
-                  )}
-                  {extractoMetadata.cupo_disponible && (
-                    <div>
-                      <div className="text-[10px] uppercase tracking-wider text-slate-500 mb-0.5">Disponible</div>
-                      <div className="text-xs text-emerald-400 font-mono">{extractoMetadata.cupo_disponible}</div>
-                    </div>
-                  )}
-                  {extractoMetadata.total_pagar && (
-                    <div>
-                      <div className="text-[10px] uppercase tracking-wider text-slate-500 mb-0.5">Total a Pagar</div>
-                      <div className="text-xs text-red-400 font-mono font-semibold">{extractoMetadata.total_pagar}</div>
-                    </div>
-                  )}
-                  {extractoMetadata.pago_minimo && (
-                    <div>
-                      <div className="text-[10px] uppercase tracking-wider text-slate-500 mb-0.5">Pago Mínimo</div>
-                      <div className="text-xs text-orange-400 font-mono">{extractoMetadata.pago_minimo}</div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* Preview table */}
-            {extractoTransactions.length > 0 && (
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <h4 className="text-sm font-medium text-white">
-                    {extractoTransactions.length} transacciones encontradas
-                  </h4>
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => {
-                        if (extractoSelected.size === extractoTransactions.length) {
-                          setExtractoSelected(new Set())
-                        } else {
-                          setExtractoSelected(new Set(extractoTransactions.map((_, i) => i)))
-                        }
-                      }}
-                      className="text-xs text-slate-400 hover:text-white transition-colors"
-                    >
-                      {extractoSelected.size === extractoTransactions.length ? 'Deseleccionar todo' : 'Seleccionar todo'}
-                    </button>
-                    <span className="text-xs text-slate-500">
-                      {extractoSelected.size} seleccionadas
-                    </span>
-                  </div>
-                </div>
-
+              ) : (
                 <div className="overflow-x-auto rounded-lg border border-border">
                   <table className="w-full text-xs">
                     <thead>
                       <tr className="bg-surface/80 text-slate-400">
-                        <th className="px-3 py-2 text-left w-8"></th>
-                        <th className="px-3 py-2 text-left">Fecha</th>
-                        <th className="px-3 py-2 text-left">Descripción</th>
-                        <th className="px-3 py-2 text-right">Valor Total</th>
-                        <th className="px-3 py-2 text-center">Cuotas</th>
-                        <th className="px-3 py-2 text-right">Valor Cuota</th>
-                        <th className="px-3 py-2 text-left">Entidad</th>
+                        <th className="px-3 py-2 text-left">Periodo</th>
+                        <th className="px-3 py-2 text-left">Archivo</th>
+                        <th className="px-3 py-2 text-center">Transacciones</th>
+                        <th className="px-3 py-2 text-right">Total</th>
+                        <th className="px-3 py-2 text-left">Importado</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {extractoTransactions.map((t, i) => (
-                        <tr
-                          key={i}
-                          className={`border-t border-border/50 transition-colors ${
-                            extractoSelected.has(i) ? 'bg-blue-500/10' : 'hover:bg-white/3'
-                          }`}
-                        >
-                          <td className="px-3 py-2">
-                            <input
-                              type="checkbox"
-                              checked={extractoSelected.has(i)}
-                              onChange={() => {
-                                const next = new Set(extractoSelected)
-                                next.has(i) ? next.delete(i) : next.add(i)
-                                setExtractoSelected(next)
-                              }}
-                              className="accent-blue-500"
-                            />
-                          </td>
-                          <td className="px-3 py-2 text-slate-300 whitespace-nowrap">{t.FECHA}</td>
-                          <td className="px-3 py-2 text-white max-w-[300px] truncate">{t.DESCRIPCION}</td>
+                      {filtered.map((imp, i) => (
+                        <tr key={imp.id || i} className="border-t border-border/50 hover:bg-white/3">
+                          <td className="px-3 py-2 text-white font-medium">{imp.period}</td>
+                          <td className="px-3 py-2 text-slate-300 max-w-[250px] truncate">{imp.file_name}</td>
+                          <td className="px-3 py-2 text-center text-slate-400">{imp.transactions}</td>
                           <td className="px-3 py-2 text-right text-emerald-400 font-mono">
-                            {formatCOPFull(t.VALOR)}
+                            {formatCOPFull(imp.total_amount || 0)}
                           </td>
-                          <td className="px-3 py-2 text-center text-slate-400">{t.CUOTAS || '—'}</td>
-                          <td className="px-3 py-2 text-right text-slate-300 font-mono">
-                            {t.VALOR_CUOTA ? formatCOPFull(t.VALOR_CUOTA) : '—'}
+                          <td className="px-3 py-2 text-slate-500">
+                            {imp.created_at ? new Date(imp.created_at).toLocaleDateString('es-CO') : ''}
                           </td>
-                          <td className="px-3 py-2 text-slate-300">{t.ENTIDAD}</td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
                 </div>
+              )
+            })()}
 
-                {/* Total + Import button */}
-                <div className="flex items-center justify-between pt-2">
-                  <div className="text-sm text-slate-400">
-                    Total seleccionado:{' '}
-                    <span className="text-white font-semibold">
-                      {formatCOPFull(
-                        extractoTransactions
-                          .filter((_, i) => extractoSelected.has(i))
-                          .reduce((sum, t) => sum + (t.VALOR || 0), 0)
-                      )}
-                    </span>
-                  </div>
+            {/* All entities summary */}
+            {extractoImports.length > 0 && (
+              <details className="group">
+                <summary className="text-xs text-slate-500 cursor-pointer hover:text-slate-300 transition-colors">
+                  Ver todas las entidades ({extractoImports.length} importaciones totales)
+                </summary>
+                <div className="overflow-x-auto rounded-lg border border-border mt-2">
+                  <table className="w-full text-xs">
+                    <thead>
+                      <tr className="bg-surface/80 text-slate-400">
+                        <th className="px-3 py-2 text-left">Entidad</th>
+                        <th className="px-3 py-2 text-left">Periodo</th>
+                        <th className="px-3 py-2 text-left">Archivo</th>
+                        <th className="px-3 py-2 text-center">Txns</th>
+                        <th className="px-3 py-2 text-right">Total</th>
+                        <th className="px-3 py-2 text-left">Fecha</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {extractoImports.map((imp, i) => (
+                        <tr key={imp.id || i} className="border-t border-border/50 hover:bg-white/3">
+                          <td className="px-3 py-2 text-white font-medium">{imp.entity}</td>
+                          <td className="px-3 py-2 text-slate-300">{imp.period}</td>
+                          <td className="px-3 py-2 text-slate-300 max-w-[200px] truncate">{imp.file_name}</td>
+                          <td className="px-3 py-2 text-center text-slate-400">{imp.transactions}</td>
+                          <td className="px-3 py-2 text-right text-emerald-400 font-mono">
+                            {formatCOPFull(imp.total_amount || 0)}
+                          </td>
+                          <td className="px-3 py-2 text-slate-500">
+                            {imp.created_at ? new Date(imp.created_at).toLocaleDateString('es-CO') : ''}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </details>
+            )}
+          </div>
+
+          {/* ═══ Panel de importación (colapsable) ═══ */}
+          {extractoImportOpen && (
+            <div className="bg-card border border-blue-500/20 rounded-xl p-5 space-y-5">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-semibold text-white">
+                    Importar Extracto — {extractoTab === 'creditos' ? 'Tarjeta de Crédito' : 'Cuenta Bancaria'}
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Selecciona un extracto desde Google Drive o sube un PDF directamente
+                  </p>
+                </div>
+                <button
+                  onClick={() => { setExtractoImportOpen(false); setExtractoTransactions([]); setExtractoMetadata({}); setExtractoError('') }}
+                  className="text-slate-500 hover:text-white transition-colors p-1"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12" /></svg>
+                </button>
+              </div>
+
+              {/* Source toggle: Drive / Upload */}
+              <div>
+                <label className="block text-xs text-slate-400 mb-2">Origen</label>
+                <div className="flex gap-2">
                   <button
-                    onClick={handleExtractoImport}
-                    disabled={extractoSelected.size === 0 || extractoSaving}
-                    className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 disabled:bg-emerald-600/30 disabled:text-slate-500 text-white text-sm font-medium rounded-lg transition-colors"
+                    onClick={() => { setExtractoSource('drive'); setExtractoTransactions([]); setExtractoMetadata({}); setExtractoError('') }}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      extractoSource === 'drive'
+                        ? 'bg-blue-500/20 text-blue-400 border border-blue-500/40'
+                        : 'text-slate-400 border border-border hover:text-white hover:bg-white/5'
+                    }`}
                   >
-                    {extractoSaving ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
-                    {extractoSaving ? 'Importando...' : `Importar ${extractoSelected.size} registros a Crédito`}
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2L2 19.5h20L12 2z"/></svg>
+                    Google Drive
+                  </button>
+                  <button
+                    onClick={() => { setExtractoSource('upload'); setExtractoTransactions([]); setExtractoMetadata({}); setExtractoError('') }}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      extractoSource === 'upload'
+                        ? 'bg-blue-500/20 text-blue-400 border border-blue-500/40'
+                        : 'text-slate-400 border border-border hover:text-white hover:bg-white/5'
+                    }`}
+                  >
+                    <Upload size={14} />
+                    Subir PDF
                   </button>
                 </div>
               </div>
-            )}
-          </div>
 
-          {/* Historial de importaciones */}
-          <div className="bg-card border border-border rounded-xl p-5 space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-sm font-semibold text-white">Historial de Importaciones</h3>
-                <p className="text-xs text-slate-500 mt-0.5">Extractos importados previamente</p>
+              {/* ── Drive browser ── */}
+              {extractoSource === 'drive' && (
+                <div className="space-y-3">
+                  {!driveAvailable ? (
+                    <div className="text-xs text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded-lg px-4 py-3 space-y-2">
+                      <p className="font-medium">Google Drive no configurado</p>
+                      <p className="text-slate-400">
+                        1. Agrega <code className="text-amber-300">DRIVE_EXTRACTOS_FOLDER_ID</code> al <code>.env</code> del backend con el ID de la carpeta de extractos.
+                      </p>
+                      {driveEmail && (
+                        <p className="text-slate-400">
+                          2. Comparte la carpeta con: <code className="text-amber-300 select-all">{driveEmail}</code>
+                        </p>
+                      )}
+                    </div>
+                  ) : (
+                    <>
+                      {/* Breadcrumb */}
+                      <div className="flex items-center gap-1 text-xs text-slate-400 flex-wrap">
+                        {driveBreadcrumb.map((b, idx) => (
+                          <span key={idx} className="flex items-center gap-1">
+                            {idx > 0 && <span className="text-slate-600">/</span>}
+                            <button
+                              onClick={() => navigateBreadcrumb(idx)}
+                              className={`hover:text-white transition-colors ${idx === driveBreadcrumb.length - 1 ? 'text-white font-medium' : ''}`}
+                            >
+                              {b.name}
+                            </button>
+                          </span>
+                        ))}
+                      </div>
+
+                      {driveLoading ? (
+                        <div className="flex items-center gap-2 text-sm text-slate-400 py-4">
+                          <Loader2 size={14} className="animate-spin" /> Cargando archivos...
+                        </div>
+                      ) : (
+                        <div className="border border-border rounded-lg overflow-hidden max-h-[300px] overflow-y-auto">
+                          {/* Folders */}
+                          {driveFolders.map(f => (
+                            <button
+                              key={f.id}
+                              onClick={() => navigateDriveFolder(f.id, f.name)}
+                              className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-white/5 transition-colors text-left border-b border-border/50"
+                            >
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" className="text-blue-400 shrink-0"><path d="M10 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg>
+                              <span className="text-sm text-white">{f.name}</span>
+                            </button>
+                          ))}
+                          {/* PDF Files */}
+                          {driveFiles.map(f => {
+                            const imported = driveImportedIds.has(f.id)
+                            return (
+                            <button
+                              key={f.id}
+                              onClick={() => setDriveSelectedFile(driveSelectedFile?.id === f.id ? null : f)}
+                              className={`w-full flex items-center gap-3 px-4 py-2.5 transition-colors text-left border-b border-border/50 ${
+                                driveSelectedFile?.id === f.id ? 'bg-blue-500/15' : 'hover:bg-white/5'
+                              }`}
+                            >
+                              <FileText size={16} className={imported ? 'text-emerald-400 shrink-0' : 'text-red-400 shrink-0'} />
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-sm text-white block truncate">{f.name}</span>
+                                  {imported && (
+                                    <span className="text-[10px] bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded font-medium shrink-0">
+                                      Importado
+                                    </span>
+                                  )}
+                                </div>
+                                <span className="text-xs text-slate-500">
+                                  {f.size ? `${(Number(f.size) / 1024).toFixed(0)} KB` : ''}
+                                  {f.modifiedTime ? ` · ${new Date(f.modifiedTime).toLocaleDateString('es-CO')}` : ''}
+                                </span>
+                              </div>
+                              {driveSelectedFile?.id === f.id && <Check size={14} className="text-blue-400 shrink-0" />}
+                            </button>
+                            )
+                          })}
+                          {driveFolders.length === 0 && driveFiles.length === 0 && (
+                            <div className="text-xs text-slate-500 text-center py-6">Carpeta vacía</div>
+                          )}
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+              )}
+
+              {/* ── Upload local ── */}
+              {extractoSource === 'upload' && (
+                <div>
+                  <label className="block text-xs text-slate-400 mb-2">Archivo PDF</label>
+                  <label className="flex items-center gap-2 px-4 py-3 bg-surface border border-dashed border-border rounded-lg cursor-pointer hover:border-blue-500/50 hover:bg-blue-500/5 transition-colors">
+                    <Upload size={16} className="text-slate-400" />
+                    <span className="text-sm text-slate-300 truncate">
+                      {extractoFile ? extractoFile.name : 'Seleccionar extracto PDF...'}
+                    </span>
+                    <input
+                      type="file"
+                      accept=".pdf"
+                      className="hidden"
+                      onChange={e => { setExtractoFile(e.target.files?.[0] || null); setExtractoTransactions([]); setExtractoMetadata({}); setExtractoError('') }}
+                    />
+                  </label>
+                </div>
+              )}
+
+              {/* Password */}
+              <div className="max-w-xs">
+                <label className="block text-xs text-slate-400 mb-2">Contraseña del PDF (si tiene)</label>
+                <input
+                  type="password"
+                  value={extractoPassword}
+                  onChange={e => setExtractoPassword(e.target.value)}
+                  placeholder="Contraseña..."
+                  className="w-full bg-surface border border-border rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500/50"
+                />
               </div>
+
+              {/* Parse button */}
               <button
-                onClick={loadExtractoImports}
-                className="text-xs text-slate-400 hover:text-white transition-colors"
+                onClick={extractoSource === 'drive' ? handleDriveParse : handleExtractoParse}
+                disabled={
+                  extractoParsing ||
+                  (extractoSource === 'upload' && !extractoFile) ||
+                  (extractoSource === 'drive' && !driveSelectedFile)
+                }
+                className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-500 disabled:bg-blue-600/30 disabled:text-slate-500 text-white text-sm font-medium rounded-lg transition-colors"
               >
-                <RefreshCw size={12} className={extractoImportsLoading ? 'animate-spin' : ''} />
+                {extractoParsing ? <Loader2 size={14} className="animate-spin" /> : <FileText size={14} />}
+                {extractoParsing ? 'Procesando...' : 'Analizar Extracto'}
               </button>
-            </div>
 
-            {extractoImports.length === 0 ? (
-              <p className="text-xs text-slate-500 py-4 text-center">No hay importaciones registradas</p>
-            ) : (
-              <div className="overflow-x-auto rounded-lg border border-border">
-                <table className="w-full text-xs">
-                  <thead>
-                    <tr className="bg-surface/80 text-slate-400">
-                      <th className="px-3 py-2 text-left">Entidad</th>
-                      <th className="px-3 py-2 text-left">Periodo</th>
-                      <th className="px-3 py-2 text-left">Archivo</th>
-                      <th className="px-3 py-2 text-center">Txns</th>
-                      <th className="px-3 py-2 text-right">Total</th>
-                      <th className="px-3 py-2 text-left">Fecha</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {extractoImports.map((imp, i) => (
-                      <tr key={imp.id || i} className="border-t border-border/50 hover:bg-white/3">
-                        <td className="px-3 py-2 text-white font-medium">{imp.entity}</td>
-                        <td className="px-3 py-2 text-slate-300">{imp.period}</td>
-                        <td className="px-3 py-2 text-slate-300 max-w-[200px] truncate">{imp.file_name}</td>
-                        <td className="px-3 py-2 text-center text-slate-400">{imp.transactions}</td>
-                        <td className="px-3 py-2 text-right text-emerald-400 font-mono">
-                          {formatCOPFull(imp.total_amount || 0)}
-                        </td>
-                        <td className="px-3 py-2 text-slate-500">
-                          {imp.created_at ? new Date(imp.created_at).toLocaleDateString('es-CO') : ''}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
+              {extractoError && (
+                <div className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2 whitespace-pre-wrap max-h-[200px] overflow-y-auto">
+                  {extractoError}
+                </div>
+              )}
+
+              {/* Metadata panel */}
+              {Object.keys(extractoMetadata).length > 0 && (
+                <div
+                  className="rounded-xl border p-4"
+                  style={{
+                    borderColor: (EXTRACTO_ENTITIES[extractoEntity]?.color || '#3B82F6') + '40',
+                    backgroundColor: (EXTRACTO_ENTITIES[extractoEntity]?.color || '#3B82F6') + '08',
+                  }}
+                >
+                  <div className="flex items-center gap-2 mb-3">
+                    <CreditCard size={15} style={{ color: EXTRACTO_ENTITIES[extractoEntity]?.color }} />
+                    <span className="text-sm font-semibold text-white">
+                      {EXTRACTO_ENTITIES[extractoEntity]?.label || extractoEntity}
+                    </span>
+                    {extractoMetadata.cuenta && (
+                      <span className="text-xs text-slate-400 font-mono ml-1">{extractoMetadata.cuenta}</span>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                    {extractoMetadata.periodo && (
+                      <div>
+                        <div className="text-[10px] uppercase tracking-wider text-slate-500 mb-0.5">Periodo</div>
+                        <div className="text-xs text-slate-200 font-medium">{extractoMetadata.periodo}</div>
+                      </div>
+                    )}
+                    {extractoMetadata.vencimiento && (
+                      <div>
+                        <div className="text-[10px] uppercase tracking-wider text-slate-500 mb-0.5">Vencimiento</div>
+                        <div className="text-xs text-amber-400 font-medium">{extractoMetadata.vencimiento}</div>
+                      </div>
+                    )}
+                    {extractoMetadata.cupo_total && (
+                      <div>
+                        <div className="text-[10px] uppercase tracking-wider text-slate-500 mb-0.5">Cupo Total</div>
+                        <div className="text-xs text-slate-200 font-mono">{extractoMetadata.cupo_total}</div>
+                      </div>
+                    )}
+                    {extractoMetadata.cupo_disponible && (
+                      <div>
+                        <div className="text-[10px] uppercase tracking-wider text-slate-500 mb-0.5">Disponible</div>
+                        <div className="text-xs text-emerald-400 font-mono">{extractoMetadata.cupo_disponible}</div>
+                      </div>
+                    )}
+                    {extractoMetadata.total_pagar && (
+                      <div>
+                        <div className="text-[10px] uppercase tracking-wider text-slate-500 mb-0.5">Total a Pagar</div>
+                        <div className="text-xs text-red-400 font-mono font-semibold">{extractoMetadata.total_pagar}</div>
+                      </div>
+                    )}
+                    {extractoMetadata.pago_minimo && (
+                      <div>
+                        <div className="text-[10px] uppercase tracking-wider text-slate-500 mb-0.5">Pago Mínimo</div>
+                        <div className="text-xs text-orange-400 font-mono">{extractoMetadata.pago_minimo}</div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Preview table */}
+              {extractoTransactions.length > 0 && (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-sm font-medium text-white">
+                      {extractoTransactions.length} transacciones encontradas
+                    </h4>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => {
+                          if (extractoSelected.size === extractoTransactions.length) {
+                            setExtractoSelected(new Set())
+                          } else {
+                            setExtractoSelected(new Set(extractoTransactions.map((_, i) => i)))
+                          }
+                        }}
+                        className="text-xs text-slate-400 hover:text-white transition-colors"
+                      >
+                        {extractoSelected.size === extractoTransactions.length ? 'Deseleccionar todo' : 'Seleccionar todo'}
+                      </button>
+                      <span className="text-xs text-slate-500">
+                        {extractoSelected.size} seleccionadas
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="overflow-x-auto rounded-lg border border-border">
+                    <table className="w-full text-xs">
+                      <thead>
+                        <tr className="bg-surface/80 text-slate-400">
+                          <th className="px-3 py-2 text-left w-8"></th>
+                          <th className="px-3 py-2 text-left">Fecha</th>
+                          <th className="px-3 py-2 text-left">Descripción</th>
+                          <th className="px-3 py-2 text-right">Valor Total</th>
+                          <th className="px-3 py-2 text-center">Cuotas</th>
+                          <th className="px-3 py-2 text-right">Valor Cuota</th>
+                          <th className="px-3 py-2 text-left">Entidad</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {extractoTransactions.map((t, i) => (
+                          <tr
+                            key={i}
+                            className={`border-t border-border/50 transition-colors ${
+                              extractoSelected.has(i) ? 'bg-blue-500/10' : 'hover:bg-white/3'
+                            }`}
+                          >
+                            <td className="px-3 py-2">
+                              <input
+                                type="checkbox"
+                                checked={extractoSelected.has(i)}
+                                onChange={() => {
+                                  const next = new Set(extractoSelected)
+                                  next.has(i) ? next.delete(i) : next.add(i)
+                                  setExtractoSelected(next)
+                                }}
+                                className="accent-blue-500"
+                              />
+                            </td>
+                            <td className="px-3 py-2 text-slate-300 whitespace-nowrap">{t.FECHA}</td>
+                            <td className="px-3 py-2 text-white max-w-[300px] truncate">{t.DESCRIPCION}</td>
+                            <td className="px-3 py-2 text-right text-emerald-400 font-mono">
+                              {formatCOPFull(t.VALOR)}
+                            </td>
+                            <td className="px-3 py-2 text-center text-slate-400">{t.CUOTAS || '—'}</td>
+                            <td className="px-3 py-2 text-right text-slate-300 font-mono">
+                              {t.VALOR_CUOTA ? formatCOPFull(t.VALOR_CUOTA) : '—'}
+                            </td>
+                            <td className="px-3 py-2 text-slate-300">{t.ENTIDAD}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Total + Import button */}
+                  <div className="flex items-center justify-between pt-2">
+                    <div className="text-sm text-slate-400">
+                      Total seleccionado:{' '}
+                      <span className="text-white font-semibold">
+                        {formatCOPFull(
+                          extractoTransactions
+                            .filter((_, i) => extractoSelected.has(i))
+                            .reduce((sum, t) => sum + (t.VALOR || 0), 0)
+                        )}
+                      </span>
+                    </div>
+                    <button
+                      onClick={handleExtractoImport}
+                      disabled={extractoSelected.size === 0 || extractoSaving}
+                      className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 disabled:bg-emerald-600/30 disabled:text-slate-500 text-white text-sm font-medium rounded-lg transition-colors"
+                    >
+                      {extractoSaving ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
+                      {extractoSaving ? 'Importando...' : `Importar ${extractoSelected.size} registros a Crédito`}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
 
