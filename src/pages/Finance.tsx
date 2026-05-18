@@ -515,7 +515,7 @@ export function Finance() {
       setExtractoTransactions(txns)
       setExtractoSelected(new Set(txns.map((_: any, i: number) => i)))
       if (txns.length === 0) {
-        const preview = data.raw_text_preview ? `\n\nTexto extraído (primeros 500 chars):\n${data.raw_text_preview.substring(0, 500)}` : ''
+        const preview = data.raw_text_preview ? `\n\nTexto extraído:\n${data.raw_text_preview}` : ''
         setExtractoError(`No se encontraron transacciones en el PDF. Páginas: ${data.raw_pages || '?'}${preview}`)
       }
     } catch (e: any) {
@@ -550,7 +550,7 @@ export function Finance() {
       setExtractoTransactions(txns)
       setExtractoSelected(new Set(txns.map((_: any, i: number) => i)))
       if (txns.length === 0) {
-        const preview = data.raw_text_preview ? `\n\nTexto extraído (primeros 500 chars):\n${data.raw_text_preview.substring(0, 500)}` : ''
+        const preview = data.raw_text_preview ? `\n\nTexto extraído:\n${data.raw_text_preview}` : ''
         setExtractoError(`No se encontraron transacciones en el PDF. Páginas: ${data.raw_pages || '?'}${preview}`)
       }
     } catch (e: any) {
