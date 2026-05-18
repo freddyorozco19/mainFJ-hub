@@ -260,7 +260,7 @@ export function Finance() {
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo]     = useState('')
   const [crudPage, setCrudPage] = useState(0)
-  const CRUD_PAGE_SIZE = 20
+  const CRUD_PAGE_SIZE = 15
 
   // ── Crédito filter toggle ──────────────────────────────────────────────────
   const [creditoFilter, setCreditoFilter] = useState<'total' | 'ingreso' | 'egreso'>('total')
