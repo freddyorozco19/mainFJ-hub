@@ -424,11 +424,11 @@ export function Finance() {
   const [extractoImports, setExtractoImports]     = useState<any[]>([])
   const [extractoImportsLoading, setExtractoImportsLoading] = useState(false)
 
-  const EXTRACTO_ENTITIES: Record<string, { label: string; color: string }> = {
-    nubank:       { label: 'Nubank',       color: '#820AD1' },
-    lulobank:     { label: 'Lulo Bank',    color: '#00D26A' },
-    bancolombia:  { label: 'Bancolombia',  color: '#FDDA24' },
-    falabella:    { label: 'Falabella',    color: '#BDD732' },
+  const EXTRACTO_ENTITIES: Record<string, { label: string; color: string; card: { last4: string; type: string; expires: string; since: string } }> = {
+    nubank:       { label: 'Nubank',       color: '#820AD1', card: { last4: '8126', type: 'Mastercard', expires: '04/34', since: '01/05/2026' } },
+    lulobank:     { label: 'Lulo Bank',    color: '#00D26A', card: { last4: '••••', type: '—',          expires: '—',     since: '—' } },
+    bancolombia:  { label: 'Bancolombia',  color: '#FDDA24', card: { last4: '••••', type: '—',          expires: '—',     since: '—' } },
+    falabella:    { label: 'Falabella',    color: '#BDD732', card: { last4: '••••', type: '—',          expires: '—',     since: '—' } },
   }
 
   async function loadDriveStatus() {
@@ -1684,6 +1684,40 @@ export function Finance() {
                 ))}
               </div>
             </div>
+
+            {/* Card info widget */}
+            {(() => {
+              const ent = EXTRACTO_ENTITIES[extractoEntity]
+              if (!ent) return null
+              const { card } = ent
+              return (
+                <div
+                  className="flex items-center gap-4 rounded-lg border px-4 py-3"
+                  style={{ borderColor: ent.color + '30', backgroundColor: ent.color + '08' }}
+                >
+                  <div className="flex items-center gap-2 min-w-0">
+                    <CreditCard size={18} style={{ color: ent.color }} />
+                    <span className="text-sm font-semibold text-white">{ent.label}</span>
+                    <span className="text-xs font-mono text-slate-400">•••• {card.last4}</span>
+                  </div>
+                  <div className="h-4 w-px bg-white/10" />
+                  <div className="flex items-center gap-5 text-xs">
+                    <div>
+                      <span className="text-slate-500">Tipo </span>
+                      <span className="text-slate-200 font-medium">{card.type}</span>
+                    </div>
+                    <div>
+                      <span className="text-slate-500">Vence </span>
+                      <span className="text-slate-200 font-medium">{card.expires}</span>
+                    </div>
+                    <div>
+                      <span className="text-slate-500">Desde </span>
+                      <span className="text-slate-200 font-medium">{card.since}</span>
+                    </div>
+                  </div>
+                </div>
+              )
+            })()}
 
             {/* Source toggle: Drive / Upload */}
             <div>
