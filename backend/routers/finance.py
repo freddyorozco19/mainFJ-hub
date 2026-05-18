@@ -881,12 +881,13 @@ except ImportError:
 def _parse_nubank_credit(text: str) -> list[dict]:
     """Parsea extracto de tarjeta de crédito Nubank.
 
-    PyPDF2 extrae el PDF en formato:
+    PyPDF2 extrae el PDF en formatos posibles:
       DD MMM\\n
-      YYYYDescripcion $VALOR X de N $CUOTA $CUOTA $RESTANTE TASA% $INTERES
-    o para compras sin cuotas:
+      YYYYDescripcion $VALOR X de N $CUOTA ...    (todo en una línea)
+    o con descripción multilinea:
       DD MMM\\n
-      YYYYDescripcion
+      YYYYDescripcion parte1\\n
+      parte2 $VALOR X de N $CUOTA ...              (montos en línea siguiente)
     """
     lines = text.split('\n')
     transactions: list[dict] = []
@@ -914,7 +915,6 @@ def _parse_nubank_credit(text: str) -> list[dict]:
         next_line = lines[i].strip()
         i += 1
 
-        # Next line starts with 4-digit year glued to description + amounts
         year_match = re.match(r'^(\d{4})(.+)$', next_line)
         if not year_match:
             continue
@@ -929,8 +929,27 @@ def _parse_nubank_credit(text: str) -> list[dict]:
             descripcion = rest[:dollar_pos].strip()
             amounts_part = rest[dollar_pos:]
         else:
+            # No $ found — description continues on next line(s)
             descripcion = rest
             amounts_part = ''
+            while i < len(lines):
+                continuation = lines[i].strip()
+                # Stop if we hit another date line
+                if re.match(r'^\d{1,2}\s+(ENE|FEB|MAR|ABR|MAY|JUN|JUL|AGO|SEP|OCT|NOV|DIC)$', continuation, re.I):
+                    break
+                # Stop if empty or looks like a section header
+                if not continuation:
+                    i += 1
+                    break
+                i += 1
+                cdollar = continuation.find('$')
+                if cdollar >= 0:
+                    if cdollar > 0:
+                        descripcion += ' ' + continuation[:cdollar].strip()
+                    amounts_part = continuation[cdollar:]
+                    break
+                else:
+                    descripcion += ' ' + continuation
 
         # Parse valor (first $amount)
         valor = 0.0
