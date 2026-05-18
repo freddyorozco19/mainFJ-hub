@@ -681,6 +681,16 @@ export function Finance() {
         total: items.reduce((sum, { row }) => sum + (Number(String(row['VALUE']).replace(/\D/g, '')) || 0), 0),
       })
     }
+    groups.sort((a, b) => {
+      const toIso = (d: string) => {
+        if (!d) return ''
+        const parts = d.includes('/') ? d.split('/') : d.split('-')
+        return parts.length === 3 && parts[0].length <= 2
+          ? `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`
+          : d
+      }
+      return toIso(b.date).localeCompare(toIso(a.date))
+    })
     if (ungrouped.length > 0) {
       groups.push({ shopId: '', store: 'Sin agrupar', date: '', items: ungrouped, total: ungrouped.reduce((sum, { row }) => sum + (Number(String(row['VALUE']).replace(/\D/g, '')) || 0), 0) })
     }
