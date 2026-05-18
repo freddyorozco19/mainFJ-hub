@@ -425,7 +425,7 @@ export function Finance() {
   const [extractoImportsLoading, setExtractoImportsLoading] = useState(false)
 
   const EXTRACTO_ENTITIES: Record<string, { label: string; color: string; card: { last4: string; type: string; expires: string; since: string; corte: string } }> = {
-    nubank:       { label: 'Nubank',       color: '#820AD1', card: { last4: '8126', type: 'Mastercard', expires: '04/34', since: '01/05/2026', corte: '15 de cada mes' } },
+    nubank:       { label: 'Nubank',       color: '#820AD1', card: { last4: '8126', type: 'Mastercard', expires: '04/34', since: '01/05/2026', corte: '15/mes' } },
     lulobank:     { label: 'Lulo Bank',    color: '#00D26A', card: { last4: '••••', type: '—',          expires: '—',     since: '—',          corte: '—' } },
     bancolombia:  { label: 'Bancolombia',  color: '#FDDA24', card: { last4: '••••', type: '—',          expires: '—',     since: '—',          corte: '—' } },
     falabella:    { label: 'Falabella',    color: '#BDD732', card: { last4: '••••', type: '—',          expires: '—',     since: '—',          corte: '—' } },
