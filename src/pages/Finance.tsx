@@ -424,11 +424,11 @@ export function Finance() {
   const [extractoImports, setExtractoImports]     = useState<any[]>([])
   const [extractoImportsLoading, setExtractoImportsLoading] = useState(false)
 
-  const EXTRACTO_ENTITIES: Record<string, { label: string; color: string; card: { last4: string; type: string; expires: string; since: string } }> = {
-    nubank:       { label: 'Nubank',       color: '#820AD1', card: { last4: '8126', type: 'Mastercard', expires: '04/34', since: '01/05/2026' } },
-    lulobank:     { label: 'Lulo Bank',    color: '#00D26A', card: { last4: '••••', type: '—',          expires: '—',     since: '—' } },
-    bancolombia:  { label: 'Bancolombia',  color: '#FDDA24', card: { last4: '••••', type: '—',          expires: '—',     since: '—' } },
-    falabella:    { label: 'Falabella',    color: '#BDD732', card: { last4: '••••', type: '—',          expires: '—',     since: '—' } },
+  const EXTRACTO_ENTITIES: Record<string, { label: string; color: string; card: { last4: string; type: string; expires: string; since: string; corte: string } }> = {
+    nubank:       { label: 'Nubank',       color: '#820AD1', card: { last4: '8126', type: 'Mastercard', expires: '04/34', since: '01/05/2026', corte: '15 de cada mes' } },
+    lulobank:     { label: 'Lulo Bank',    color: '#00D26A', card: { last4: '••••', type: '—',          expires: '—',     since: '—',          corte: '—' } },
+    bancolombia:  { label: 'Bancolombia',  color: '#FDDA24', card: { last4: '••••', type: '—',          expires: '—',     since: '—',          corte: '—' } },
+    falabella:    { label: 'Falabella',    color: '#BDD732', card: { last4: '••••', type: '—',          expires: '—',     since: '—',          corte: '—' } },
   }
 
   async function loadDriveStatus() {
@@ -1713,6 +1713,10 @@ export function Finance() {
                     <div>
                       <span className="text-slate-500">Desde </span>
                       <span className="text-slate-200 font-medium">{card.since}</span>
+                    </div>
+                    <div>
+                      <span className="text-slate-500">Corte </span>
+                      <span className="text-slate-200 font-medium">{card.corte}</span>
                     </div>
                   </div>
                 </div>
