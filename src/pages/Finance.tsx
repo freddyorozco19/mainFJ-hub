@@ -506,12 +506,17 @@ export function Finance() {
         body: formData,
       })
       if (!res.ok) {
-        const err = await res.json()
-        throw new Error(err.detail || 'Error al parsear extracto')
+        let errMsg = 'Error al parsear extracto'
+        try { const err = await res.json(); errMsg = err.detail || errMsg } catch {}
+        throw new Error(errMsg)
       }
       const data = await res.json()
-      setExtractoTransactions(data.transactions || [])
-      setExtractoSelected(new Set(data.transactions?.map((_: any, i: number) => i) || []))
+      const txns = data.transactions || []
+      setExtractoTransactions(txns)
+      setExtractoSelected(new Set(txns.map((_: any, i: number) => i)))
+      if (txns.length === 0) {
+        setExtractoError(`No se encontraron transacciones en el PDF. Páginas: ${data.raw_pages || '?'}`)
+      }
     } catch (e: any) {
       setExtractoError(e.message || 'Error de conexión')
     } finally {
@@ -535,12 +540,17 @@ export function Finance() {
         body: formData,
       })
       if (!res.ok) {
-        const err = await res.json()
-        throw new Error(err.detail || 'Error al parsear extracto desde Drive')
+        let errMsg = 'Error al parsear extracto desde Drive'
+        try { const err = await res.json(); errMsg = err.detail || errMsg } catch {}
+        throw new Error(errMsg)
       }
       const data = await res.json()
-      setExtractoTransactions(data.transactions || [])
-      setExtractoSelected(new Set(data.transactions?.map((_: any, i: number) => i) || []))
+      const txns = data.transactions || []
+      setExtractoTransactions(txns)
+      setExtractoSelected(new Set(txns.map((_: any, i: number) => i)))
+      if (txns.length === 0) {
+        setExtractoError(`No se encontraron transacciones en el PDF. Páginas: ${data.raw_pages || '?'}`)
+      }
     } catch (e: any) {
       setExtractoError(e.message || 'Error de conexión')
     } finally {

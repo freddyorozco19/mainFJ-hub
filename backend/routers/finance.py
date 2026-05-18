@@ -1043,7 +1043,7 @@ Texto del extracto:
 
     except Exception as e:
         print(f"[EXTRACTO] AI parse error for {entity}: {e}")
-        return []
+        raise RuntimeError(f"Error parseando con IA ({entity}): {e}")
 
 
 @router.post("/extract-statement")
@@ -1077,10 +1077,13 @@ async def extract_statement(
         raise HTTPException(500, f"Error leyendo PDF: {e}")
 
     entity_lower = entity.lower()
-    if entity_lower == "nubank":
-        transactions = _parse_nubank_credit(full_text)
-    else:
-        transactions = _parse_generic_statement(full_text, entity)
+    try:
+        if entity_lower == "nubank":
+            transactions = _parse_nubank_credit(full_text)
+        else:
+            transactions = _parse_generic_statement(full_text, entity)
+    except RuntimeError as e:
+        raise HTTPException(500, str(e))
 
     return {
         "entity": entity,
@@ -1177,10 +1180,13 @@ def drive_parse(
         raise HTTPException(500, f"Error leyendo PDF: {e}")
 
     entity_lower = entity.lower()
-    if entity_lower == "nubank":
-        transactions = _parse_nubank_credit(full_text)
-    else:
-        transactions = _parse_generic_statement(full_text, entity)
+    try:
+        if entity_lower == "nubank":
+            transactions = _parse_nubank_credit(full_text)
+        else:
+            transactions = _parse_generic_statement(full_text, entity)
+    except RuntimeError as e:
+        raise HTTPException(500, str(e))
 
     return {
         "entity": entity,
