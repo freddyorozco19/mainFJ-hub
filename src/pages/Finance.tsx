@@ -346,36 +346,6 @@ export function Finance() {
     }
   }
 
-  const groupedByShop = (() => {
-    if (crudTab !== 'shops') return []
-    const groups: { shopId: string; store: string; date: string; items: typeof filteredCrudRecords; total: number }[] = []
-    const map = new Map<string, typeof filteredCrudRecords>()
-    const ungrouped: typeof filteredCrudRecords = []
-    for (const entry of filteredCrudRecords) {
-      const sid = String(entry.row['SHOP_ID'] ?? '').trim()
-      if (sid) {
-        if (!map.has(sid)) map.set(sid, [])
-        map.get(sid)!.push(entry)
-      } else {
-        ungrouped.push(entry)
-      }
-    }
-    for (const [shopId, items] of map) {
-      const first = items[0].row
-      groups.push({
-        shopId,
-        store: String(first['STORE'] ?? ''),
-        date: String(first['DATE'] ?? ''),
-        items,
-        total: items.reduce((sum, { row }) => sum + (Number(String(row['VALUE']).replace(/\D/g, '')) || 0), 0),
-      })
-    }
-    if (ungrouped.length > 0) {
-      groups.push({ shopId: '', store: 'Sin agrupar', date: '', items: ungrouped, total: ungrouped.reduce((sum, { row }) => sum + (Number(String(row['VALUE']).replace(/\D/g, '')) || 0), 0) })
-    }
-    return groups
-  })()
-
   // ── Delete Confirmation Modal ──────────────────────────────────────────────
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [deleteIndex, setDeleteIndex]         = useState<number | null>(null)
@@ -685,6 +655,37 @@ export function Finance() {
 
   const totalCrudPages = Math.ceil(filteredCrudRecords.length / CRUD_PAGE_SIZE)
   const paginatedCrudRecords = filteredCrudRecords.slice(crudPage * CRUD_PAGE_SIZE, (crudPage + 1) * CRUD_PAGE_SIZE)
+
+  const groupedByShop = (() => {
+    if (crudTab !== 'shops') return []
+    type Entry = { row: Record<string, string | number>; i: number }
+    const groups: { shopId: string; store: string; date: string; items: Entry[]; total: number }[] = []
+    const map = new Map<string, Entry[]>()
+    const ungrouped: Entry[] = []
+    for (const entry of filteredCrudRecords) {
+      const sid = String(entry.row['SHOP_ID'] ?? '').trim()
+      if (sid) {
+        if (!map.has(sid)) map.set(sid, [])
+        map.get(sid)!.push(entry)
+      } else {
+        ungrouped.push(entry)
+      }
+    }
+    for (const [shopId, items] of map) {
+      const first = items[0].row
+      groups.push({
+        shopId,
+        store: String(first['STORE'] ?? ''),
+        date: String(first['DATE'] ?? ''),
+        items,
+        total: items.reduce((sum, { row }) => sum + (Number(String(row['VALUE']).replace(/\D/g, '')) || 0), 0),
+      })
+    }
+    if (ungrouped.length > 0) {
+      groups.push({ shopId: '', store: 'Sin agrupar', date: '', items: ungrouped, total: ungrouped.reduce((sum, { row }) => sum + (Number(String(row['VALUE']).replace(/\D/g, '')) || 0), 0) })
+    }
+    return groups
+  })()
 
   const maxTotal = Math.max(
     ...Object.values(summary).map(s => s?.total_cop ?? 0),
