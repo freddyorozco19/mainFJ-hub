@@ -415,7 +415,7 @@ export function Finance() {
   const [driveEmail, setDriveEmail]               = useState('')
   const [driveFolders, setDriveFolders]           = useState<any[]>([])
   const [driveFiles, setDriveFiles]               = useState<any[]>([])
-  const [driveCurrentFolder, setDriveCurrentFolder] = useState<string | null>(null)
+  const [, setDriveCurrentFolder] = useState<string | null>(null)
   const [driveBreadcrumb, setDriveBreadcrumb]     = useState<{ id: string | null; name: string }[]>([{ id: null, name: 'Extractos' }])
   const [driveLoading, setDriveLoading]           = useState(false)
   const [driveSelectedFile, setDriveSelectedFile] = useState<any | null>(null)
@@ -462,6 +462,35 @@ export function Finance() {
     const target = driveBreadcrumb[index]
     setDriveBreadcrumb(prev => prev.slice(0, index + 1))
     loadDriveFolder(target.id)
+  }
+
+  async function handleExtractoParse() {
+    if (!extractoFile) return
+    setExtractoParsing(true)
+    setExtractoError('')
+    setExtractoTransactions([])
+    try {
+      const formData = new FormData()
+      formData.append('file', extractoFile)
+      formData.append('password', extractoPassword)
+      formData.append('entity', extractoEntity)
+      formData.append('statement_type', extractoTab === 'creditos' ? 'credito' : 'cuenta')
+      const res = await api('/finance/extract-statement', {
+        method: 'POST',
+        body: formData,
+      })
+      if (!res.ok) {
+        const err = await res.json()
+        throw new Error(err.detail || 'Error al parsear extracto')
+      }
+      const data = await res.json()
+      setExtractoTransactions(data.transactions || [])
+      setExtractoSelected(new Set(data.transactions?.map((_: any, i: number) => i) || []))
+    } catch (e: any) {
+      setExtractoError(e.message || 'Error de conexión')
+    } finally {
+      setExtractoParsing(false)
+    }
   }
 
   async function handleDriveParse() {
