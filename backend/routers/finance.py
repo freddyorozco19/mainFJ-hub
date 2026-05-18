@@ -1181,6 +1181,80 @@ def _build_lulo_tx(match: re.Match, months: dict) -> dict | None:
     }
 
 
+def _parse_bancolombia_credit(text: str) -> list[dict]:
+    """Parsea extracto de tarjeta de crédito Bancolombia (AMEX u otra).
+
+    Formato (sección PESOS):
+      AMAZON.COM776701 02/05/2026 $ 372.651,00 1/6 $ 62.108,50 1,9915 % 26,6974 % $ 310.542,50
+      ABONO SUCURSAL VIRTUAL951520 05/05/2026 $ -50.000,00 $ -50.000,00 $ 0,00
+    """
+    transactions: list[dict] = []
+
+    # Only parse PESOS section (skip DOLARES)
+    pesos_idx = text.find('ESTADO DE CUENTA EN: PESOS')
+    if pesos_idx < 0:
+        pesos_idx = text.find('Moneda: PESOS')
+    search_text = text[pesos_idx:] if pesos_idx >= 0 else text
+
+    # Transaction lines: DESCRIPTION[AUTH] DATE $ AMOUNT [CUOTAS] $ CUOTA [%s] $ SALDO
+    pattern = re.compile(
+        r'(.+?)\s*(\d{2}/\d{2}/\d{4})\s+'
+        r'\$\s*(-?[\d.]+,\d{2})\s+'
+        r'(?:(\d+/\d+)\s+)?'
+        r'\$\s*(-?[\d.]+,\d{2})\s+'
+        r'(?:[\d,]+\s*%\s+[\d,]+\s*%\s+)?'
+        r'\$\s*([\d.]+,\d{2})'
+    )
+
+    for match in pattern.finditer(search_text):
+        raw_desc = match.group(1).strip()
+        fecha_raw = match.group(2)
+        valor_str = match.group(3)
+        cuotas = match.group(4) or ''
+        cuota_str = match.group(5)
+        saldo_str = match.group(6)
+
+        # Skip header/noise lines
+        if any(kw in raw_desc.upper() for kw in [
+            'CATEGORÍA', 'CATEGORIA', 'NÚMERO DE', 'NUMERO DE',
+            'AUTORIZACIÓN', 'AUTORIZACION', 'MOVIMIENTOS',
+        ]):
+            continue
+
+        # Skip payments (ABONO) and interest (INTERESES)
+        if raw_desc.upper().startswith('ABONO') or raw_desc.upper().startswith('INTERESES'):
+            continue
+
+        # Clean description: remove trailing auth number (6 digits at end)
+        desc_clean = re.sub(r'\d{6}$', '', raw_desc).strip()
+        if not desc_clean:
+            desc_clean = raw_desc
+
+        # Parse Colombian format: 372.651,00 → 372651
+        def parse_cop(s: str) -> int:
+            try:
+                return int(float(s.replace('.', '').replace(',', '.')))
+            except ValueError:
+                return 0
+
+        valor = abs(parse_cop(valor_str))
+        valor_cuota = abs(parse_cop(cuota_str))
+        saldo = parse_cop(saldo_str)
+
+        # Date is DD/MM/YYYY — keep as is
+        transactions.append({
+            'FECHA': fecha_raw,
+            'DESCRIPCION': desc_clean,
+            'VALOR': valor,
+            'VALOR_CUOTA': valor_cuota,
+            'CUOTAS': cuotas,
+            'SALDO_PENDIENTE': saldo,
+            'ENTIDAD': 'Bancolombia',
+        })
+
+    return transactions
+
+
 def _parse_generic_statement(text: str, entity: str) -> list[dict]:
     """Parseo genérico regex para extractos no soportados."""
     transactions: list[dict] = []
@@ -1245,6 +1319,8 @@ async def extract_statement(
             transactions = _parse_nubank_credit(full_text)
         elif entity_lower == "lulobank":
             transactions = _parse_lulobank_credit(full_text)
+        elif entity_lower == "bancolombia":
+            transactions = _parse_bancolombia_credit(full_text)
         else:
             transactions = _parse_generic_statement(full_text, entity)
     except RuntimeError as e:
@@ -1353,6 +1429,8 @@ def drive_parse(
             transactions = _parse_nubank_credit(full_text)
         elif entity_lower == "lulobank":
             transactions = _parse_lulobank_credit(full_text)
+        elif entity_lower == "bancolombia":
+            transactions = _parse_bancolombia_credit(full_text)
         else:
             transactions = _parse_generic_statement(full_text, entity)
     except RuntimeError as e:
