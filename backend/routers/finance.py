@@ -867,3 +867,168 @@ async def ocr_invoice(current_user = Depends(get_current_user),
         raise HTTPException(500, f"Error procesando imagen: {e}")
     extracted = _parse_invoice_text(text, tab)
     return {"extracted": extracted}
+
+
+# ── Extractos bancarios (PDF) ────────────────────────────────────────────────
+try:
+    from PyPDF2 import PdfReader
+    _PDF_AVAILABLE = True
+except ImportError:
+    PdfReader = None  # type: ignore
+    _PDF_AVAILABLE = False
+
+
+def _parse_nubank_credit(text: str) -> list[dict]:
+    """Parsea extracto de tarjeta de crédito Nubank."""
+    lines = text.split('\n')
+    transactions: list[dict] = []
+
+    MONTHS = {
+        'ENE': '01', 'FEB': '02', 'MAR': '03', 'ABR': '04',
+        'MAY': '05', 'JUN': '06', 'JUL': '07', 'AGO': '08',
+        'SEP': '09', 'OCT': '10', 'NOV': '11', 'DIC': '12',
+    }
+
+    i = 0
+    while i < len(lines):
+        line = lines[i].strip()
+        date_match = re.match(r'^(\d{1,2})\s+(ENE|FEB|MAR|ABR|MAY|JUN|JUL|AGO|SEP|OCT|NOV|DIC)$', line, re.I)
+        if date_match:
+            day = date_match.group(1).zfill(2)
+            month_name = date_match.group(2).upper()
+            month = MONTHS.get(month_name, '01')
+
+            year = None
+            if i + 1 < len(lines) and re.match(r'^\d{4}$', lines[i + 1].strip()):
+                year = lines[i + 1].strip()
+                i += 2
+            else:
+                year = str(datetime.now().year)
+                i += 1
+
+            fecha = f"{day}/{month}/{year}"
+
+            if i < len(lines):
+                descripcion = lines[i].strip()
+                i += 1
+            else:
+                i += 1
+                continue
+
+            amounts: list[str] = []
+            while i < len(lines):
+                val_line = lines[i].strip()
+                if re.match(r'^-?\$[\d.,]+$', val_line):
+                    amounts.append(val_line)
+                    i += 1
+                elif re.match(r'^\d+/\d+$', val_line):
+                    amounts.append(val_line)
+                    i += 1
+                elif re.match(r'^\d+[.,]\d+\s*%?$', val_line):
+                    amounts.append(val_line)
+                    i += 1
+                elif re.match(r'^\d{1,2}\s+(ENE|FEB|MAR|ABR|MAY|JUN|JUL|AGO|SEP|OCT|NOV|DIC)$', val_line, re.I):
+                    break
+                elif val_line == '' or re.match(r'^[A-Z\s]{3,}$', val_line):
+                    break
+                else:
+                    break
+
+            valor_str = amounts[0] if amounts else '$0'
+            valor_clean = valor_str.replace('$', '').replace('.', '').replace(',', '.')
+            try:
+                valor = abs(float(valor_clean))
+            except ValueError:
+                valor = 0
+
+            cuotas_str = ''
+            for a in amounts:
+                if re.match(r'^\d+/\d+$', a):
+                    cuotas_str = a
+                    break
+
+            transactions.append({
+                'FECHA': fecha,
+                'DESCRIPCION': descripcion,
+                'VALOR': valor,
+                'CUOTAS': cuotas_str,
+                'ENTIDAD': 'Nubank',
+            })
+        else:
+            i += 1
+
+    return transactions
+
+
+def _parse_generic_statement(text: str, entity: str) -> list[dict]:
+    """Parseo genérico para extractos no soportados específicamente."""
+    lines = text.split('\n')
+    transactions: list[dict] = []
+
+    for line in lines:
+        match = re.search(
+            r'(\d{1,2}[/\-]\d{1,2}[/\-]\d{2,4})\s+(.+?)\s+[\$]?([\d.,]+)\s*$',
+            line.strip()
+        )
+        if match:
+            fecha = match.group(1)
+            desc = match.group(2).strip()
+            valor_raw = match.group(3).replace('.', '').replace(',', '.')
+            try:
+                valor = abs(float(valor_raw))
+            except ValueError:
+                valor = 0
+            transactions.append({
+                'FECHA': fecha,
+                'DESCRIPCION': desc,
+                'VALOR': valor,
+                'CUOTAS': '',
+                'ENTIDAD': entity,
+            })
+
+    return transactions
+
+
+@router.post("/extract-statement")
+async def extract_statement(
+    current_user = Depends(get_current_user),
+    file: UploadFile = File(...),
+    password: str = Form(""),
+    entity: str = Form("nubank"),
+    statement_type: str = Form("credito"),
+):
+    """Parsea un extracto bancario PDF y devuelve transacciones estructuradas."""
+    if not _PDF_AVAILABLE:
+        raise HTTPException(503, "PyPDF2 no disponible. Instala PyPDF2>=3.0.0")
+
+    try:
+        pdf_bytes = await file.read()
+        reader = PdfReader(io.BytesIO(pdf_bytes))
+
+        if reader.is_encrypted:
+            if not password:
+                raise HTTPException(400, "El PDF está encriptado. Proporciona la contraseña.")
+            reader.decrypt(password)
+
+        full_text = ""
+        for page in reader.pages:
+            full_text += page.extract_text() + "\n"
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(500, f"Error leyendo PDF: {e}")
+
+    entity_lower = entity.lower()
+    if entity_lower == "nubank":
+        transactions = _parse_nubank_credit(full_text)
+    else:
+        transactions = _parse_generic_statement(full_text, entity)
+
+    return {
+        "entity": entity,
+        "type": statement_type,
+        "count": len(transactions),
+        "transactions": transactions,
+        "raw_pages": len(reader.pages),
+    }

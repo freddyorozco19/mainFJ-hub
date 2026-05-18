@@ -3,7 +3,7 @@ import {
   DollarSign, ShoppingCart,
   Send, Loader2, Bot, Search, PiggyBank,
   AlertCircle, RefreshCw, Sparkles, ChevronDown,
-  BarChart3, Table2, History,
+  BarChart3, Table2, History, FileText, CreditCard, Building2, Upload, Check, X,
 } from 'lucide-react'
 
 import { api } from '../api'
@@ -13,6 +13,7 @@ import { FinanceAnalytics } from '../components/FinanceAnalytics'
 const SUBPAGES = [
   { key: 'dashboard', label: 'Dashboard', hex: '#7C3AED', icon: BarChart3 },
   { key: 'registros', label: 'Registros',  hex: '#10B981', icon: Table2   },
+  { key: 'extractos', label: 'Extractos',  hex: '#3B82F6', icon: FileText },
   { key: 'history',   label: 'History',    hex: '#F59E0B', icon: History  },
 ]
 
@@ -36,7 +37,7 @@ const TAB_COLUMNS: Record<TabKey, string[]> = {
   credito:    ['PRODUCTO', 'DESCRIPCION', 'ENTIDAD', 'MONEDA', 'VALOR_TOTAL', 'CUOTAS', 'CUOTA_ACTUAL', 'VALOR_CUOTA', 'FECHA_CORTE', 'FECHA_PAGO', 'ESTADO', 'TIPO'],
 }
 
-type SubPageKey = 'dashboard' | 'registros' | 'history'
+type SubPageKey = 'dashboard' | 'registros' | 'extractos' | 'history'
 type TabKey = 'shops' | 'basket' | 'essentials' | 'ahorro' | 'debts' | 'wishlist' | 'credito'
 type Summary = Record<TabKey, { count: number; total_cop: number; error?: string }>
 type Records = Record<string, string | number>[]
@@ -396,6 +397,92 @@ export function Finance() {
   const [historyData, setHistoryData]         = useState<any[]>([])
   const [historyLoading, setHistoryLoading]   = useState(false)
   const [historyTab, setHistoryTab]           = useState<TabKey | 'all'>('all')
+
+  // ── Extractos ──────────────────────────────────────────────────────────────
+  const [extractoTab, setExtractoTab]             = useState<'creditos' | 'cuentas'>('creditos')
+  const [extractoEntity, setExtractoEntity]       = useState('nubank')
+  const [extractoFile, setExtractoFile]           = useState<File | null>(null)
+  const [extractoPassword, setExtractoPassword]   = useState('')
+  const [extractoParsing, setExtractoParsing]     = useState(false)
+  const [extractoError, setExtractoError]         = useState('')
+  const [extractoTransactions, setExtractoTransactions] = useState<any[]>([])
+  const [extractoSelected, setExtractoSelected]   = useState<Set<number>>(new Set())
+  const [extractoSaving, setExtractoSaving]       = useState(false)
+
+  const EXTRACTO_ENTITIES: Record<string, { label: string; color: string }> = {
+    nubank:       { label: 'Nubank',       color: '#820AD1' },
+    lulobank:     { label: 'Lulobank',     color: '#00D26A' },
+    bancolombia:  { label: 'Bancolombia',  color: '#FDDA24' },
+  }
+
+  async function handleExtractoParse() {
+    if (!extractoFile) return
+    setExtractoParsing(true)
+    setExtractoError('')
+    setExtractoTransactions([])
+    try {
+      const formData = new FormData()
+      formData.append('file', extractoFile)
+      formData.append('password', extractoPassword)
+      formData.append('entity', extractoEntity)
+      formData.append('statement_type', extractoTab === 'creditos' ? 'credito' : 'cuenta')
+      const token = localStorage.getItem('token')
+      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/finance/extract-statement`, {
+        method: 'POST',
+        headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: formData,
+      })
+      if (!res.ok) {
+        const err = await res.json()
+        throw new Error(err.detail || 'Error al parsear extracto')
+      }
+      const data = await res.json()
+      setExtractoTransactions(data.transactions || [])
+      setExtractoSelected(new Set(data.transactions?.map((_: any, i: number) => i) || []))
+    } catch (e: any) {
+      setExtractoError(e.message || 'Error de conexión')
+    } finally {
+      setExtractoParsing(false)
+    }
+  }
+
+  async function handleExtractoImport() {
+    const selected = extractoTransactions.filter((_, i) => extractoSelected.has(i))
+    if (!selected.length) return
+    setExtractoSaving(true)
+    setExtractoError('')
+    try {
+      const rows = selected.map(t => ({
+        PRODUCTO: t.DESCRIPCION,
+        DESCRIPCION: `Extracto ${EXTRACTO_ENTITIES[extractoEntity]?.label || extractoEntity}`,
+        ENTIDAD: t.ENTIDAD || extractoEntity,
+        MONEDA: 'COP',
+        VALOR_TOTAL: t.VALOR,
+        CUOTAS: t.CUOTAS ? String(t.CUOTAS).split('/')[1] || t.CUOTAS : '1',
+        CUOTA_ACTUAL: t.CUOTAS ? String(t.CUOTAS).split('/')[0] || '1' : '1',
+        VALOR_CUOTA: t.VALOR,
+        FECHA_CORTE: '',
+        FECHA_PAGO: t.FECHA,
+        ESTADO: 'PENDIENTE',
+        TIPO: 'EGRESO',
+      }))
+      const res = await api('/finance/records/batch', {
+        method: 'POST',
+        body: { tab: 'credito', rows },
+      })
+      if (!res.ok) {
+        const err = await res.json()
+        throw new Error(err.detail || 'Error al importar')
+      }
+      setExtractoTransactions([])
+      setExtractoFile(null)
+      setExtractoSelected(new Set())
+    } catch (e: any) {
+      setExtractoError(e.message || 'Error al importar')
+    } finally {
+      setExtractoSaving(false)
+    }
+  }
 
   useEffect(() => { loadSummary() }, [])
   useEffect(() => {
@@ -1394,6 +1481,204 @@ export function Finance() {
           </a>
         </div>
         </>
+      )}
+
+      {/* ── Extractos SubPage ────────────────────────────────────────────── */}
+      {activeSubPage === 'extractos' && (
+        <div className="space-y-4">
+          {/* Tabs Créditos / Cuentas */}
+          <div className="flex items-center gap-3">
+            {(['creditos', 'cuentas'] as const).map(tab => (
+              <button
+                key={tab}
+                onClick={() => { setExtractoTab(tab); setExtractoTransactions([]); setExtractoError('') }}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  extractoTab === tab
+                    ? 'bg-blue-500/20 text-blue-400 border border-blue-500/40'
+                    : 'text-slate-400 hover:text-white border border-border hover:bg-white/5'
+                }`}
+              >
+                {tab === 'creditos' ? (
+                  <span className="flex items-center gap-2"><CreditCard size={14} /> Créditos</span>
+                ) : (
+                  <span className="flex items-center gap-2"><Building2 size={14} /> Cuentas</span>
+                )}
+              </button>
+            ))}
+          </div>
+
+          <div className="bg-card border border-border rounded-xl p-5 space-y-5">
+            <div>
+              <h3 className="text-sm font-semibold text-white">
+                Importar Extracto — {extractoTab === 'creditos' ? 'Tarjeta de Crédito' : 'Cuenta Bancaria'}
+              </h3>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Sube el PDF del extracto bancario para importar transacciones automáticamente
+              </p>
+            </div>
+
+            {/* Entity selector */}
+            <div>
+              <label className="block text-xs text-slate-400 mb-2">Entidad Bancaria</label>
+              <div className="flex gap-2">
+                {Object.entries(EXTRACTO_ENTITIES).map(([key, { label, color }]) => (
+                  <button
+                    key={key}
+                    onClick={() => setExtractoEntity(key)}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                      extractoEntity === key
+                        ? 'text-white border-2'
+                        : 'text-slate-400 border border-border hover:text-white hover:bg-white/5'
+                    }`}
+                    style={extractoEntity === key ? { borderColor: color, backgroundColor: color + '20', color } : {}}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Upload + password */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs text-slate-400 mb-2">Archivo PDF</label>
+                <label className="flex items-center gap-2 px-4 py-3 bg-surface border border-dashed border-border rounded-lg cursor-pointer hover:border-blue-500/50 hover:bg-blue-500/5 transition-colors">
+                  <Upload size={16} className="text-slate-400" />
+                  <span className="text-sm text-slate-300 truncate">
+                    {extractoFile ? extractoFile.name : 'Seleccionar extracto PDF...'}
+                  </span>
+                  <input
+                    type="file"
+                    accept=".pdf"
+                    className="hidden"
+                    onChange={e => { setExtractoFile(e.target.files?.[0] || null); setExtractoTransactions([]); setExtractoError('') }}
+                  />
+                </label>
+              </div>
+              <div>
+                <label className="block text-xs text-slate-400 mb-2">Contraseña del PDF (si tiene)</label>
+                <input
+                  type="password"
+                  value={extractoPassword}
+                  onChange={e => setExtractoPassword(e.target.value)}
+                  placeholder="Contraseña..."
+                  className="w-full bg-surface border border-border rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500/50"
+                />
+              </div>
+            </div>
+
+            {/* Parse button */}
+            <button
+              onClick={handleExtractoParse}
+              disabled={!extractoFile || extractoParsing}
+              className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-500 disabled:bg-blue-600/30 disabled:text-slate-500 text-white text-sm font-medium rounded-lg transition-colors"
+            >
+              {extractoParsing ? <Loader2 size={14} className="animate-spin" /> : <FileText size={14} />}
+              {extractoParsing ? 'Procesando...' : 'Analizar Extracto'}
+            </button>
+
+            {extractoError && (
+              <div className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">
+                {extractoError}
+              </div>
+            )}
+
+            {/* Preview table */}
+            {extractoTransactions.length > 0 && (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-sm font-medium text-white">
+                    {extractoTransactions.length} transacciones encontradas
+                  </h4>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => {
+                        if (extractoSelected.size === extractoTransactions.length) {
+                          setExtractoSelected(new Set())
+                        } else {
+                          setExtractoSelected(new Set(extractoTransactions.map((_, i) => i)))
+                        }
+                      }}
+                      className="text-xs text-slate-400 hover:text-white transition-colors"
+                    >
+                      {extractoSelected.size === extractoTransactions.length ? 'Deseleccionar todo' : 'Seleccionar todo'}
+                    </button>
+                    <span className="text-xs text-slate-500">
+                      {extractoSelected.size} seleccionadas
+                    </span>
+                  </div>
+                </div>
+
+                <div className="overflow-x-auto rounded-lg border border-border">
+                  <table className="w-full text-xs">
+                    <thead>
+                      <tr className="bg-surface/80 text-slate-400">
+                        <th className="px-3 py-2 text-left w-8"></th>
+                        <th className="px-3 py-2 text-left">Fecha</th>
+                        <th className="px-3 py-2 text-left">Descripción</th>
+                        <th className="px-3 py-2 text-right">Valor</th>
+                        <th className="px-3 py-2 text-center">Cuotas</th>
+                        <th className="px-3 py-2 text-left">Entidad</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {extractoTransactions.map((t, i) => (
+                        <tr
+                          key={i}
+                          className={`border-t border-border/50 transition-colors ${
+                            extractoSelected.has(i) ? 'bg-blue-500/10' : 'hover:bg-white/3'
+                          }`}
+                        >
+                          <td className="px-3 py-2">
+                            <input
+                              type="checkbox"
+                              checked={extractoSelected.has(i)}
+                              onChange={() => {
+                                const next = new Set(extractoSelected)
+                                next.has(i) ? next.delete(i) : next.add(i)
+                                setExtractoSelected(next)
+                              }}
+                              className="accent-blue-500"
+                            />
+                          </td>
+                          <td className="px-3 py-2 text-slate-300 whitespace-nowrap">{t.FECHA}</td>
+                          <td className="px-3 py-2 text-white max-w-[300px] truncate">{t.DESCRIPCION}</td>
+                          <td className="px-3 py-2 text-right text-emerald-400 font-mono">
+                            {formatCOPFull(t.VALOR)}
+                          </td>
+                          <td className="px-3 py-2 text-center text-slate-400">{t.CUOTAS || '—'}</td>
+                          <td className="px-3 py-2 text-slate-300">{t.ENTIDAD}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Total + Import button */}
+                <div className="flex items-center justify-between pt-2">
+                  <div className="text-sm text-slate-400">
+                    Total seleccionado:{' '}
+                    <span className="text-white font-semibold">
+                      {formatCOPFull(
+                        extractoTransactions
+                          .filter((_, i) => extractoSelected.has(i))
+                          .reduce((sum, t) => sum + (t.VALOR || 0), 0)
+                      )}
+                    </span>
+                  </div>
+                  <button
+                    onClick={handleExtractoImport}
+                    disabled={extractoSelected.size === 0 || extractoSaving}
+                    className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 disabled:bg-emerald-600/30 disabled:text-slate-500 text-white text-sm font-medium rounded-lg transition-colors"
+                  >
+                    {extractoSaving ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
+                    {extractoSaving ? 'Importando...' : `Importar ${extractoSelected.size} registros a Crédito`}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
       )}
 
       {/* ── History SubPage ──────────────────────────────────────────────── */}
