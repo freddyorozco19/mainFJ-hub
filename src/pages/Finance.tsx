@@ -426,10 +426,8 @@ export function Finance() {
       formData.append('password', extractoPassword)
       formData.append('entity', extractoEntity)
       formData.append('statement_type', extractoTab === 'creditos' ? 'credito' : 'cuenta')
-      const token = localStorage.getItem('token')
-      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/finance/extract-statement`, {
+      const res = await api('/finance/extract-statement', {
         method: 'POST',
-        headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
         body: formData,
       })
       if (!res.ok) {
