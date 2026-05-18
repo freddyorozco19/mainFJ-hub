@@ -482,14 +482,15 @@ export function Finance() {
         const filtered = records.filter((r: any) => {
           const matchEntity = (r.ENTIDAD || '').toLowerCase() === entityLabel
           if (!matchEntity) return false
+          if (!period) return true
+          if (r.FECHA_CORTE === period) return true
           const fecha = r.FECHA_PAGO || ''
-          if (!fecha || !period) return matchEntity
+          if (!fecha) return false
           const parts = fecha.split('/')
           if (parts.length === 3) {
-            const recordPeriod = `${parts[2]}-${parts[1]}`
-            return recordPeriod === period
+            return `${parts[2]}-${parts[1]}` === period
           }
-          return matchEntity
+          return false
         })
         setExtractoDetailRecords(filtered)
       }
@@ -615,11 +616,16 @@ export function Finance() {
         VALOR_CUOTA: Math.round(t.VALOR_CUOTA || t.VALOR || 0),
         PCT_INTERES: t.PCT_INTERES || '',
         VALOR_INTERES: Math.round(t.VALOR_INTERES || 0),
-        FECHA_CORTE: '',
         FECHA_PAGO: t.FECHA,
         ESTADO: 'PENDIENTE',
         TIPO: 'EGRESO',
       }))
+
+      // Calcular periodo antes de insertar para usarlo en FECHA_CORTE
+      const firstDate = selected[0]?.FECHA || ''
+      const period = firstDate ? firstDate.split('/').slice(1).reverse().join('-') : new Date().toISOString().slice(0, 7)
+      rows.forEach(r => { r.FECHA_CORTE = period })
+
       const res = await api('/finance/records/batch', {
         method: 'POST',
         body: { tab: 'credito', rows },
@@ -631,8 +637,6 @@ export function Finance() {
 
       // Registrar importación
       const totalAmount = selected.reduce((s, t) => s + (t.VALOR || 0), 0)
-      const firstDate = selected[0]?.FECHA || ''
-      const period = firstDate ? firstDate.split('/').slice(1).reverse().join('-') : new Date().toISOString().slice(0, 7)
       const fileName = extractoSource === 'drive' && driveSelectedFile ? driveSelectedFile.name : (extractoFile?.name || 'upload.pdf')
       const driveId = extractoSource === 'drive' && driveSelectedFile ? driveSelectedFile.id : ''
 
