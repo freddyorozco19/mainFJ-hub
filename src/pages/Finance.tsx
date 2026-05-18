@@ -424,6 +424,9 @@ export function Finance() {
   const [driveImportedIds, setDriveImportedIds]   = useState<Set<string>>(new Set())
   const [extractoImports, setExtractoImports]     = useState<any[]>([])
   const [extractoImportsLoading, setExtractoImportsLoading] = useState(false)
+  const [extractoDetailImport, setExtractoDetailImport] = useState<any | null>(null)
+  const [extractoDetailRecords, setExtractoDetailRecords] = useState<any[]>([])
+  const [extractoDetailLoading, setExtractoDetailLoading] = useState(false)
 
   const EXTRACTO_ENTITIES: Record<string, { label: string; color: string; card: { last4: string; type: string; expires: string; since: string; corte: string } }> = {
     nubank:       { label: 'Nubank',       color: '#820AD1', card: { last4: '8126', type: 'Mastercard', expires: '04/34', since: '01/05/2026', corte: '15/mes' } },
@@ -463,6 +466,35 @@ export function Finance() {
       }
     } catch { /* ignore */ }
     setExtractoImportsLoading(false)
+  }
+
+  async function loadExtractoDetail(imp: any) {
+    setExtractoDetailImport(imp)
+    setExtractoDetailLoading(true)
+    setExtractoDetailRecords([])
+    try {
+      const res = await api('/finance/data/credito')
+      if (res.ok) {
+        const data = await res.json()
+        const records = data.records || []
+        const entityLabel = (imp.entity || '').toLowerCase()
+        const period = imp.period || ''
+        const filtered = records.filter((r: any) => {
+          const matchEntity = (r.ENTIDAD || '').toLowerCase() === entityLabel
+          if (!matchEntity) return false
+          const fecha = r.FECHA_PAGO || ''
+          if (!fecha || !period) return matchEntity
+          const parts = fecha.split('/')
+          if (parts.length === 3) {
+            const recordPeriod = `${parts[2]}-${parts[1]}`
+            return recordPeriod === period
+          }
+          return matchEntity
+        })
+        setExtractoDetailRecords(filtered)
+      }
+    } catch { /* ignore */ }
+    setExtractoDetailLoading(false)
   }
 
   async function loadDriveFolder(folderId: string | null) {
@@ -1774,7 +1806,7 @@ export function Finance() {
                     </thead>
                     <tbody>
                       {filtered.map((imp, i) => (
-                        <tr key={imp.id || i} className="border-t border-border/50 hover:bg-white/3">
+                        <tr key={imp.id || i} className="border-t border-border/50 hover:bg-white/5 cursor-pointer transition-colors" onClick={() => loadExtractoDetail(imp)}>
                           <td className="px-3 py-2 text-white font-medium">{imp.period}</td>
                           <td className="px-3 py-2 text-slate-300 max-w-[250px] truncate">{imp.file_name}</td>
                           <td className="px-3 py-2 text-center text-slate-400">{imp.transactions}</td>
@@ -1831,6 +1863,87 @@ export function Finance() {
               </details>
             )}
           </div>
+
+          {/* ═══ Modal de detalle de extracto ═══ */}
+          {extractoDetailImport && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+              <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => { setExtractoDetailImport(null); setExtractoDetailRecords([]) }} />
+              <div className="relative bg-card border border-blue-500/20 rounded-xl p-5 space-y-4 w-full max-w-4xl max-h-[85vh] overflow-y-auto">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-sm font-semibold text-white">
+                      {extractoDetailImport.entity} — {extractoDetailImport.period}
+                    </h3>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      {extractoDetailImport.file_name} · {extractoDetailImport.transactions} transacciones · {formatCOPFull(extractoDetailImport.total_amount || 0)}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => { setExtractoDetailImport(null); setExtractoDetailRecords([]) }}
+                    className="text-slate-400 hover:text-white transition-colors p-1"
+                  >✕</button>
+                </div>
+
+                {extractoDetailLoading ? (
+                  <div className="flex items-center justify-center py-12">
+                    <Loader2 className="w-5 h-5 animate-spin text-blue-400" />
+                    <span className="ml-2 text-xs text-slate-400">Cargando registros...</span>
+                  </div>
+                ) : extractoDetailRecords.length === 0 ? (
+                  <div className="text-center py-12 space-y-2">
+                    <FileText size={28} className="mx-auto text-slate-600" />
+                    <p className="text-sm text-slate-500">No se encontraron registros para este periodo</p>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto rounded-lg border border-border">
+                    <table className="w-full text-xs">
+                      <thead>
+                        <tr className="bg-surface/80 text-slate-400">
+                          <th className="px-3 py-2 text-left">Producto</th>
+                          <th className="px-3 py-2 text-left">Entidad</th>
+                          <th className="px-3 py-2 text-center">Cuotas</th>
+                          <th className="px-3 py-2 text-right">Valor Cuota</th>
+                          <th className="px-3 py-2 text-center">% Interés</th>
+                          <th className="px-3 py-2 text-right">Val. Interés</th>
+                          <th className="px-3 py-2 text-right">Valor Total</th>
+                          <th className="px-3 py-2 text-left">Fecha Pago</th>
+                          <th className="px-3 py-2 text-center">Estado</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {extractoDetailRecords.map((r, i) => (
+                          <tr key={i} className="border-t border-border/50 hover:bg-white/3">
+                            <td className="px-3 py-2 text-white max-w-[200px] truncate" title={r.PRODUCTO}>{r.PRODUCTO}</td>
+                            <td className="px-3 py-2 text-slate-400">{r.ENTIDAD}</td>
+                            <td className="px-3 py-2 text-center text-slate-300">{r.CUOTA_ACTUAL}/{r.CUOTAS}</td>
+                            <td className="px-3 py-2 text-right text-slate-300 font-mono">{r.VALOR_CUOTA ? formatCOPFull(Number(r.VALOR_CUOTA)) : '—'}</td>
+                            <td className="px-3 py-2 text-center text-amber-400 font-mono">{r.PCT_INTERES || '—'}</td>
+                            <td className="px-3 py-2 text-right text-slate-300 font-mono">{r.VALOR_INTERES ? formatCOPFull(Number(r.VALOR_INTERES)) : '—'}</td>
+                            <td className="px-3 py-2 text-right text-emerald-400 font-mono">{r.VALOR_TOTAL ? formatCOPFull(Number(r.VALOR_TOTAL)) : '—'}</td>
+                            <td className="px-3 py-2 text-slate-400">{r.FECHA_PAGO}</td>
+                            <td className="px-3 py-2 text-center">
+                              <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${r.ESTADO === 'PAGADO' ? 'bg-green-500/20 text-green-400' : 'bg-amber-500/20 text-amber-400'}`}>
+                                {r.ESTADO}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                      <tfoot>
+                        <tr className="border-t border-border bg-surface/50">
+                          <td colSpan={6} className="px-3 py-2 text-right text-xs text-slate-400 font-medium">Total</td>
+                          <td className="px-3 py-2 text-right text-emerald-400 font-mono font-semibold text-xs">
+                            {formatCOPFull(extractoDetailRecords.reduce((s, r) => s + Number(r.VALOR_TOTAL || 0), 0))}
+                          </td>
+                          <td colSpan={2} />
+                        </tr>
+                      </tfoot>
+                    </table>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* ═══ Modal de importación ═══ */}
           {extractoImportOpen && (
