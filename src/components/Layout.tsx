@@ -35,10 +35,10 @@ const MORE_MODULES = [
 ]
 
 const ROUTE_LABELS: Record<string, string> = {
-  '/home': 'Home', '/agents': 'Agentes', '/chat': 'Chat', '/metrics': 'Métricas',
-  '/logs': 'Logs', '/finance': 'Finanzas', '/kronos': 'KRONOS', '/winstats': 'WinStats',
-  '/expertia': 'ArchiTechIA', '/growdata': 'Grow Data', '/life': 'LIFE',
-  '/health': 'Health', '/profile': 'Perfil', '/webhooks': 'Webhooks', '/backlog': 'Backlog',
+  '/home': 'HOME', '/agents': 'AGENTES', '/chat': 'CHAT', '/metrics': 'MÉTRICAS',
+  '/logs': 'LOGS', '/finance': 'FINANZAS', '/kronos': 'KRONOS', '/winstats': 'WINSTATS',
+  '/expertia': 'ARCHITECHIA', '/growdata': 'GROW DATA', '/life': 'LIFE',
+  '/health': 'HEALTH', '/profile': 'PERFIL', '/webhooks': 'WEBHOOKS', '/backlog': 'BACKLOG',
 }
 
 function UserAvatar() {
