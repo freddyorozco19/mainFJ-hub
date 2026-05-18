@@ -996,9 +996,12 @@ def _parse_nubank_credit(text: str) -> list[dict]:
 def _parse_lulobank_credit(text: str) -> list[dict]:
     """Parsea extracto de tarjeta de crédito Lulo Bank.
 
-    Formato:
+    Formato esperado (puede variar entre PyPDF2 y pdfjs):
       Abr 1, 2026 $32,200.00 RAPPI COLOMBIA*DL 0.00% 1 de 1 $00.00
     """
+    import logging
+    log = logging.getLogger("lulobank_parser")
+
     transactions: list[dict] = []
 
     MONTHS = {
@@ -1007,7 +1010,8 @@ def _parse_lulobank_credit(text: str) -> list[dict]:
         'Sep': '09', 'Oct': '10', 'Nov': '11', 'Dic': '12',
     }
 
-    pattern = re.compile(
+    # Strategy 1: single-line regex (works with pdfjs / pdf-parse-new)
+    pattern_single = re.compile(
         r'(Ene|Feb|Mar|Abr|May|Jun|Jul|Ago|Sep|Oct|Nov|Dic)\s+'
         r'(\d{1,2}),\s*(\d{4})\s+'
         r'\$([\d,.]+)\s+'
@@ -1017,46 +1021,164 @@ def _parse_lulobank_credit(text: str) -> list[dict]:
         r'\$([\d,.]+)'
     )
 
-    for match in pattern.finditer(text):
-        month_name = match.group(1)
-        day = match.group(2).zfill(2)
-        year = match.group(3)
-        month = MONTHS.get(month_name, '01')
-        fecha = f"{day}/{month}/{year}"
+    # Strategy 2: multi-line regex (PyPDF2 may insert newlines between columns)
+    pattern_multi = re.compile(
+        r'(Ene|Feb|Mar|Abr|May|Jun|Jul|Ago|Sep|Oct|Nov|Dic)\s+'
+        r'(\d{1,2}),?\s*(\d{4})\s*'
+        r'\$?([\d,.]+)\s+'
+        r'(.+?)\s+'
+        r'[\d.]+\s*%\s*'
+        r'(\d+)\s+de\s+(\d+)\s+'
+        r'\$?([\d,.]+)',
+        re.DOTALL,
+    )
 
-        valor_raw = match.group(4).replace(',', '').replace('.', '')
-        # Lulo uses $32,200.00 format — last 2 digits are cents
-        try:
-            valor = int(float(match.group(4).replace(',', '')))
-        except ValueError:
-            valor = 0
+    # Strategy 3: date-anchored line-by-line for PyPDF2 table extraction
+    # PyPDF2 sometimes concatenates columns without proper spacing
+    pattern_date = re.compile(
+        r'(Ene|Feb|Mar|Abr|May|Jun|Jul|Ago|Sep|Oct|Nov|Dic)\s+(\d{1,2}),?\s*(\d{4})'
+    )
 
-        descripcion = match.group(5).strip()
-        cuota_actual = match.group(6)
-        cuota_total = match.group(7)
-        cuotas_str = f"{cuota_actual}/{cuota_total}" if cuota_total != '0' else ''
+    # Try single-line first
+    for match in pattern_single.finditer(text):
+        tx = _build_lulo_tx(match, MONTHS)
+        if tx:
+            transactions.append(tx)
 
-        saldo_raw = match.group(8).replace(',', '')
-        try:
-            saldo = int(float(saldo_raw))
-        except ValueError:
-            saldo = 0
+    if transactions:
+        log.info(f"Lulo parser: {len(transactions)} tx found with single-line regex")
+        return transactions
 
-        # Skip payment entries (Pago PSE) — cuotas "0 de 0"
-        if cuota_total == '0' and cuota_actual == '0':
+    # Try multi-line (limit description match to avoid spanning rows)
+    mov_idx = text.find('Movimientos')
+    search_text = text[mov_idx:] if mov_idx >= 0 else text
+    log.info(f"Lulo parser: searching in text starting at 'Movimientos' (found={mov_idx >= 0}), len={len(search_text)}")
+
+    for match in pattern_multi.finditer(search_text):
+        desc = match.group(5).strip()
+        if len(desc) > 80:
             continue
+        tx = _build_lulo_tx(match, MONTHS)
+        if tx:
+            transactions.append(tx)
 
-        transactions.append({
-            'FECHA': fecha,
-            'DESCRIPCION': descripcion,
-            'VALOR': valor,
-            'VALOR_CUOTA': valor,
-            'CUOTAS': cuotas_str,
-            'SALDO_PENDIENTE': saldo,
-            'ENTIDAD': 'Lulo Bank',
-        })
+    if transactions:
+        log.info(f"Lulo parser: {len(transactions)} tx found with multi-line regex")
+        return transactions
 
+    # Strategy 3: line-by-line parsing
+    # Find each date, then extract fields from that line + next lines
+    lines = search_text.split('\n')
+    i = 0
+    while i < len(lines):
+        line = lines[i].strip()
+        date_match = pattern_date.match(line)
+        if date_match:
+            month_name = date_match.group(1)
+            day = date_match.group(2).zfill(2)
+            year = date_match.group(3)
+            month = MONTHS.get(month_name, '01')
+            fecha = f"{day}/{month}/{year}"
+
+            remainder = line[date_match.end():].strip()
+            # Collect next lines if remainder is short (PyPDF2 split columns)
+            context = remainder
+            for j in range(1, 5):
+                if i + j < len(lines):
+                    next_line = lines[i + j].strip()
+                    if next_line and not pattern_date.match(next_line):
+                        context += " " + next_line
+                    else:
+                        break
+
+            valor_match = re.search(r'\$?([\d,]+\.\d{2})', context)
+            cuotas_match = re.search(r'(\d+)\s+de\s+(\d+)', context)
+            pct_match = re.search(r'[\d.]+\s*%', context)
+
+            if valor_match and cuotas_match:
+                try:
+                    valor = int(float(valor_match.group(1).replace(',', '')))
+                except ValueError:
+                    valor = 0
+
+                cuota_actual = cuotas_match.group(1)
+                cuota_total = cuotas_match.group(2)
+
+                if cuota_total == '0' and cuota_actual == '0':
+                    i += 1
+                    continue
+
+                # Description is between valor and percentage
+                desc_start = valor_match.end()
+                desc_end = pct_match.start() if pct_match else cuotas_match.start()
+                descripcion = context[desc_start:desc_end].strip().strip('%').strip()
+                if not descripcion:
+                    desc_end2 = cuotas_match.start()
+                    descripcion = context[desc_start:desc_end2].strip()
+
+                # Saldo pendiente: last $amount in context
+                saldo = 0
+                saldo_matches = list(re.finditer(r'\$?([\d,]+\.\d{2})', context))
+                if len(saldo_matches) >= 2:
+                    try:
+                        saldo = int(float(saldo_matches[-1].group(1).replace(',', '')))
+                    except ValueError:
+                        saldo = 0
+
+                cuotas_str = f"{cuota_actual}/{cuota_total}" if cuota_total != '0' else ''
+
+                transactions.append({
+                    'FECHA': fecha,
+                    'DESCRIPCION': descripcion,
+                    'VALOR': valor,
+                    'VALOR_CUOTA': valor,
+                    'CUOTAS': cuotas_str,
+                    'SALDO_PENDIENTE': saldo,
+                    'ENTIDAD': 'Lulo Bank',
+                })
+        i += 1
+
+    log.info(f"Lulo parser: {len(transactions)} tx found with line-by-line strategy")
     return transactions
+
+
+def _build_lulo_tx(match: re.Match, months: dict) -> dict | None:
+    """Helper to build a Lulo Bank transaction dict from a regex match."""
+    month_name = match.group(1)
+    day = match.group(2).zfill(2)
+    year = match.group(3)
+    month = months.get(month_name, '01')
+    fecha = f"{day}/{month}/{year}"
+
+    try:
+        valor = int(float(match.group(4).replace(',', '')))
+    except ValueError:
+        valor = 0
+
+    descripcion = match.group(5).strip()
+    cuota_actual = match.group(6)
+    cuota_total = match.group(7)
+
+    if cuota_total == '0' and cuota_actual == '0':
+        return None
+
+    cuotas_str = f"{cuota_actual}/{cuota_total}" if cuota_total != '0' else ''
+
+    saldo_raw = match.group(8).replace(',', '')
+    try:
+        saldo = int(float(saldo_raw))
+    except ValueError:
+        saldo = 0
+
+    return {
+        'FECHA': fecha,
+        'DESCRIPCION': descripcion,
+        'VALOR': valor,
+        'VALOR_CUOTA': valor,
+        'CUOTAS': cuotas_str,
+        'SALDO_PENDIENTE': saldo,
+        'ENTIDAD': 'Lulo Bank',
+    }
 
 
 def _parse_generic_statement(text: str, entity: str) -> list[dict]:
@@ -1110,7 +1232,7 @@ async def extract_statement(
 
         full_text = ""
         for page in reader.pages:
-            full_text += page.extract_text() + "\n"
+            full_text += (page.extract_text() or "") + "\n"
 
     except HTTPException:
         raise
@@ -1128,13 +1250,16 @@ async def extract_statement(
     except RuntimeError as e:
         raise HTTPException(500, str(e))
 
+    mov_idx = full_text.find('Movimientos')
+    debug_text = full_text[mov_idx:mov_idx + 2000] if mov_idx >= 0 else full_text[:2000]
+
     return {
         "entity": entity,
         "type": statement_type,
         "count": len(transactions),
         "transactions": transactions,
         "raw_pages": len(reader.pages),
-        "raw_text_preview": full_text[:2000],
+        "raw_text_preview": debug_text,
     }
 
 
@@ -1216,7 +1341,7 @@ def drive_parse(
 
         full_text = ""
         for page in reader.pages:
-            full_text += page.extract_text() + "\n"
+            full_text += (page.extract_text() or "") + "\n"
     except HTTPException:
         raise
     except Exception as e:
@@ -1239,7 +1364,8 @@ def drive_parse(
         "count": len(transactions),
         "transactions": transactions,
         "raw_pages": len(reader.pages),
-        "raw_text_preview": full_text[:2000],
+        "raw_text_preview": (full_text[full_text.find('Movimientos'):full_text.find('Movimientos') + 2000]
+                             if full_text.find('Movimientos') >= 0 else full_text[:2000]),
     }
 
 
