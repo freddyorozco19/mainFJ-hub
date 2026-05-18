@@ -1066,3 +1066,102 @@ async def extract_statement(
         "raw_pages": len(reader.pages),
         "raw_text_preview": full_text[:2000],
     }
+
+
+# ── Google Drive - Extractos ─────────────────────────────────────────────────
+try:
+    from backend.drive import (
+        list_pdfs, list_subfolders, download_pdf,
+        get_service_account_email, DRIVE_FOLDER_ID,
+    )
+    _DRIVE_AVAILABLE = True
+except ImportError:
+    _DRIVE_AVAILABLE = False
+
+
+@router.get("/drive/status")
+def drive_status(current_user=Depends(get_current_user)):
+    """Verifica si Drive está configurado y devuelve el email del service account."""
+    if not _DRIVE_AVAILABLE:
+        return {"available": False, "reason": "google-api-python-client no instalado"}
+    email = get_service_account_email()
+    folder_id = DRIVE_FOLDER_ID
+    return {
+        "available": bool(folder_id),
+        "service_account_email": email,
+        "folder_id": folder_id,
+        "reason": "" if folder_id else "Falta DRIVE_EXTRACTOS_FOLDER_ID en .env",
+    }
+
+
+@router.get("/drive/folders")
+def drive_folders(folder_id: str | None = None, current_user=Depends(get_current_user)):
+    """Lista subcarpetas dentro de la carpeta de extractos."""
+    if not _DRIVE_AVAILABLE:
+        raise HTTPException(503, "Drive no disponible")
+    try:
+        folders = list_subfolders(folder_id)
+        return {"folders": folders}
+    except Exception as e:
+        raise HTTPException(500, f"Error listando carpetas: {e}")
+
+
+@router.get("/drive/files")
+def drive_files(folder_id: str | None = None, current_user=Depends(get_current_user)):
+    """Lista PDFs en una carpeta de Drive."""
+    if not _DRIVE_AVAILABLE:
+        raise HTTPException(503, "Drive no disponible")
+    try:
+        files = list_pdfs(folder_id)
+        return {"files": files}
+    except Exception as e:
+        raise HTTPException(500, f"Error listando archivos: {e}")
+
+
+@router.post("/drive/parse")
+def drive_parse(
+    file_id: str = Form(...),
+    password: str = Form(""),
+    entity: str = Form("nubank"),
+    statement_type: str = Form("credito"),
+    current_user=Depends(get_current_user),
+):
+    """Descarga un PDF de Drive y lo parsea como extracto bancario."""
+    if not _DRIVE_AVAILABLE:
+        raise HTTPException(503, "Drive no disponible")
+    if not _PDF_AVAILABLE:
+        raise HTTPException(503, "PyPDF2 no disponible")
+
+    try:
+        pdf_bytes = download_pdf(file_id)
+    except Exception as e:
+        raise HTTPException(500, f"Error descargando de Drive: {e}")
+
+    try:
+        reader = PdfReader(io.BytesIO(pdf_bytes))
+        if reader.is_encrypted:
+            if not password:
+                raise HTTPException(400, "El PDF está encriptado. Proporciona la contraseña.")
+            reader.decrypt(password)
+
+        full_text = ""
+        for page in reader.pages:
+            full_text += page.extract_text() + "\n"
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(500, f"Error leyendo PDF: {e}")
+
+    entity_lower = entity.lower()
+    if entity_lower == "nubank":
+        transactions = _parse_nubank_credit(full_text)
+    else:
+        transactions = _parse_generic_statement(full_text, entity)
+
+    return {
+        "entity": entity,
+        "type": statement_type,
+        "count": len(transactions),
+        "transactions": transactions,
+        "raw_pages": len(reader.pages),
+    }

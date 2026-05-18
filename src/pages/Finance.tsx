@@ -408,6 +408,17 @@ export function Finance() {
   const [extractoTransactions, setExtractoTransactions] = useState<any[]>([])
   const [extractoSelected, setExtractoSelected]   = useState<Set<number>>(new Set())
   const [extractoSaving, setExtractoSaving]       = useState(false)
+  const [extractoSource, setExtractoSource]       = useState<'upload' | 'drive'>('upload')
+
+  // Drive state
+  const [driveAvailable, setDriveAvailable]       = useState(false)
+  const [driveEmail, setDriveEmail]               = useState('')
+  const [driveFolders, setDriveFolders]           = useState<any[]>([])
+  const [driveFiles, setDriveFiles]               = useState<any[]>([])
+  const [driveCurrentFolder, setDriveCurrentFolder] = useState<string | null>(null)
+  const [driveBreadcrumb, setDriveBreadcrumb]     = useState<{ id: string | null; name: string }[]>([{ id: null, name: 'Extractos' }])
+  const [driveLoading, setDriveLoading]           = useState(false)
+  const [driveSelectedFile, setDriveSelectedFile] = useState<any | null>(null)
 
   const EXTRACTO_ENTITIES: Record<string, { label: string; color: string }> = {
     nubank:       { label: 'Nubank',       color: '#820AD1' },
@@ -415,24 +426,62 @@ export function Finance() {
     bancolombia:  { label: 'Bancolombia',  color: '#FDDA24' },
   }
 
-  async function handleExtractoParse() {
-    if (!extractoFile) return
+  async function loadDriveStatus() {
+    try {
+      const res = await api('/finance/drive/status')
+      if (res.ok) {
+        const data = await res.json()
+        setDriveAvailable(data.available)
+        setDriveEmail(data.service_account_email || '')
+      }
+    } catch { /* ignore */ }
+  }
+
+  async function loadDriveFolder(folderId: string | null) {
+    setDriveLoading(true)
+    setDriveSelectedFile(null)
+    try {
+      const params = folderId ? `?folder_id=${folderId}` : ''
+      const [foldersRes, filesRes] = await Promise.all([
+        api(`/finance/drive/folders${params}`),
+        api(`/finance/drive/files${params}`),
+      ])
+      if (foldersRes.ok) setDriveFolders((await foldersRes.json()).folders || [])
+      if (filesRes.ok) setDriveFiles((await filesRes.json()).files || [])
+      setDriveCurrentFolder(folderId)
+    } catch { /* ignore */ }
+    setDriveLoading(false)
+  }
+
+  function navigateDriveFolder(folderId: string, folderName: string) {
+    setDriveBreadcrumb(prev => [...prev, { id: folderId, name: folderName }])
+    loadDriveFolder(folderId)
+  }
+
+  function navigateBreadcrumb(index: number) {
+    const target = driveBreadcrumb[index]
+    setDriveBreadcrumb(prev => prev.slice(0, index + 1))
+    loadDriveFolder(target.id)
+  }
+
+  async function handleDriveParse() {
+    if (!driveSelectedFile) return
     setExtractoParsing(true)
     setExtractoError('')
     setExtractoTransactions([])
     try {
       const formData = new FormData()
-      formData.append('file', extractoFile)
+      formData.append('file_id', driveSelectedFile.id)
       formData.append('password', extractoPassword)
       formData.append('entity', extractoEntity)
       formData.append('statement_type', extractoTab === 'creditos' ? 'credito' : 'cuenta')
-      const res = await api('/finance/extract-statement', {
+      const res = await api('/finance/drive/parse', {
         method: 'POST',
         body: formData,
       })
       if (!res.ok) {
         const err = await res.json()
-        throw new Error(err.detail || 'Error al parsear extracto')
+        throw new Error(err.detail || 'Error al parsear extracto desde Drive')
       }
       const data = await res.json()
       setExtractoTransactions(data.transactions || [])
@@ -492,6 +541,12 @@ export function Finance() {
   useEffect(() => {
     if (activeSubPage === 'history') loadHistory()
   }, [activeSubPage, historyTab])
+  useEffect(() => {
+    if (activeSubPage === 'extractos') {
+      loadDriveStatus()
+      loadDriveFolder(null)
+    }
+  }, [activeSubPage])
 
   // ── AI Analysis ───────────────────────────────────────────────────────────
   const [analysisText, setAnalysisText]     = useState('')
@@ -1511,7 +1566,7 @@ export function Finance() {
                 Importar Extracto — {extractoTab === 'creditos' ? 'Tarjeta de Crédito' : 'Cuenta Bancaria'}
               </h3>
               <p className="text-xs text-slate-500 mt-0.5">
-                Sube el PDF del extracto bancario para importar transacciones automáticamente
+                Selecciona un extracto desde Google Drive o sube un PDF directamente
               </p>
             </div>
 
@@ -1536,8 +1591,116 @@ export function Finance() {
               </div>
             </div>
 
-            {/* Upload + password */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Source toggle: Drive / Upload */}
+            <div>
+              <label className="block text-xs text-slate-400 mb-2">Origen</label>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => { setExtractoSource('drive'); setExtractoTransactions([]); setExtractoError('') }}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    extractoSource === 'drive'
+                      ? 'bg-blue-500/20 text-blue-400 border border-blue-500/40'
+                      : 'text-slate-400 border border-border hover:text-white hover:bg-white/5'
+                  }`}
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2L2 19.5h20L12 2z"/></svg>
+                  Google Drive
+                </button>
+                <button
+                  onClick={() => { setExtractoSource('upload'); setExtractoTransactions([]); setExtractoError('') }}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    extractoSource === 'upload'
+                      ? 'bg-blue-500/20 text-blue-400 border border-blue-500/40'
+                      : 'text-slate-400 border border-border hover:text-white hover:bg-white/5'
+                  }`}
+                >
+                  <Upload size={14} />
+                  Subir PDF
+                </button>
+              </div>
+            </div>
+
+            {/* ── Drive browser ── */}
+            {extractoSource === 'drive' && (
+              <div className="space-y-3">
+                {!driveAvailable ? (
+                  <div className="text-xs text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded-lg px-4 py-3 space-y-2">
+                    <p className="font-medium">Google Drive no configurado</p>
+                    <p className="text-slate-400">
+                      1. Agrega <code className="text-amber-300">DRIVE_EXTRACTOS_FOLDER_ID</code> al <code>.env</code> del backend con el ID de la carpeta de extractos.
+                    </p>
+                    {driveEmail && (
+                      <p className="text-slate-400">
+                        2. Comparte la carpeta con: <code className="text-amber-300 select-all">{driveEmail}</code>
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <>
+                    {/* Breadcrumb */}
+                    <div className="flex items-center gap-1 text-xs text-slate-400 flex-wrap">
+                      {driveBreadcrumb.map((b, idx) => (
+                        <span key={idx} className="flex items-center gap-1">
+                          {idx > 0 && <span className="text-slate-600">/</span>}
+                          <button
+                            onClick={() => navigateBreadcrumb(idx)}
+                            className={`hover:text-white transition-colors ${idx === driveBreadcrumb.length - 1 ? 'text-white font-medium' : ''}`}
+                          >
+                            {b.name}
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+
+                    {driveLoading ? (
+                      <div className="flex items-center gap-2 text-sm text-slate-400 py-4">
+                        <Loader2 size={14} className="animate-spin" /> Cargando archivos...
+                      </div>
+                    ) : (
+                      <div className="border border-border rounded-lg overflow-hidden max-h-[300px] overflow-y-auto">
+                        {/* Folders */}
+                        {driveFolders.map(f => (
+                          <button
+                            key={f.id}
+                            onClick={() => navigateDriveFolder(f.id, f.name)}
+                            className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-white/5 transition-colors text-left border-b border-border/50"
+                          >
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" className="text-blue-400 shrink-0"><path d="M10 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg>
+                            <span className="text-sm text-white">{f.name}</span>
+                          </button>
+                        ))}
+                        {/* PDF Files */}
+                        {driveFiles.map(f => (
+                          <button
+                            key={f.id}
+                            onClick={() => setDriveSelectedFile(driveSelectedFile?.id === f.id ? null : f)}
+                            className={`w-full flex items-center gap-3 px-4 py-2.5 transition-colors text-left border-b border-border/50 ${
+                              driveSelectedFile?.id === f.id ? 'bg-blue-500/15' : 'hover:bg-white/5'
+                            }`}
+                          >
+                            <FileText size={16} className="text-red-400 shrink-0" />
+                            <div className="flex-1 min-w-0">
+                              <span className="text-sm text-white block truncate">{f.name}</span>
+                              <span className="text-xs text-slate-500">
+                                {f.size ? `${(Number(f.size) / 1024).toFixed(0)} KB` : ''}
+                                {f.modifiedTime ? ` · ${new Date(f.modifiedTime).toLocaleDateString('es-CO')}` : ''}
+                              </span>
+                            </div>
+                            {driveSelectedFile?.id === f.id && <Check size={14} className="text-blue-400 shrink-0" />}
+                          </button>
+                        ))}
+                        {driveFolders.length === 0 && driveFiles.length === 0 && (
+                          <div className="text-xs text-slate-500 text-center py-6">Carpeta vacía</div>
+                        )}
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
+
+            {/* ── Upload local ── */}
+            {extractoSource === 'upload' && (
               <div>
                 <label className="block text-xs text-slate-400 mb-2">Archivo PDF</label>
                 <label className="flex items-center gap-2 px-4 py-3 bg-surface border border-dashed border-border rounded-lg cursor-pointer hover:border-blue-500/50 hover:bg-blue-500/5 transition-colors">
@@ -1553,22 +1716,28 @@ export function Finance() {
                   />
                 </label>
               </div>
-              <div>
-                <label className="block text-xs text-slate-400 mb-2">Contraseña del PDF (si tiene)</label>
-                <input
-                  type="password"
-                  value={extractoPassword}
-                  onChange={e => setExtractoPassword(e.target.value)}
-                  placeholder="Contraseña..."
-                  className="w-full bg-surface border border-border rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500/50"
-                />
-              </div>
+            )}
+
+            {/* Password */}
+            <div className="max-w-xs">
+              <label className="block text-xs text-slate-400 mb-2">Contraseña del PDF (si tiene)</label>
+              <input
+                type="password"
+                value={extractoPassword}
+                onChange={e => setExtractoPassword(e.target.value)}
+                placeholder="Contraseña..."
+                className="w-full bg-surface border border-border rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500/50"
+              />
             </div>
 
             {/* Parse button */}
             <button
-              onClick={handleExtractoParse}
-              disabled={!extractoFile || extractoParsing}
+              onClick={extractoSource === 'drive' ? handleDriveParse : handleExtractoParse}
+              disabled={
+                extractoParsing ||
+                (extractoSource === 'upload' && !extractoFile) ||
+                (extractoSource === 'drive' && !driveSelectedFile)
+              }
               className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-500 disabled:bg-blue-600/30 disabled:text-slate-500 text-white text-sm font-medium rounded-lg transition-colors"
             >
               {extractoParsing ? <Loader2 size={14} className="animate-spin" /> : <FileText size={14} />}
