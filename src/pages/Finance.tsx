@@ -422,8 +422,9 @@ export function Finance() {
 
   const EXTRACTO_ENTITIES: Record<string, { label: string; color: string }> = {
     nubank:       { label: 'Nubank',       color: '#820AD1' },
-    lulobank:     { label: 'Lulobank',     color: '#00D26A' },
+    lulobank:     { label: 'Lulo Bank',    color: '#00D26A' },
     bancolombia:  { label: 'Bancolombia',  color: '#FDDA24' },
+    falabella:    { label: 'Falabella',    color: '#BDD732' },
   }
 
   async function loadDriveStatus() {
