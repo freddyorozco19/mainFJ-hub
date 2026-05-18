@@ -257,6 +257,10 @@ export function Finance() {
 
   // ── Column Filters (Registros) ─────────────────────────────────────────────
   const [columnFilters, setColumnFilters] = useState<Record<string, string>>({})
+  const [dateFrom, setDateFrom] = useState('')
+  const [dateTo, setDateTo]     = useState('')
+  const [crudPage, setCrudPage] = useState(0)
+  const CRUD_PAGE_SIZE = 20
 
   // ── Crédito filter toggle ──────────────────────────────────────────────────
   const [creditoFilter, setCreditoFilter] = useState<'total' | 'ingreso' | 'egreso'>('total')
@@ -564,8 +568,22 @@ export function Finance() {
       if (creditoFilter === 'ingreso' && tipo !== 'ingreso') return false
       if (creditoFilter === 'egreso' && tipo !== 'egreso') return false
     }
+    if (dateFrom || dateTo) {
+      const dateCol = row['DATE'] ?? row['FECHA'] ?? row['MES'] ?? row['FECHA_PAGO'] ?? ''
+      const raw = String(dateCol).trim()
+      if (!raw) return false
+      const parts = raw.includes('/') ? raw.split('/') : raw.split('-')
+      const iso = parts.length === 3
+        ? (parts[0].length === 4 ? raw : `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`)
+        : raw
+      if (dateFrom && iso < dateFrom) return false
+      if (dateTo && iso > dateTo) return false
+    }
     return true
-  })
+  }).reverse()
+
+  const totalCrudPages = Math.ceil(filteredCrudRecords.length / CRUD_PAGE_SIZE)
+  const paginatedCrudRecords = filteredCrudRecords.slice(crudPage * CRUD_PAGE_SIZE, (crudPage + 1) * CRUD_PAGE_SIZE)
 
   const maxTotal = Math.max(
     ...Object.values(summary).map(s => s?.total_cop ?? 0),
@@ -875,7 +893,7 @@ export function Finance() {
             <div className="flex items-center gap-2">
               <select
                 value={crudTab}
-                onChange={e => { setCrudTab(e.target.value as TabKey); setSelectedRows(new Set()); loadRecords(e.target.value as TabKey) }}
+                onChange={e => { setCrudTab(e.target.value as TabKey); setSelectedRows(new Set()); setCrudPage(0); loadRecords(e.target.value as TabKey) }}
                 className="bg-surface border border-border text-sm text-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:border-primary/50"
               >
                 {TABS_CONFIG.map(t => (
@@ -951,9 +969,25 @@ export function Finance() {
                 </select>
               )
             })}
-            {(search || Object.values(columnFilters).some(Boolean) || creditoFilter !== 'total') && (
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs text-slate-500">Desde</span>
+              <input
+                type="date"
+                value={dateFrom}
+                onChange={e => { setDateFrom(e.target.value); setCrudPage(0) }}
+                className="bg-surface border border-border text-sm text-slate-300 rounded-lg px-2 py-2 focus:outline-none focus:border-primary/50"
+              />
+              <span className="text-xs text-slate-500">Hasta</span>
+              <input
+                type="date"
+                value={dateTo}
+                onChange={e => { setDateTo(e.target.value); setCrudPage(0) }}
+                className="bg-surface border border-border text-sm text-slate-300 rounded-lg px-2 py-2 focus:outline-none focus:border-primary/50"
+              />
+            </div>
+            {(search || Object.values(columnFilters).some(Boolean) || creditoFilter !== 'total' || dateFrom || dateTo) && (
               <button
-                onClick={() => { setSearch(''); setColumnFilters({}); setCreditoFilter('total') }}
+                onClick={() => { setSearch(''); setColumnFilters({}); setCreditoFilter('total'); setDateFrom(''); setDateTo(''); setCrudPage(0) }}
                 className="text-xs text-slate-400 hover:text-white px-2 py-1 border border-border rounded-lg transition-colors"
               >
                 Limpiar filtros
@@ -974,7 +1008,7 @@ export function Finance() {
                 <Loader2 size={16} className="animate-spin" />
                 <span className="text-sm">Cargando…</span>
               </div>
-            ) : filteredCrudRecords.length === 0 ? (
+            ) : paginatedCrudRecords.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12 gap-2 text-slate-600">
                 <DollarSign size={24} />
                 <span className="text-sm">
@@ -987,7 +1021,7 @@ export function Finance() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-border">
-                    <th className="text-center text-xs text-slate-500 font-medium py-2 px-2"><input type="checkbox" onChange={() => { const visibleIdx = new Set(filteredCrudRecords.map(({ i }) => i)); if (visibleIdx.size > 0 && Array.from(visibleIdx).every(idx => selectedRows.has(idx))) { const next = new Set(selectedRows); Array.from(visibleIdx).forEach(idx => next.delete(idx)); setSelectedRows(next); } else { const next = new Set(selectedRows); Array.from(visibleIdx).forEach(idx => next.add(idx)); setSelectedRows(next); } }} className="rounded" /></th>
+                    <th className="text-center text-xs text-slate-500 font-medium py-2 px-2"><input type="checkbox" onChange={() => { const visibleIdx = new Set(paginatedCrudRecords.map(({ i }) => i)); if (visibleIdx.size > 0 && Array.from(visibleIdx).every(idx => selectedRows.has(idx))) { const next = new Set(selectedRows); Array.from(visibleIdx).forEach(idx => next.delete(idx)); setSelectedRows(next); } else { const next = new Set(selectedRows); Array.from(visibleIdx).forEach(idx => next.add(idx)); setSelectedRows(next); } }} className="rounded" /></th>
                     <th className="text-center text-xs text-slate-500 font-medium py-2 px-3 whitespace-nowrap w-[100px]">Acciones</th>
                     {Object.keys(records[0]).map(col => (
                       <th key={col} className="text-left text-xs text-slate-500 font-medium py-2 px-3 whitespace-nowrap">{col}</th>
@@ -995,7 +1029,7 @@ export function Finance() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredCrudRecords.map(({ row, i }) => (
+                  {paginatedCrudRecords.map(({ row, i }) => (
                     <tr key={i} className="border-b border-border/50 hover:bg-white/3 transition-colors">
                       <td className="py-2 px-2 text-center whitespace-nowrap">
                         <input type="checkbox" checked={selectedRows.has(i)} onChange={() => toggleSelectRow(i)} className="rounded" />
@@ -1029,6 +1063,45 @@ export function Finance() {
               </table>
             )}
           </div>
+
+          {/* Paginación */}
+          {totalCrudPages > 1 && (
+            <div className="flex items-center justify-between pt-3 border-t border-border">
+              <span className="text-xs text-slate-500">
+                {filteredCrudRecords.length} registros — Página {crudPage + 1} de {totalCrudPages}
+              </span>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => setCrudPage(0)}
+                  disabled={crudPage === 0}
+                  className="px-2 py-1 text-xs text-slate-400 hover:text-white border border-border rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                >
+                  «
+                </button>
+                <button
+                  onClick={() => setCrudPage(p => Math.max(0, p - 1))}
+                  disabled={crudPage === 0}
+                  className="px-2 py-1 text-xs text-slate-400 hover:text-white border border-border rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                >
+                  ‹ Anterior
+                </button>
+                <button
+                  onClick={() => setCrudPage(p => Math.min(totalCrudPages - 1, p + 1))}
+                  disabled={crudPage >= totalCrudPages - 1}
+                  className="px-2 py-1 text-xs text-slate-400 hover:text-white border border-border rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                >
+                  Siguiente ›
+                </button>
+                <button
+                  onClick={() => setCrudPage(totalCrudPages - 1)}
+                  disabled={crudPage >= totalCrudPages - 1}
+                  className="px-2 py-1 text-xs text-slate-400 hover:text-white border border-border rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                >
+                  »
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="flex justify-center pt-2">
