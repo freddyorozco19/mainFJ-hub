@@ -30,7 +30,7 @@ const TAB_COLUMNS: Record<TabKey, string[]> = {
   essentials: ['PRODUCTO', 'DESCRIPCION', 'MONEDA', 'VALOR', 'MEDIO PAGO', 'MODO'],
   ahorro:     ['NOMBRE', 'MEDIO', 'MES', 'VALOR'],
   basket:     ['PRODUCTO', 'DESCRIPCION', 'CATEGORIA', 'MONEDA', 'VALOR', 'CANTIDAD'],
-  shops:      ['PRODUCT', 'DESCRIPTION', 'BRAND', 'CATEGORY', 'STORE', 'STORE2', 'COIN', 'VALUE', 'PAYMENT', 'ACCOUNT', 'CUOTAS', 'OFFER', 'DATE'],
+  shops:      ['PRODUCT', 'DESCRIPTION', 'BRAND', 'CATEGORY', 'STORE', 'STORE2', 'COIN', 'VALUE', 'PAYMENT', 'ACCOUNT', 'CUOTAS', 'OFFER', 'DATE', 'SHOP_ID'],
   wishlist:   ['PRODUCTO', 'DESCRIPCION', 'MONEDA', 'VALOR', 'TIENDA', 'MEDIO', 'SOURCE'],
   debts:      ['PRODUCTO', 'DESCRIPCION', 'MONEDA', 'VALOR', 'PAGO', 'ESTADO', 'FECHA'],
   credito:    ['PRODUCTO', 'DESCRIPCION', 'ENTIDAD', 'MONEDA', 'VALOR_TOTAL', 'CUOTAS', 'CUOTA_ACTUAL', 'VALOR_CUOTA', 'FECHA_CORTE', 'FECHA_PAGO', 'ESTADO', 'TIPO'],
@@ -284,6 +284,15 @@ export function Finance() {
 
   const BULK_COMMON_FIELDS = ['STORE', 'STORE2', 'COIN', 'PAYMENT', 'CUOTAS', 'ACCOUNT', 'DATE']
   const BULK_ITEM_FIELDS   = ['PRODUCT', 'DESCRIPTION', 'BRAND', 'CATEGORY', 'VALUE', 'OFFER']
+  const [crudView, setCrudView] = useState<'list' | 'grouped'>('list')
+  const [grouping, setGrouping] = useState(false)
+
+  function generateShopId() {
+    const now = new Date()
+    const d = now.toISOString().slice(0, 10).replace(/-/g, '')
+    const r = Math.random().toString(36).slice(2, 6).toUpperCase()
+    return `S-${d}-${r}`
+  }
 
   async function handleBulkSave() {
     if (bulkItems.every(item => !item['PRODUCT'])) {
@@ -293,9 +302,10 @@ export function Finance() {
     setBulkSaving(true)
     setBulkError('')
     try {
+      const shopId = generateShopId()
       const rows = bulkItems
         .filter(item => item['PRODUCT'])
-        .map(item => ({ ...bulkCommon, ...item }))
+        .map(item => ({ ...bulkCommon, ...item, SHOP_ID: shopId }))
       const res = await api('/finance/records/batch', {
         method: 'POST',
         body: { tab: 'shops', rows },
@@ -314,6 +324,57 @@ export function Finance() {
       setBulkSaving(false)
     }
   }
+
+  async function handleGroupSelected() {
+    if (selectedRows.size < 2) return
+    setGrouping(true)
+    try {
+      const shopId = generateShopId()
+      const updates = Array.from(selectedRows).map(idx =>
+        api('/finance/records', {
+          method: 'PUT',
+          body: { tab: 'shops', row_index: idx, data: { ...records[idx], SHOP_ID: shopId } },
+        })
+      )
+      await Promise.all(updates)
+      await loadRecords('shops')
+      setSelectedRows(new Set())
+    } catch (e: any) {
+      console.error('Error agrupando:', e)
+    } finally {
+      setGrouping(false)
+    }
+  }
+
+  const groupedByShop = (() => {
+    if (crudTab !== 'shops') return []
+    const groups: { shopId: string; store: string; date: string; items: typeof filteredCrudRecords; total: number }[] = []
+    const map = new Map<string, typeof filteredCrudRecords>()
+    const ungrouped: typeof filteredCrudRecords = []
+    for (const entry of filteredCrudRecords) {
+      const sid = String(entry.row['SHOP_ID'] ?? '').trim()
+      if (sid) {
+        if (!map.has(sid)) map.set(sid, [])
+        map.get(sid)!.push(entry)
+      } else {
+        ungrouped.push(entry)
+      }
+    }
+    for (const [shopId, items] of map) {
+      const first = items[0].row
+      groups.push({
+        shopId,
+        store: String(first['STORE'] ?? ''),
+        date: String(first['DATE'] ?? ''),
+        items,
+        total: items.reduce((sum, { row }) => sum + (Number(String(row['VALUE']).replace(/\D/g, '')) || 0), 0),
+      })
+    }
+    if (ungrouped.length > 0) {
+      groups.push({ shopId: '', store: 'Sin agrupar', date: '', items: ungrouped, total: ungrouped.reduce((sum, { row }) => sum + (Number(String(row['VALUE']).replace(/\D/g, '')) || 0), 0) })
+    }
+    return groups
+  })()
 
   // ── Delete Confirmation Modal ──────────────────────────────────────────────
   const [showDeleteModal, setShowDeleteModal] = useState(false)
@@ -1043,10 +1104,36 @@ export function Finance() {
             )}
           </div>
 
+          {/* Vista toggle (solo shops) */}
+          {crudTab === 'shops' && (
+            <div className="flex items-center gap-1 bg-black/20 border border-border rounded-xl p-1 w-fit">
+              {[
+                { key: 'list', label: 'Lista' },
+                { key: 'grouped', label: 'Por Compra' },
+              ].map(t => (
+                <button
+                  key={t.key}
+                  onClick={() => setCrudView(t.key as any)}
+                  className={`px-3 py-1 rounded-lg text-xs font-medium transition-all ${
+                    crudView === t.key ? 'text-white' : 'text-slate-500 hover:text-slate-300'
+                  }`}
+                  style={crudView === t.key ? { backgroundColor: '#06B6D422', color: '#06B6D4' } : {}}
+                >
+                  {t.label}
+                </button>
+              ))}
+            </div>
+          )}
+
           <div className="overflow-x-auto">
             {selectedRows.size > 0 && (
               <div className="flex items-center gap-3 px-4 py-2 bg-orange-500/10 border border-orange-500/30 rounded-lg mb-3">
                 <span className="text-xs text-orange-400">{selectedRows.size} seleccionados</span>
+                {crudTab === 'shops' && selectedRows.size >= 2 && (
+                  <button onClick={handleGroupSelected} disabled={grouping} className="px-2 py-1 text-xs bg-accent/20 hover:bg-accent/30 text-accent rounded transition-colors disabled:opacity-50">
+                    {grouping ? 'Agrupando...' : 'Agrupar en Compra'}
+                  </button>
+                )}
                 <button onClick={handleBulkDelete} className="px-2 py-1 text-xs bg-danger/20 hover:bg-danger/30 text-danger rounded transition-colors">Eliminar seleccionados</button>
                 <button onClick={() => setSelectedRows(new Set())} className="px-2 py-1 text-xs text-slate-400 hover:text-white rounded transition-colors">Cancelar</button>
               </div>
@@ -1065,7 +1152,7 @@ export function Finance() {
                     : `Sin registros en ${TABS_CONFIG.find(t => t.key === crudTab)?.label}`}
                 </span>
               </div>
-            ) : (
+            ) : (crudView === 'list' || crudTab !== 'shops') ? (
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-border">
@@ -1109,6 +1196,78 @@ export function Finance() {
                   ))}
                 </tbody>
               </table>
+            ) : (
+              /* ── Vista agrupada por compra ── */
+              <div className="space-y-4">
+                {groupedByShop.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-12 gap-2 text-slate-600">
+                    <ShoppingCart size={24} />
+                    <span className="text-sm">Sin compras agrupadas</span>
+                  </div>
+                ) : groupedByShop.map((group, gi) => (
+                  <div key={gi} className="border border-border rounded-xl overflow-hidden">
+                    <div className="flex items-center justify-between px-4 py-3 bg-surface/50 border-b border-border">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-lg bg-accent/10 border border-accent/20 flex items-center justify-center">
+                          <ShoppingCart size={14} className="text-accent" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-white">
+                            {group.store}{group.date ? ` — ${group.date}` : ''}
+                          </p>
+                          <p className="text-xs text-slate-500">
+                            {group.shopId ? <span className="font-mono text-slate-600">{group.shopId}</span> : 'Registros individuales'}
+                            {' · '}{group.items.length} item{group.items.length > 1 ? 's' : ''}
+                          </p>
+                        </div>
+                      </div>
+                      <span className="font-mono text-sm font-semibold text-success">{formatCOPFull(group.total)}</span>
+                    </div>
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-border/50">
+                          <th className="text-left text-xs text-slate-500 font-medium py-2 px-4">PRODUCT</th>
+                          <th className="text-left text-xs text-slate-500 font-medium py-2 px-3">BRAND</th>
+                          <th className="text-left text-xs text-slate-500 font-medium py-2 px-3">CATEGORY</th>
+                          <th className="text-right text-xs text-slate-500 font-medium py-2 px-3">VALUE</th>
+                          <th className="text-center text-xs text-slate-500 font-medium py-2 px-3">OFFER</th>
+                          <th className="text-center text-xs text-slate-500 font-medium py-2 px-3 w-[80px]">Acciones</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {group.items.map(({ row, i }) => (
+                          <tr key={i} className="border-b border-border/30 hover:bg-white/3 transition-colors">
+                            <td className="py-2 px-4 text-slate-300 max-w-xs truncate" title={String(row['PRODUCT'])}>
+                              <span className="font-medium">{String(row['PRODUCT'])}</span>
+                              {row['DESCRIPTION'] && <span className="text-slate-500 text-xs ml-1.5">{String(row['DESCRIPTION'])}</span>}
+                            </td>
+                            <td className="py-2 px-3 text-slate-400 text-xs">{String(row['BRAND'] ?? '')}</td>
+                            <td className="py-2 px-3 text-slate-400 text-xs">{String(row['CATEGORY'] ?? '')}</td>
+                            <td className="py-2 px-3 text-right">
+                              <span className="font-mono text-success text-xs">{formatCOPFull(Number(String(row['VALUE']).replace(/\D/g, '')) || 0)}</span>
+                            </td>
+                            <td className="py-2 px-3 text-center">
+                              {String(row['OFFER'] ?? '').toUpperCase() === 'SÍ' && (
+                                <span className="text-xs bg-emerald-500/15 text-emerald-400 border border-emerald-500/20 px-1.5 py-0.5 rounded">Oferta</span>
+                              )}
+                            </td>
+                            <td className="py-2 px-3 text-center">
+                              <div className="flex items-center justify-center gap-1">
+                                <button onClick={() => openEditModal(i)} title="Editar" className="inline-flex items-center justify-center w-6 h-6 rounded bg-accent/10 hover:bg-accent/20 text-accent transition-colors">
+                                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                                </button>
+                                <button onClick={() => openDeleteModal(i)} title="Eliminar" className="inline-flex items-center justify-center w-6 h-6 rounded bg-danger/10 hover:bg-danger/20 text-danger transition-colors">
+                                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ))}
+              </div>
             )}
           </div>
 
