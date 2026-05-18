@@ -2118,6 +2118,8 @@ export function Finance() {
                           <th className="px-3 py-2 text-right">Valor Total</th>
                           <th className="px-3 py-2 text-center">Cuotas</th>
                           <th className="px-3 py-2 text-right">Valor Cuota</th>
+                          <th className="px-3 py-2 text-center">% Interés</th>
+                          <th className="px-3 py-2 text-right">Val. Interés</th>
                           <th className="px-3 py-2 text-left">Entidad</th>
                         </tr>
                       </thead>
@@ -2149,6 +2151,10 @@ export function Finance() {
                             <td className="px-3 py-2 text-center text-slate-400">{t.CUOTAS || '—'}</td>
                             <td className="px-3 py-2 text-right text-slate-300 font-mono">
                               {t.VALOR_CUOTA ? formatCOPFull(t.VALOR_CUOTA) : '—'}
+                            </td>
+                            <td className="px-3 py-2 text-center text-amber-400 font-mono">{t.PCT_INTERES || '—'}</td>
+                            <td className="px-3 py-2 text-right text-slate-300 font-mono">
+                              {t.VALOR_INTERES ? formatCOPFull(t.VALOR_INTERES) : '—'}
                             </td>
                             <td className="px-3 py-2 text-slate-300">{t.ENTIDAD}</td>
                           </tr>
