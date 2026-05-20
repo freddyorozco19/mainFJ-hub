@@ -17,11 +17,6 @@ interface CalEvent {
   attendee_count: number
 }
 
-const DAY_LABELS: Record<string, string> = {
-  Monday: 'Lun', Tuesday: 'Mar', Wednesday: 'Mié',
-  Thursday: 'Jue', Friday: 'Vie', Saturday: 'Sáb', Sunday: 'Dom',
-}
-
 const MONTH_SHORT = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic']
 
 function durationLabel(min: number) {
