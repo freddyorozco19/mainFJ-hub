@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Calendar, Clock, MapPin, Users, AlertCircle, X, ExternalLink, User, Video, Building2 } from 'lucide-react'
+import { Calendar, Clock, MapPin, Users, AlertCircle, X, ExternalLink, User, Video, Building2, Settings } from 'lucide-react'
 import { api } from '../api'
 
 interface Attendee {
@@ -334,16 +334,29 @@ export function CalendarWidget() {
 
         {!loading && error && (
           <div className="flex items-center gap-2 py-4 justify-center">
-            <AlertCircle size={14} className="text-slate-600" />
-            <span className="text-xs text-slate-600">{error}</span>
+            <AlertCircle size={14} className="text-red-400" />
+            <span className="text-xs text-slate-400">{error}</span>
           </div>
         )}
 
-        {!loading && !error && events.length === 0 && (
+        {!loading && !error && sources.length === 0 && (
+          <div className="py-6 text-center space-y-2">
+            <div className="w-10 h-10 rounded-xl bg-slate-500/10 border border-slate-500/20 flex items-center justify-center mx-auto">
+              <Settings size={18} className="text-slate-400" />
+            </div>
+            <p className="text-xs text-slate-300 font-medium">Calendario no configurado</p>
+            <p className="text-[11px] text-slate-500 leading-relaxed px-2">
+              Agrega <span className="text-slate-300 font-mono">OUTLOOK_CALENDAR_ICS_URL</span> o{' '}
+              <span className="text-slate-300 font-mono">GOOGLE_CALENDAR_ICS_URL</span> en las vars de entorno de Render.
+            </p>
+          </div>
+        )}
+
+        {!loading && !error && sources.length > 0 && events.length === 0 && (
           <div className="py-6 text-center">
-            <Calendar size={24} className="text-slate-700 mx-auto mb-2" />
-            <p className="text-xs text-slate-600">Sin eventos hoy</p>
-            <p className="text-[10px] text-slate-700 mt-0.5">Tienes el dia libre!</p>
+            <Calendar size={24} className="text-slate-500 mx-auto mb-2" />
+            <p className="text-xs text-slate-300">Sin eventos hoy</p>
+            <p className="text-[11px] text-slate-500 mt-0.5">Tienes el día libre</p>
           </div>
         )}
 
