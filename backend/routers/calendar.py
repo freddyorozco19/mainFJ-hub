@@ -111,9 +111,20 @@ def _event_to_dict(component, source: str) -> dict:
     organizer = component.get("ORGANIZER")
     organizer_name = organizer_email = None
     if organizer:
-        params = organizer.params if hasattr(organizer, "params") else {}
-        organizer_name  = params.get("CN") or None
-        organizer_email = str(organizer).replace("mailto:", "") or None
+        try:
+            params = organizer.params if hasattr(organizer, "params") else {}
+            # CN can be a vText object or plain string, strip quotes
+            cn_raw = params.get("CN", "")
+            organizer_name = str(cn_raw).strip('"').strip("'").strip() or None
+            # Email from the value itself (mailto:email or MAILTO:email)
+            raw_val = str(organizer).strip()
+            email_match = re.search(r'(?i)mailto:(.+)', raw_val)
+            if email_match:
+                organizer_email = email_match.group(1).strip() or None
+            else:
+                organizer_email = raw_val or None
+        except Exception:
+            pass
 
     attendees = component.get("ATTENDEE", [])
     if not isinstance(attendees, list):
