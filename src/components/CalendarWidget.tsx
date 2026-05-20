@@ -9,6 +9,7 @@ interface Attendee {
 
 interface CalEvent {
   uid: string
+  source: 'outlook' | 'google'
   summary: string
   start: string
   end: string
@@ -27,6 +28,11 @@ interface CalEvent {
 }
 
 const MONTH_SHORT = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic']
+
+const SOURCE_STYLES = {
+  outlook: { label: 'Outlook', dot: 'bg-blue-400',   text: 'text-blue-400'  },
+  google:  { label: 'Google',  dot: 'bg-red-400',    text: 'text-red-400'   },
+} as const
 
 const ATTENDEE_STATUS: Record<string, { label: string; color: string }> = {
   ACCEPTED:     { label: 'Aceptó',   color: 'text-emerald-400' },
@@ -84,6 +90,9 @@ function EventPopup({ ev, onClose }: { ev: CalEvent; onClose: () => void }) {
               </div>
               <div className="flex-1 min-w-0">
                 <h3 className="text-base font-semibold text-white leading-snug">{ev.summary}</h3>
+                <span className={`flex-shrink-0 text-[9px] font-medium ${SOURCE_STYLES[ev.source]?.text ?? 'text-slate-500'}`}>
+                  {SOURCE_STYLES[ev.source]?.label}
+                </span>
                 {isNow && (
                   <span className="inline-flex mt-1 badge badge-primary text-[9px] animate-pulse">En curso ahora</span>
                 )}
@@ -208,7 +217,7 @@ function EventCard({ ev, onClick }: { ev: CalEvent; onClick: () => void }) {
         }
       </div>
 
-      {/* Bar */}
+      {/* Source dot + bar */}
       <div className={`w-0.5 rounded-full flex-shrink-0 ${isNow ? 'bg-primary shadow-[0_0_6px_rgba(124,58,237,0.6)]' : 'bg-white/10'}`} />
 
       {/* Content */}
@@ -250,6 +259,7 @@ export function CalendarWidget() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [weekCount, setWeekCount] = useState(0)
+  const [sources, setSources] = useState<string[]>([])
   const [selected, setSelected] = useState<CalEvent | null>(null)
 
   useEffect(() => { load() }, [])
@@ -267,6 +277,7 @@ export function CalendarWidget() {
       const statsData = statsRes.ok ? await statsRes.json() : {}
       setEvents(todayData.events ?? [])
       setWeekCount(statsData.week_count ?? 0)
+      setSources(statsData.sources ?? [])
     } catch (e: any) {
       setError(e.message || 'Error al cargar calendario')
     } finally {
@@ -288,7 +299,7 @@ export function CalendarWidget() {
             </div>
             <div>
               <h3 className="text-sm font-semibold text-white leading-none">Calendario</h3>
-              <p className="text-[10px] text-slate-600 mt-0.5">Outlook — {todayLabel}</p>
+              <p className="text-[10px] text-slate-600 mt-0.5">{sources.length > 0 ? sources.map(s => SOURCE_STYLES[s as keyof typeof SOURCE_STYLES]?.label).join(' + ') : 'Calendario'} — {todayLabel}</p>
             </div>
           </div>
           {weekCount > 0 && (
