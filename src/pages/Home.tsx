@@ -1,10 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import {
-  Bot, TrendingUp, DollarSign, PiggyBank, AlertCircle,
-  ShoppingCart, Activity, Wallet, Heart, Layers,
-  ArrowUpRight, Zap,
-} from 'lucide-react'
+import { Bot, TrendingUp, DollarSign, PiggyBank, AlertCircle, ShoppingCart, Activity, Wallet, Heart, Layers, ArrowUpRight, Zap } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { useDashboard } from '../store/dashboardStore'
 import { api } from '../api'
@@ -22,7 +18,7 @@ interface FinanceSummary {
 }
 
 function Sparkline({ data, color = '#7C3AED' }: { data: number[]; color?: string }) {
-  if (data.length < 2) return null
+  if (!data || data.length < 2) return null
   const max = Math.max(...data)
   const min = Math.min(...data)
   const range = max - min || 1
@@ -36,56 +32,44 @@ function Sparkline({ data, color = '#7C3AED' }: { data: number[]; color?: string
           <stop offset="100%" stopColor={color} stopOpacity="0" />
         </linearGradient>
       </defs>
-      <path
-        d={`M${pts.join(' L')} L${W},${H} L0,${H} Z`}
-        fill={`url(#g-${color.replace('#','')})`}
-      />
-      <path
-        d={`M${pts.join(' L')}`}
-        stroke={color}
-        strokeWidth="1.5"
-        fill="none"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <circle
-        cx={(data.length - 1) / (data.length - 1) * W}
-        cy={H - ((data[data.length-1] - min) / range) * (H * 0.8) - H * 0.1}
-        r="2.5"
-        fill={color}
-      />
+      <path d={`M${pts.join(' L')} L${W},${H} L0,${H} Z`} fill={`url(#g-${color.replace('#','')})`} />
+      <path d={`M${pts.join(' L')}`} stroke={color} strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+      <circle cx={(data.length - 1) / (data.length - 1) * W} cy={H - ((data[data.length-1] - min) / range) * (H * 0.8) - H * 0.1} r="2.5" fill={color} />
     </svg>
   )
 }
 
-  error:   'bg-danger',
-  warn:    'bg-warning',
-  success: 'bg-success',
-  info:    'bg-primary',
+const PRIORITY_STYLES: Record<string, { dot: string; label: string }> = {
+  critical: { dot: 'bg-red-400',    label: 'Critica' },
+  high:     { dot: 'bg-orange-400', label: 'Alta'    },
+  medium:   { dot: 'bg-yellow-400', label: 'Media'   },
+  low:      { dot: 'bg-slate-500',  label: 'Baja'    },
 }
 
-  error:   'badge badge-danger',
-  warn:    'badge badge-warning',
-  success: 'badge badge-success',
-  info:    'badge badge-primary',
+const STATUS_LABEL: Record<string, { label: string; color: string }> = {
+  in_progress: { label: 'En progreso', color: 'text-blue-400'   },
+  review:      { label: 'Review',      color: 'text-amber-400'  },
+  backlog:     { label: 'Backlog',     color: 'text-slate-500'  },
 }
 
 export function Home() {
   const { user } = useAuth()
   const { agents, logs, financeRefreshTick } = useDashboard()
-  const [summary, setSummary] = useState<Partial<FinanceSummary>>({})
+  const [summary, setSummary]               = useState<Partial<FinanceSummary>>({})
   const [summaryLoading, setSummaryLoading] = useState(true)
-  const [recentRecords, setRecentRecords] = useState<Record<string, string | number>[]>([])
+  const [recentRecords, setRecentRecords]   = useState<Record<string, string | number>[]>([])
   const [recordsLoading, setRecordsLoading] = useState(true)
-  const [backlogTasks, setBacklogTasks] = useState<any[]>([])
+  const [backlogTasks, setBacklogTasks]     = useState<any[]>([])
   const [backlogLoading, setBacklogLoading] = useState(true)
-  const [healthData, setHealthData] = useState<any>(null)
-  const [healthLoading, setHealthLoading] = useState(true)
-  const [now, setNow] = useState(new Date())
+  const [healthData, setHealthData]         = useState<any>(null)
+  const [healthLoading, setHealthLoading]   = useState(true)
+  const [now, setNow]                       = useState(new Date())
 
   useEffect(() => {
     loadSummary()
     loadRecentRecords()
+    loadBacklog()
+    loadHealth()
     const t = setInterval(() => setNow(new Date()), 60000)
     return () => clearInterval(t)
   }, [financeRefreshTick])
@@ -109,20 +93,29 @@ export function Home() {
     } catch { /* ignore */ } finally { setRecordsLoading(false) }
   }
 
-  async function loadBacklog() \{
+  async function loadBacklog() {
     setBacklogLoading(true)
-    try \{
+    try {
       const res = await api('/backlog/tasks?limit=6')
       const data = await res.json()
       setBacklogTasks((data ?? []).filter((t: any) => t.status !== 'done').slice(0, 6))
-    \} catch \{ /* ignore */ \} finally \{ setBacklogLoading(false) \}
-  \}
+    } catch { /* ignore */ } finally { setBacklogLoading(false) }
+  }
 
-  const totalGastos = Object.values(summary).reduce((acc, s) => acc + (s?.total_cop ?? 0), 0)
+  async function loadHealth() {
+    setHealthLoading(true)
+    try {
+      const res = await api('/health/summary')
+      if (res.ok) setHealthData(await res.json())
+    } catch { /* ignore */ } finally { setHealthLoading(false) }
+  }
+
+  const totalGastos    = Object.values(summary).reduce((acc, s) => acc + (s?.total_cop ?? 0), 0)
   const totalRegistros = Object.values(summary).reduce((acc, s) => acc + (s?.count ?? 0), 0)
-  const agentesOnline = agents.filter(a => a.status === 'online').length || 4
-  const fmt = (n: number) => new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(n)
+  const agentesOnline  = agents.filter(a => a.status === 'online').length || 4
+  const fmt  = (n: number) => new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(n)
   const fmtM = (n: number) => n >= 1_000_000 ? `${(n/1_000_000).toFixed(1)}M` : n >= 1_000 ? `${(n/1_000).toFixed(0)}K` : String(n)
+  const firstName = user?.name?.split(' ')[0] || 'Freddy'
 
   const greeting = (() => {
     const h = now.getHours()
@@ -131,77 +124,77 @@ export function Home() {
     return 'Buenas noches'
   })()
 
+  const healthSteps = healthData?.latest?.steps
+  const healthFC    = healthData?.latest?.heart_rate_avg
+  const healthTrend = (healthData?.trend ?? []).slice(0, 7).reverse().map((t: any) => t.steps || 0)
+
   const statCards = [
     {
-      label: 'Gastos Totales',
-      value: summaryLoading ? '—' : `$${fmtM(totalGastos)}`,
-      sub: `${totalRegistros} registros`,
-      icon: Wallet,
-      link: '/finance',
-      color: '#7C3AED',
-      iconBg: 'bg-violet-500/10 border-violet-500/20',
-      iconText: 'text-violet-400',
-      spark: [2.1,2.4,2.0,2.7,2.5,2.9,totalGastos/1_000_000||3.1],
+      label:   'Gastos Totales',
+      value:   summaryLoading ? '—' : `$${fmtM(totalGastos)}`,
+      sub:     `${totalRegistros} registros`,
+      icon:    Wallet,
+      link:    '/finance',
+      color:   '#7C3AED',
+      iconBg:  'bg-violet-500/10 border-violet-500/20',
+      iconText:'text-violet-400',
+      spark:   [2.1,2.4,2.0,2.7,2.5,2.9,totalGastos/1_000_000||3.1],
     },
     {
-      label: 'Agentes Online',
-      value: String(agentesOnline),
-      sub: `de ${agents.length || 8} total`,
-      icon: Bot,
-      link: '/agents',
-      color: '#10B981',
-      iconBg: 'bg-emerald-500/10 border-emerald-500/20',
-      iconText: 'text-emerald-400',
-      spark: [2,3,2,4,3,4,agentesOnline],
+      label:   'Agentes Online',
+      value:   String(agentesOnline),
+      sub:     `de ${agents.length || 8} total`,
+      icon:    Bot,
+      link:    '/agents',
+      color:   '#10B981',
+      iconBg:  'bg-emerald-500/10 border-emerald-500/20',
+      iconText:'text-emerald-400',
+      spark:   [2,3,2,4,3,4,agentesOnline],
     },
     {
-      label: 'Pasos hoy',
-      value: healthLoading ? '—' : healthData?.latest?.steps ? `${(healthData.latest.steps/1000).toFixed(1)}K` : '—',
-      sub: healthData?.latest?.heart_rate_avg ? `FC ${healthData.latest.heart_rate_avg} bpm` : 'sin datos',
-      icon: Heart,
-      link: '/health',
-      color: '#EF4444',
-      iconBg: 'bg-red-500/10 border-red-500/20',
-      iconText: 'text-red-400',
-      spark: (healthData?.trend ?? []).slice(0,7).reverse().map((t: any) => t.steps || 0),
+      label:   'Pasos hoy',
+      value:   healthLoading ? '—' : healthSteps ? `${(healthSteps/1000).toFixed(1)}K` : '—',
+      sub:     healthFC ? `FC ${healthFC} bpm` : 'sin datos',
+      icon:    Heart,
+      link:    '/health',
+      color:   '#EF4444',
+      iconBg:  'bg-red-500/10 border-red-500/20',
+      iconText:'text-red-400',
+      spark:   healthTrend.length > 1 ? healthTrend : [0,0,0,0,0,0,0],
     },
     {
-      label: 'Logs de Sistema',
-      value: String(logs.length),
-      sub: `${logs.filter(l=>l.level==='error').length} errores`,
-      icon: Activity,
-      link: '/logs',
-      color: '#F59E0B',
-      iconBg: 'bg-amber-500/10 border-amber-500/20',
-      iconText: 'text-amber-400',
-      spark: [8,12,9,14,11,16,logs.length||17],
+      label:   'Logs de Sistema',
+      value:   String(logs.length),
+      sub:     `${logs.filter(l => l.level === 'error').length} errores`,
+      icon:    Activity,
+      link:    '/logs',
+      color:   '#F59E0B',
+      iconBg:  'bg-amber-500/10 border-amber-500/20',
+      iconText:'text-amber-400',
+      spark:   [8,12,9,14,11,16,logs.length||17],
     },
   ]
 
   const financeBreakdown = [
-    { key: 'shops',      label: 'Compras',  icon: ShoppingCart, color: '#7C3AED', amount: summary.shops?.total_cop ?? 0,  count: summary.shops?.count ?? 0  },
-    { key: 'basket',     label: 'Canasta',  icon: ShoppingCart, color: '#06B6D4', amount: summary.basket?.total_cop ?? 0, count: summary.basket?.count ?? 0 },
-    { key: 'ahorro',     label: 'Ahorro',   icon: PiggyBank,    color: '#10B981', amount: summary.ahorro?.total_cop ?? 0, count: summary.ahorro?.count ?? 0 },
-    { key: 'debts',      label: 'Deudas',   icon: AlertCircle,  color: '#EF4444', amount: summary.debts?.total_cop ?? 0,  count: summary.debts?.count ?? 0  },
+    { label: 'Compras', icon: ShoppingCart, color: '#7C3AED', amount: summary.shops?.total_cop ?? 0,  count: summary.shops?.count ?? 0  },
+    { label: 'Canasta', icon: ShoppingCart, color: '#06B6D4', amount: summary.basket?.total_cop ?? 0, count: summary.basket?.count ?? 0 },
+    { label: 'Ahorro',  icon: PiggyBank,    color: '#10B981', amount: summary.ahorro?.total_cop ?? 0, count: summary.ahorro?.count ?? 0 },
+    { label: 'Deudas',  icon: AlertCircle,  color: '#EF4444', amount: summary.debts?.total_cop ?? 0,  count: summary.debts?.count ?? 0  },
   ]
 
   const quickLinks = [
-    { name: 'Finanzas',  desc: 'Control financiero', path: '/finance', icon: Wallet,     color: '#10B981', bg: 'bg-emerald-500/10', border: 'border-emerald-500/20', text: 'text-emerald-400' },
-    { name: 'Health',    desc: 'Salud y bienestar',  path: '/health',  icon: Heart,      color: '#EF4444', bg: 'bg-red-500/10',     border: 'border-red-500/20',     text: 'text-red-400'     },
-    { name: 'Backlog',   desc: 'Tareas pendientes',  path: '/backlog', icon: Layers,     color: '#8B5CF6', bg: 'bg-violet-500/10', border: 'border-violet-500/20',  text: 'text-violet-400' },
-    { name: 'GrowData',  desc: 'Datos de negocio',   path: '/growdata',icon: TrendingUp, color: '#06B6D4', bg: 'bg-cyan-500/10',   border: 'border-cyan-500/20',    text: 'text-cyan-400'   },
+    { name: 'Finanzas', desc: 'Control financiero', path: '/finance',  icon: Wallet,     color: '#10B981', bg: 'bg-emerald-500/10', border: 'border-emerald-500/20', text: 'text-emerald-400' },
+    { name: 'Health',   desc: 'Salud y bienestar',  path: '/health',   icon: Heart,      color: '#EF4444', bg: 'bg-red-500/10',     border: 'border-red-500/20',     text: 'text-red-400'     },
+    { name: 'Backlog',  desc: 'Tareas pendientes',  path: '/backlog',  icon: Layers,     color: '#8B5CF6', bg: 'bg-violet-500/10', border: 'border-violet-500/20',  text: 'text-violet-400'  },
+    { name: 'GrowData', desc: 'Datos de negocio',   path: '/growdata', icon: TrendingUp, color: '#06B6D4', bg: 'bg-cyan-500/10',   border: 'border-cyan-500/20',    text: 'text-cyan-400'    },
   ]
-
-  const firstName = user?.name?.split(' ')[0] || 'Freddy'
 
   return (
     <div className="flex-1 overflow-auto" style={{ background: 'var(--bg)' }}>
       {/* Hero header */}
       <div className="relative px-5 md:px-7 pt-7 pb-5 overflow-hidden">
-        {/* Background glow */}
         <div className="absolute top-0 left-0 right-0 h-48 pointer-events-none"
           style={{ background: 'radial-gradient(ellipse 60% 100% at 20% -20%, rgba(124,58,237,0.12) 0%, transparent 70%)' }} />
-
         <div className="relative flex items-start justify-between">
           <div>
             <div className="flex items-center gap-2 mb-1">
@@ -228,20 +221,15 @@ export function Home() {
 
       <div className="px-5 md:px-7 pb-8 space-y-6">
 
-        {/* Stat cards row */}
+        {/* Stat cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           {summaryLoading
             ? [0,1,2,3].map(i => <SkeletonCard key={i} />)
             : statCards.map(({ label, value, sub, icon: Icon, link, color, iconBg, iconText, spark }) => (
-              <Link
-                key={label}
-                to={link}
-                className="group relative rounded-2xl p-4 border border-white/[0.06] bg-card card-hover overflow-hidden"
-              >
-                {/* Subtle glow on hover */}
+              <Link key={label} to={link}
+                className="group relative rounded-2xl p-4 border border-white/[0.06] bg-card card-hover overflow-hidden">
                 <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-2xl"
                   style={{ background: `radial-gradient(circle at top left, ${color}10 0%, transparent 60%)` }} />
-
                 <div className="relative">
                   <div className="flex items-start justify-between mb-3">
                     <div className={`w-8 h-8 ${iconBg} border rounded-lg flex items-center justify-center`}>
@@ -260,10 +248,10 @@ export function Home() {
           }
         </div>
 
-        {/* Main bento grid */}
+        {/* Bento grid */}
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
 
-          {/* Finance breakdown */}
+          {/* Finance */}
           <div className="rounded-2xl border border-white/[0.06] bg-card p-5 space-y-4">
             <div className="flex items-center justify-between">
               <div>
@@ -274,7 +262,6 @@ export function Home() {
                 Ver todo <ArrowUpRight size={11} />
               </Link>
             </div>
-
             {summaryLoading
               ? <div className="space-y-3"><SkeletonRow /><SkeletonRow /><SkeletonRow /><SkeletonRow /></div>
               : (
@@ -292,10 +279,8 @@ export function Home() {
                           <span className="text-xs font-mono text-slate-300">{fmt(amount)}</span>
                         </div>
                         <div className="h-1 rounded-full bg-white/[0.04] overflow-hidden">
-                          <div
-                            className="h-full rounded-full transition-all duration-500"
-                            style={{ width: `${pct}%`, background: color, boxShadow: `0 0 6px ${color}60` }}
-                          />
+                          <div className="h-full rounded-full transition-all duration-500"
+                            style={{ width: `${pct}%`, background: color, boxShadow: `0 0 6px ${color}60` }} />
                         </div>
                       </div>
                     )
@@ -309,7 +294,7 @@ export function Home() {
             }
           </div>
 
-          {/* Backlog panel */}
+          {/* Backlog */}
           <div className="rounded-2xl border border-white/[0.06] bg-card p-5 space-y-4">
             <div className="flex items-center justify-between">
               <div>
@@ -320,7 +305,6 @@ export function Home() {
                 Ver todo <ArrowUpRight size={11} />
               </Link>
             </div>
-
             {backlogLoading
               ? <div className="space-y-2"><SkeletonRow /><SkeletonRow /><SkeletonRow /></div>
               : backlogTasks.length === 0
@@ -328,19 +312,8 @@ export function Home() {
                 : (
                   <div className="space-y-1.5">
                     {backlogTasks.map((task) => {
-                      const PRIORITY_STYLES: Record<string, { dot: string; label: string }> = {
-                        critical: { dot: 'bg-red-400',    label: 'Critica'  },
-                        high:     { dot: 'bg-orange-400', label: 'Alta'     },
-                        medium:   { dot: 'bg-yellow-400', label: 'Media'    },
-                        low:      { dot: 'bg-slate-500',  label: 'Baja'     },
-                      }
-                      const STATUS_STYLES: Record<string, string> = {
-                        in_progress: 'text-blue-400',
-                        review:      'text-amber-400',
-                        backlog:     'text-slate-500',
-                      }
-                      const p = PRIORITY_STYLES[task.priority] ?? { dot: 'bg-slate-500', label: task.priority }
-                      const statusColor = STATUS_STYLES[task.status] ?? 'text-slate-500'
+                      const p  = PRIORITY_STYLES[task.priority] ?? { dot: 'bg-slate-500', label: task.priority }
+                      const st = STATUS_LABEL[task.status]       ?? { label: task.status, color: 'text-slate-500' }
                       return (
                         <div key={task.id} className="flex items-start gap-2.5 py-2 border-b border-white/[0.04] last:border-0">
                           <div className={`w-1.5 h-1.5 rounded-full mt-1.5 flex-shrink-0 ${p.dot}`} />
@@ -348,7 +321,7 @@ export function Home() {
                             <p className="text-xs text-slate-300 truncate">{task.title}</p>
                             <div className="flex items-center gap-2 mt-0.5">
                               {task.project && <span className="text-[10px] text-slate-700 truncate max-w-[80px]">{task.project}</span>}
-                              <span className={`text-[10px] ${statusColor}`}>{task.status === 'in_progress' ? 'En progreso' : task.status === 'review' ? 'Review' : 'Backlog'}</span>
+                              <span className={`text-[10px] ${st.color}`}>{st.label}</span>
                             </div>
                           </div>
                           <span className="text-[10px] text-slate-600 flex-shrink-0">{p.label}</span>
@@ -360,21 +333,20 @@ export function Home() {
             }
           </div>
 
-          {/* Calendar widget */}
+          {/* Calendar */}
           <CalendarWidget />
 
           {/* Recent finance records */}
           <div className="rounded-2xl border border-white/[0.06] bg-card p-5 space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-sm font-semibold text-white">Últimos registros</h3>
+                <h3 className="text-sm font-semibold text-white">Ultimos registros</h3>
                 <p className="text-[11px] text-slate-600 mt-0.5">Movimientos recientes</p>
               </div>
               <Link to="/finance" className="flex items-center gap-1 text-[11px] text-slate-600 hover:text-primary transition-colors">
                 Ver todo <ArrowUpRight size={11} />
               </Link>
             </div>
-
             {recordsLoading
               ? <div className="space-y-2"><SkeletonRow /><SkeletonRow /><SkeletonRow /></div>
               : recentRecords.length === 0
@@ -395,9 +367,8 @@ export function Home() {
                             </p>
                             <div className="flex items-center gap-1.5 mt-0.5">
                               <span className={`badge ${tabColors[String(rec._tab)] || 'badge-primary'}`}>{String(rec._tab)}</span>
-                              {rec.FECHA || rec.MES || rec.DATE
-                                ? <span className="text-[10px] text-slate-700">{String(rec.FECHA || rec.MES || rec.DATE)}</span>
-                                : null
+                              {(rec.FECHA || rec.MES || rec.DATE) &&
+                                <span className="text-[10px] text-slate-700">{String(rec.FECHA || rec.MES || rec.DATE)}</span>
                               }
                             </div>
                           </div>
@@ -413,19 +384,16 @@ export function Home() {
           </div>
         </div>
 
-        {/* Quick access modules */}
+        {/* Quick access */}
         <div>
           <div className="flex items-center gap-2 mb-3">
-            <span className="section-label">Acceso rápido</span>
+            <span className="section-label">Acceso rapido</span>
             <div className="flex-1 h-px bg-white/[0.04]" />
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {quickLinks.map(({ name, desc, path, icon: Icon, color, bg, border, text }) => (
-              <Link
-                key={name}
-                to={path}
-                className="group relative rounded-2xl p-4 border border-white/[0.06] bg-card overflow-hidden card-hover"
-              >
+              <Link key={name} to={path}
+                className="group relative rounded-2xl p-4 border border-white/[0.06] bg-card overflow-hidden card-hover">
                 <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
                   style={{ background: `radial-gradient(circle at bottom right, ${color}0D 0%, transparent 60%)` }} />
                 <div className="relative">
