@@ -153,7 +153,7 @@ def _get_ms_access_token() -> Optional[str]:
                 "grant_type":    "refresh_token",
                 "scope":         "https://graph.microsoft.com/Mail.Read offline_access",
             },
-            timeout=10,
+            timeout=30,
         )
         result = resp.json()
         if "access_token" in result:
@@ -179,7 +179,7 @@ def _fetch_outlook_graph(limit: int, now: datetime) -> list[dict]:
             f"?$top={limit}&$orderby=receivedDateTime desc"
             f"&$select=id,subject,from,receivedDateTime,isRead,bodyPreview",
             headers={"Authorization": f"Bearer {access_token}"},
-            timeout=15,
+            timeout=30,
         )
         if resp.status_code != 200:
             return []
@@ -308,7 +308,7 @@ def debug_imap():
         try:
             resp = httpx.get(
                 "https://graph.microsoft.com/v1.0/me/mailFolders/inbox/messages?$top=1&$select=id",
-                headers={"Authorization": f"Bearer {token}"}, timeout=10,
+                headers={"Authorization": f"Bearer {token}"}, timeout=30,
             )
             results["outlook"] = {"status": "ok" if resp.status_code == 200 else "error",
                                    "http_status": resp.status_code}
