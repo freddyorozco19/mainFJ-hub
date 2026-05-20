@@ -2,8 +2,8 @@ import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import {
   Bot, MessageSquare, TrendingUp, DollarSign, PiggyBank, AlertCircle,
-  ShoppingCart, Activity, ChevronRight, Wallet, Heart, Layers,
-  ArrowUpRight, Zap, Circle,
+  ShoppingCart, Activity, Wallet, Heart, Layers,
+  ArrowUpRight, Zap,
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { useDashboard } from '../store/dashboardStore'
@@ -27,7 +27,6 @@ function Sparkline({ data, color = '#7C3AED' }: { data: number[]; color?: string
   const range = max - min || 1
   const W = 80, H = 28
   const pts = data.map((v, i) => `${(i / (data.length - 1)) * W},${H - ((v - min) / range) * (H * 0.8) - H * 0.1}`)
-  const trend = data[data.length - 1] >= data[0]
   return (
     <svg width={W} height={H} className="flex-shrink-0">
       <defs>
