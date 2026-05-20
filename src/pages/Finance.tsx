@@ -624,7 +624,7 @@ export function Finance() {
       // Calcular periodo antes de insertar para usarlo en FECHA_CORTE
       const firstDate = selected[0]?.FECHA || ''
       const period = firstDate ? firstDate.split('/').slice(1).reverse().join('-') : new Date().toISOString().slice(0, 7)
-      rows.forEach(r => { r.FECHA_CORTE = period })
+      rows.forEach(r => { (r as any).FECHA_CORTE = period })
 
       const res = await api('/finance/records/batch', {
         method: 'POST',
