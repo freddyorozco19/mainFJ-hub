@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import {
-  Bot, MessageSquare, TrendingUp, DollarSign, PiggyBank, AlertCircle,
+  Bot, TrendingUp, DollarSign, PiggyBank, AlertCircle,
   ShoppingCart, Activity, Wallet, Heart, Layers,
   ArrowUpRight, Zap,
 } from 'lucide-react'
@@ -72,13 +72,15 @@ function Sparkline({ data, color = '#7C3AED' }: { data: number[]; color?: string
 
 export function Home() {
   const { user } = useAuth()
-  const { agents, logs, chatHistories, financeRefreshTick } = useDashboard()
+  const { agents, logs, financeRefreshTick } = useDashboard()
   const [summary, setSummary] = useState<Partial<FinanceSummary>>({})
   const [summaryLoading, setSummaryLoading] = useState(true)
   const [recentRecords, setRecentRecords] = useState<Record<string, string | number>[]>([])
   const [recordsLoading, setRecordsLoading] = useState(true)
   const [backlogTasks, setBacklogTasks] = useState<any[]>([])
   const [backlogLoading, setBacklogLoading] = useState(true)
+  const [healthData, setHealthData] = useState<any>(null)
+  const [healthLoading, setHealthLoading] = useState(true)
   const [now, setNow] = useState(new Date())
 
   useEffect(() => {
@@ -118,7 +120,6 @@ export function Home() {
 
   const totalGastos = Object.values(summary).reduce((acc, s) => acc + (s?.total_cop ?? 0), 0)
   const totalRegistros = Object.values(summary).reduce((acc, s) => acc + (s?.count ?? 0), 0)
-  const totalConversaciones = Object.values(chatHistories).reduce((acc, msgs) => acc + msgs.length, 0)
   const agentesOnline = agents.filter(a => a.status === 'online').length || 4
   const fmt = (n: number) => new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(n)
   const fmtM = (n: number) => n >= 1_000_000 ? `${(n/1_000_000).toFixed(1)}M` : n >= 1_000 ? `${(n/1_000).toFixed(0)}K` : String(n)
@@ -154,15 +155,15 @@ export function Home() {
       spark: [2,3,2,4,3,4,agentesOnline],
     },
     {
-      label: 'Conversaciones',
-      value: String(totalConversaciones),
-      sub: 'mensajes totales',
-      icon: MessageSquare,
-      link: '/chat',
-      color: '#06B6D4',
-      iconBg: 'bg-cyan-500/10 border-cyan-500/20',
-      iconText: 'text-cyan-400',
-      spark: [5,8,6,10,9,12,totalConversaciones||13],
+      label: 'Pasos hoy',
+      value: healthLoading ? '—' : healthData?.latest?.steps ? `${(healthData.latest.steps/1000).toFixed(1)}K` : '—',
+      sub: healthData?.latest?.heart_rate_avg ? `FC ${healthData.latest.heart_rate_avg} bpm` : 'sin datos',
+      icon: Heart,
+      link: '/health',
+      color: '#EF4444',
+      iconBg: 'bg-red-500/10 border-red-500/20',
+      iconText: 'text-red-400',
+      spark: (healthData?.trend ?? []).slice(0,7).reverse().map((t: any) => t.steps || 0),
     },
     {
       label: 'Logs de Sistema',
