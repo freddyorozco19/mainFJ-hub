@@ -82,7 +82,7 @@ def _fetch_emails(folder: str = "INBOX", limit: int = 15) -> list[dict]:
             return CACHE["data"]
 
     outlook_email = os.getenv("IMAP_EMAIL", os.getenv("OUTLOOK_EMAIL", ""))
-    outlook_pass  = os.getenv("IMAP_PASSWORD", os.getenv("OUTLOOK_PASSWORD", ""))
+    outlook_pass  = os.getenv("IMAP_PASSWORD_GMAIL", os.getenv("IMAP_PASSWORD", os.getenv("OUTLOOK_PASSWORD", "")))
 
     if not outlook_email or not outlook_pass:
         return []
@@ -166,12 +166,12 @@ def debug_imap():
     """Debug IMAP connection — remove after testing."""
     import traceback
     outlook_email = os.getenv("IMAP_EMAIL", os.getenv("OUTLOOK_EMAIL", ""))
-    outlook_pass  = os.getenv("IMAP_PASSWORD", os.getenv("OUTLOOK_PASSWORD", ""))
+    outlook_pass  = os.getenv("IMAP_PASSWORD_GMAIL", os.getenv("IMAP_PASSWORD", os.getenv("OUTLOOK_PASSWORD", "")))
 
     if not outlook_email:
         return {"error": "IMAP_EMAIL env var not set"}
     if not outlook_pass:
-        return {"error": "IMAP_PASSWORD env var not set"}
+        return {"error": "IMAP_PASSWORD_GMAIL env var not set"}
 
     try:
         mail = imaplib.IMAP4_SSL(IMAP_HOST, IMAP_PORT)
