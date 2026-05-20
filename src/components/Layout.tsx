@@ -6,7 +6,7 @@ import { GlobalSearch } from './Search'
 import { NotificationsPanel } from './NotificationsPanel'
 import { useAuth } from '../context/AuthContext'
 import {
-  WifiOff, Wifi, Search, Home, MessageSquare, Wallet, Bot,
+  WifiOff, Search, Home, MessageSquare, Wallet, Bot,
   Trophy, Brain, TrendingUp, Heart, Layers, Network, Activity,
   Webhook, BarChart3, ScrollText, User, MoreHorizontal, X,
   Building2, ChevronRight, Zap,
