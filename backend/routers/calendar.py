@@ -232,3 +232,28 @@ async def get_stats():
         "month_count":          len(month_evs),
         "sources":              sources_active,
     }
+
+@router.get("/debug/today")
+async def debug_today():
+    """Debug endpoint — returns raw organizer/attendee fields from ICS."""
+    raw = await _fetch_ics("outlook")
+    if not raw:
+        return {"error": "No ICS data"}
+    from icalendar import Calendar as Cal
+    cal = Cal.from_ical(raw)
+    import recurring_ical_events as rie
+    today = _now().replace(hour=0, minute=0, second=0, microsecond=0)
+    comps = rie.of(cal).between(today, today + timedelta(days=1))
+    results = []
+    for c in comps:
+        if c.name != "VEVENT":
+            continue
+        org = c.get("ORGANIZER")
+        org_raw = str(org) if org else None
+        org_params = dict(org.params) if org and hasattr(org, "params") else {}
+        results.append({
+            "summary":        str(c.get("SUMMARY", "")),
+            "organizer_raw":  org_raw,
+            "organizer_params": {k: str(v) for k, v in org_params.items()},
+        })
+    return {"events": results}
