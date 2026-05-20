@@ -7,6 +7,7 @@ import { api, API_BASE, getToken } from '../api'
 import { SkeletonCard, SkeletonRow } from '../components/Skeleton'
 import { EmptyState } from '../components/EmptyState'
 import { CalendarWidget } from '../components/CalendarWidget'
+import { EmailWidget } from '../components/EmailWidget'
 
 interface FinanceSummary {
   essentials: { count: number; total_cop: number }
@@ -252,7 +253,7 @@ export function Home() {
         </div>
 
         {/* Bento grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 lg:grid-cols-3 xl:grid-cols-5 gap-4">
 
           {/* Finance */}
           <div className="rounded-2xl border border-white/[0.06] bg-card p-5 space-y-4">
@@ -338,6 +339,9 @@ export function Home() {
 
           {/* Calendar */}
           <CalendarWidget />
+
+          {/* Email Inbox */}
+          <EmailWidget />
 
           {/* Recent finance records */}
           <div className="rounded-2xl border border-white/[0.06] bg-card p-5 space-y-4">
