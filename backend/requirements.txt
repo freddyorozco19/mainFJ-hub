@@ -17,3 +17,5 @@ psycopg2-binary>=2.9
 PyPDF2>=3.0.0
 pycryptodome>=3.19.0
 google-api-python-client>=2.0.0
+icalendar>=5.0.0
+recurring-ical-events>=2.2.0
