@@ -25,6 +25,7 @@ interface CalEvent {
   organizer_email: string | null
   attendees: Attendee[]
   attendee_count: number
+  mentioned_contacts: { name: string | null; email: string }[]
 }
 
 const MONTH_SHORT = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic']
@@ -121,19 +122,34 @@ function EventPopup({ ev, onClose }: { ev: CalEvent; onClose: () => void }) {
           {/* Body */}
           <div className="p-5 space-y-3.5 max-h-[65vh] overflow-y-auto">
 
-            {/* Organizer card */}
-            {organizer && (
-              <div className="flex items-center gap-3 p-3 rounded-xl bg-white/[0.03] border border-white/[0.05]">
-                <div className="w-8 h-8 rounded-lg bg-violet-500/10 border border-violet-500/20 flex items-center justify-center flex-shrink-0">
-                  <User size={14} className="text-violet-400" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-[10px] text-slate-600 uppercase tracking-wide">Organiza</p>
-                  <p className="text-sm text-slate-200 font-medium truncate">{ev.organizer_name ?? ev.organizer_email}</p>
-                  {ev.organizer_name && ev.organizer_email && (
-                    <p className="text-[10px] text-slate-600 truncate">{ev.organizer_email}</p>
-                  )}
-                </div>
+            {/* Organizer / mentioned contacts */}
+            {(organizer || (ev.mentioned_contacts && ev.mentioned_contacts.length > 0)) && (
+              <div className="space-y-1.5">
+                <p className="text-[10px] text-slate-600 uppercase tracking-wide">Contactos</p>
+                {organizer && (
+                  <div className="flex items-center gap-2.5 p-2.5 rounded-xl bg-white/[0.03] border border-white/[0.05]">
+                    <div className="w-7 h-7 rounded-lg bg-violet-500/10 border border-violet-500/20 flex items-center justify-center flex-shrink-0">
+                      <User size={13} className="text-violet-400" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs text-slate-200 font-medium truncate">{ev.organizer_name ?? ev.organizer_email}</p>
+                      {ev.organizer_name && ev.organizer_email && (
+                        <p className="text-[10px] text-slate-600 truncate">{ev.organizer_email}</p>
+                      )}
+                    </div>
+                  </div>
+                )}
+                {!organizer && ev.mentioned_contacts?.map((c, i) => (
+                  <div key={i} className="flex items-center gap-2.5 p-2.5 rounded-xl bg-white/[0.03] border border-white/[0.05]">
+                    <div className="w-7 h-7 rounded-lg bg-slate-500/10 border border-slate-500/20 flex items-center justify-center flex-shrink-0">
+                      <User size={13} className="text-slate-400" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      {c.name && <p className="text-xs text-slate-200 font-medium truncate">{c.name}</p>}
+                      <p className={`text-[10px] text-slate-500 truncate ${!c.name ? 'text-xs text-slate-300' : ''}`}>{c.email}</p>
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
 
