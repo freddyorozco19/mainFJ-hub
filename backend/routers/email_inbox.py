@@ -160,3 +160,26 @@ def get_unread_count(current_user=Depends(get_current_user)):
     emails = _fetch_emails()
     unread = sum(1 for e in emails if e["unread"])
     return {"unread": unread, "total": len(emails)}
+
+@router.get("/debug")
+def debug_imap():
+    """Debug IMAP connection — remove after testing."""
+    import traceback
+    outlook_email = os.getenv("OUTLOOK_EMAIL", "")
+    outlook_pass  = os.getenv("OUTLOOK_PASSWORD", "")
+
+    if not outlook_email:
+        return {"error": "OUTLOOK_EMAIL env var not set"}
+    if not outlook_pass:
+        return {"error": "OUTLOOK_PASSWORD env var not set"}
+
+    try:
+        mail = imaplib.IMAP4_SSL(IMAP_HOST, IMAP_PORT)
+        login_resp = mail.login(outlook_email, outlook_pass)
+        mail.select("INBOX", readonly=True)
+        _, data = mail.search(None, "ALL")
+        count = len(data[0].split()) if data[0] else 0
+        mail.logout()
+        return {"status": "ok", "login": str(login_resp), "total_emails": count}
+    except Exception as e:
+        return {"status": "error", "error": str(e), "trace": traceback.format_exc()[-500:]}
