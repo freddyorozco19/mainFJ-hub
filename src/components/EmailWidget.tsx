@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Mail, AlertCircle, RefreshCw, Circle } from 'lucide-react'
+import { Mail, AlertCircle, RefreshCw } from 'lucide-react'
 import { api } from '../api'
 
 interface InboxEmail {
