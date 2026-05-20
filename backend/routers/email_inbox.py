@@ -1,12 +1,13 @@
 # -*- coding: utf-8 -*-
 """
 backend/routers/email_inbox.py
-Lectura de correos via IMAP — Gmail + Outlook personal.
+Correos via IMAP (Gmail) + Microsoft Graph API (Outlook personal).
 Variables de entorno:
   IMAP_EMAIL            Gmail address
   IMAP_PASSWORD_GMAIL   Gmail app password
-  OUTLOOK_EMAIL         Outlook/Hotmail personal address
-  OUTLOOK_PASSWORD      Outlook personal password
+  MS_CLIENT_ID          Azure app client ID
+  MS_CLIENT_SECRET      Azure app client secret
+  MS_REFRESH_TOKEN      OAuth refresh token para Hotmail
 """
 from __future__ import annotations
 
@@ -20,33 +21,21 @@ from datetime import datetime
 from typing import Optional
 from zoneinfo import ZoneInfo
 
+import httpx
 from fastapi import APIRouter, Query, Depends
 from backend.routers.auth import get_current_user
 
 router = APIRouter(prefix="/inbox", tags=["inbox"])
 
-TZ = ZoneInfo("America/Bogota")
-
+TZ       = ZoneInfo("America/Bogota")
 CACHE: dict = {"data": None, "fetched_at": None}
-CACHE_TTL = 120  # 2 min
+CACHE_TTL   = 120
 
-ACCOUNTS = [
-    {
-        "key":      "gmail",
-        "host":     "imap.gmail.com",
-        "port":     993,
-        "email_var":    "IMAP_EMAIL",
-        "pass_var":     "IMAP_PASSWORD_GMAIL",
-    },
-    {
-        "key":      "outlook",
-        "host":     "imap-mail.outlook.com",
-        "port":     993,
-        "email_var":    "OUTLOOK_EMAIL",
-        "pass_var":     "OUTLOOK_PASSWORD",
-    },
-]
+# Token cache para no pedir access_token en cada request
+_token_cache: dict = {"access_token": None, "expires_at": None}
 
+
+# ── helpers ──────────────────────────────────────────────────────────────────
 
 def _decode_header(raw) -> str:
     if raw is None:
@@ -80,7 +69,6 @@ def _get_body_snippet(msg, max_len: int = 200) -> Optional[str]:
             body = msg.get_payload(decode=True).decode(charset, errors="replace")
         except Exception:
             pass
-
     if body:
         body = re.sub(r'\s+', ' ', body).strip()
         return body[:max_len]
@@ -93,70 +81,144 @@ def _parse_from(raw_from: str) -> tuple[Optional[str], Optional[str]]:
     return name or None, addr or None
 
 
-def _fetch_account(account: dict, limit: int, now: datetime) -> list[dict]:
-    addr = os.getenv(account["email_var"], "")
-    pwd  = os.getenv(account["pass_var"], "")
+# ── Gmail IMAP ────────────────────────────────────────────────────────────────
+
+def _fetch_gmail(limit: int, now: datetime) -> list[dict]:
+    addr = os.getenv("IMAP_EMAIL", "")
+    pwd  = os.getenv("IMAP_PASSWORD_GMAIL", "")
     if not addr or not pwd:
         return []
-
     try:
-        mail = imaplib.IMAP4_SSL(account["host"], account["port"])
+        mail = imaplib.IMAP4_SSL("imap.gmail.com", 993)
         mail.login(addr, pwd)
         mail.select("INBOX", readonly=True)
-
         _, data = mail.search(None, "ALL")
         ids = data[0].split()
-        ids = ids[-limit:] if len(ids) > limit else ids
-        ids = list(reversed(ids))
-
+        ids = list(reversed(ids[-limit:] if len(ids) > limit else ids))
         emails = []
         for uid in ids:
             try:
                 _, raw = mail.fetch(uid, "(RFC822 FLAGS)")
                 flags_raw = str(raw[0][0]) if raw and raw[0] else ""
                 is_unread = "\\Seen" not in flags_raw
-
                 msg = email.message_from_bytes(raw[0][1])
-
-                subject     = _decode_header(msg.get("Subject", "(sin asunto)"))
-                from_raw    = msg.get("From", "")
-                sender_name, sender_email = _parse_from(from_raw)
-                date_raw    = msg.get("Date", "")
-                snippet     = _get_body_snippet(msg)
-
-                date_parsed = None
-                date_str    = None
-                date_ts     = None
+                subject = _decode_header(msg.get("Subject", "(sin asunto)"))
+                sender_name, sender_email = _parse_from(msg.get("From", ""))
+                date_raw = msg.get("Date", "")
+                snippet  = _get_body_snippet(msg)
+                date_parsed = date_str = date_ts = None
                 try:
-                    ts = email.utils.parsedate_to_datetime(date_raw)
-                    ts = ts.astimezone(TZ)
+                    ts = email.utils.parsedate_to_datetime(date_raw).astimezone(TZ)
                     date_parsed = ts.isoformat()
                     date_ts     = ts
                     date_str    = ts.strftime("%H:%M") if ts.date() == now.date() else ts.strftime("%d %b")
                 except Exception:
                     date_str = date_raw[:16] if date_raw else None
-
                 emails.append({
-                    "uid":          f"{account['key']}_{uid.decode()}",
-                    "source":       account["key"],
-                    "subject":      subject,
+                    "uid": f"gmail_{uid.decode()}", "source": "gmail",
+                    "subject": subject, "sender_name": sender_name,
+                    "sender_email": sender_email, "date": date_parsed,
+                    "date_label": date_str, "_date_ts": date_ts,
+                    "snippet": snippet, "unread": is_unread,
+                })
+            except Exception:
+                continue
+        mail.logout()
+        return emails
+    except Exception:
+        return []
+
+
+# ── Outlook Graph API ─────────────────────────────────────────────────────────
+
+def _get_ms_access_token() -> Optional[str]:
+    now = datetime.now(tz=TZ)
+    if _token_cache["access_token"] and _token_cache["expires_at"]:
+        if (now - _token_cache["expires_at"]).total_seconds() < -60:
+            return _token_cache["access_token"]
+
+    client_id     = os.getenv("MS_CLIENT_ID", "858c20f7-d60d-4296-858f-802082ea291c")
+    client_secret = os.getenv("MS_CLIENT_SECRET", "")
+    refresh_token = os.getenv("MS_REFRESH_TOKEN", "")
+    if not client_secret or not refresh_token:
+        return None
+
+    try:
+        resp = httpx.post(
+            "https://login.microsoftonline.com/consumers/oauth2/v2.0/token",
+            data={
+                "client_id":     client_id,
+                "client_secret": client_secret,
+                "refresh_token": refresh_token,
+                "grant_type":    "refresh_token",
+                "scope":         "https://graph.microsoft.com/Mail.Read offline_access",
+            },
+            timeout=10,
+        )
+        result = resp.json()
+        if "access_token" in result:
+            import time
+            expires_in = result.get("expires_in", 3600)
+            _token_cache["access_token"] = result["access_token"]
+            _token_cache["expires_at"]   = datetime.fromtimestamp(time.time() + expires_in, tz=TZ)
+            if "refresh_token" in result:
+                os.environ["MS_REFRESH_TOKEN"] = result["refresh_token"]
+            return result["access_token"]
+    except Exception:
+        pass
+    return None
+
+
+def _fetch_outlook_graph(limit: int, now: datetime) -> list[dict]:
+    access_token = _get_ms_access_token()
+    if not access_token:
+        return []
+    try:
+        resp = httpx.get(
+            f"https://graph.microsoft.com/v1.0/me/mailFolders/inbox/messages"
+            f"?$top={limit}&$orderby=receivedDateTime desc"
+            f"&$select=id,subject,from,receivedDateTime,isRead,bodyPreview",
+            headers={"Authorization": f"Bearer {access_token}"},
+            timeout=15,
+        )
+        if resp.status_code != 200:
+            return []
+        messages = resp.json().get("value", [])
+        emails = []
+        for m in messages:
+            try:
+                from_obj     = m.get("from", {}).get("emailAddress", {})
+                sender_name  = from_obj.get("name") or None
+                sender_email = from_obj.get("address") or None
+                date_ts = date_str = date_parsed = None
+                try:
+                    from datetime import timezone
+                    ts = datetime.fromisoformat(m["receivedDateTime"].replace("Z", "+00:00")).astimezone(TZ)
+                    date_parsed = ts.isoformat()
+                    date_ts     = ts
+                    date_str    = ts.strftime("%H:%M") if ts.date() == now.date() else ts.strftime("%d %b")
+                except Exception:
+                    pass
+                emails.append({
+                    "uid":          f"outlook_{m['id']}",
+                    "source":       "outlook",
+                    "subject":      m.get("subject") or "(sin asunto)",
                     "sender_name":  sender_name,
                     "sender_email": sender_email,
                     "date":         date_parsed,
                     "date_label":   date_str,
                     "_date_ts":     date_ts,
-                    "snippet":      snippet,
-                    "unread":       is_unread,
+                    "snippet":      m.get("bodyPreview") or None,
+                    "unread":       not m.get("isRead", True),
                 })
             except Exception:
                 continue
-
-        mail.logout()
         return emails
-
     except Exception:
         return []
 
+
+# ── Merge ─────────────────────────────────────────────────────────────────────
 
 def _fetch_emails(limit: int = 15) -> list[dict]:
     now = datetime.now(tz=TZ)
@@ -164,29 +226,22 @@ def _fetch_emails(limit: int = 15) -> list[dict]:
         if (now - CACHE["fetched_at"]).total_seconds() < CACHE_TTL:
             return CACHE["data"]
 
-    all_emails: list[dict] = []
-    per_account = max(limit, 10)
-    for account in ACCOUNTS:
-        all_emails.extend(_fetch_account(account, per_account, now))
-
-    # Sort by date descending, keep limit
+    per = max(limit, 10)
+    all_emails = _fetch_gmail(per, now) + _fetch_outlook_graph(per, now)
     all_emails.sort(key=lambda e: e["_date_ts"] or datetime.min.replace(tzinfo=TZ), reverse=True)
     all_emails = all_emails[:limit]
-
-    # Remove internal sort key
     for e in all_emails:
         e.pop("_date_ts", None)
 
-    CACHE["data"] = all_emails
+    CACHE["data"]       = all_emails
     CACHE["fetched_at"] = now
     return all_emails
 
 
+# ── Endpoints ─────────────────────────────────────────────────────────────────
+
 @router.get("/emails")
-def get_emails(
-    limit: int = Query(default=15, ge=1, le=50),
-    current_user=Depends(get_current_user),
-):
+def get_emails(limit: int = Query(default=15, ge=1, le=50), current_user=Depends(get_current_user)):
     emails = _fetch_emails(limit=limit)
     unread = sum(1 for e in emails if e["unread"])
     return {"emails": emails, "count": len(emails), "unread": unread}
@@ -206,53 +261,57 @@ def oauth_callback(code: str = "", error: str = ""):
         return {"error": error}
     if not code:
         return {"error": "No code received"}
-
-    import httpx
     client_id     = os.getenv("MS_CLIENT_ID", "858c20f7-d60d-4296-858f-802082ea291c")
     client_secret = os.getenv("MS_CLIENT_SECRET", "")
-    redirect_uri  = "https://mainfj-hub.onrender.com/inbox/oauth-callback"
-
     resp = httpx.post(
         "https://login.microsoftonline.com/consumers/oauth2/v2.0/token",
         data={
             "client_id":     client_id,
             "client_secret": client_secret,
             "code":          code,
-            "redirect_uri":  redirect_uri,
+            "redirect_uri":  "https://mainfj-hub.onrender.com/inbox/oauth-callback",
             "grant_type":    "authorization_code",
             "scope":         "https://graph.microsoft.com/Mail.Read offline_access",
         },
     )
     result = resp.json()
     if "refresh_token" in result:
-        return {
-            "status":        "ok",
-            "refresh_token": result["refresh_token"],
-            "message":       "Copia este refresh_token y guardalo en Render como MS_REFRESH_TOKEN",
-        }
+        return {"status": "ok", "refresh_token": result["refresh_token"],
+                "message": "Guarda este refresh_token en Render como MS_REFRESH_TOKEN"}
     return {"error": result}
 
 
 @router.get("/debug")
 def debug_imap():
-    results = {}
-    for account in ACCOUNTS:
-        addr = os.getenv(account["email_var"], "")
-        pwd  = os.getenv(account["pass_var"], "")
-        if not addr:
-            results[account["key"]] = {"status": "skip", "reason": f"{account['email_var']} not set"}
-            continue
-        if not pwd:
-            results[account["key"]] = {"status": "skip", "reason": f"{account['pass_var']} not set"}
-            continue
+    results: dict = {}
+    # Gmail
+    addr = os.getenv("IMAP_EMAIL", "")
+    pwd  = os.getenv("IMAP_PASSWORD_GMAIL", "")
+    if not addr:
+        results["gmail"] = {"status": "skip", "reason": "IMAP_EMAIL not set"}
+    else:
         try:
-            mail = imaplib.IMAP4_SSL(account["host"], account["port"])
+            mail = imaplib.IMAP4_SSL("imap.gmail.com", 993)
             mail.login(addr, pwd)
             mail.select("INBOX", readonly=True)
             _, data = mail.search(None, "ALL")
             count = len(data[0].split()) if data[0] else 0
             mail.logout()
-            results[account["key"]] = {"status": "ok", "email": addr, "total_emails": count}
+            results["gmail"] = {"status": "ok", "email": addr, "total_emails": count}
         except Exception as e:
-            results[account["key"]] = {"status": "error", "email": addr, "error": str(e)}
+            results["gmail"] = {"status": "error", "email": addr, "error": str(e)}
+    # Outlook Graph
+    token = _get_ms_access_token()
+    if not token:
+        results["outlook"] = {"status": "skip", "reason": "MS_CLIENT_SECRET or MS_REFRESH_TOKEN not set"}
+    else:
+        try:
+            resp = httpx.get(
+                "https://graph.microsoft.com/v1.0/me/mailFolders/inbox/messages?$top=1&$select=id",
+                headers={"Authorization": f"Bearer {token}"}, timeout=10,
+            )
+            results["outlook"] = {"status": "ok" if resp.status_code == 200 else "error",
+                                   "http_status": resp.status_code}
+        except Exception as e:
+            results["outlook"] = {"status": "error", "error": str(e)}
     return results
