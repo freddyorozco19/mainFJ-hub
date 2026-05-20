@@ -22,8 +22,8 @@ from fastapi import Depends
 
 router = APIRouter(prefix="/inbox", tags=["inbox"])
 
-IMAP_HOST = "outlook.office365.com"
-IMAP_PORT = 993
+IMAP_HOST = os.getenv("IMAP_HOST", "imap.gmail.com")
+IMAP_PORT = int(os.getenv("IMAP_PORT", "993"))
 TZ = ZoneInfo("America/Bogota")
 
 CACHE: dict = {"data": None, "fetched_at": None}
@@ -81,8 +81,8 @@ def _fetch_emails(folder: str = "INBOX", limit: int = 15) -> list[dict]:
         if (now - CACHE["fetched_at"]).total_seconds() < CACHE_TTL:
             return CACHE["data"]
 
-    outlook_email = os.getenv("OUTLOOK_EMAIL", "")
-    outlook_pass  = os.getenv("OUTLOOK_PASSWORD", "")
+    outlook_email = os.getenv("IMAP_EMAIL", os.getenv("OUTLOOK_EMAIL", ""))
+    outlook_pass  = os.getenv("IMAP_PASSWORD", os.getenv("OUTLOOK_PASSWORD", ""))
 
     if not outlook_email or not outlook_pass:
         return []
@@ -165,13 +165,13 @@ def get_unread_count(current_user=Depends(get_current_user)):
 def debug_imap():
     """Debug IMAP connection — remove after testing."""
     import traceback
-    outlook_email = os.getenv("OUTLOOK_EMAIL", "")
-    outlook_pass  = os.getenv("OUTLOOK_PASSWORD", "")
+    outlook_email = os.getenv("IMAP_EMAIL", os.getenv("OUTLOOK_EMAIL", ""))
+    outlook_pass  = os.getenv("IMAP_PASSWORD", os.getenv("OUTLOOK_PASSWORD", ""))
 
     if not outlook_email:
-        return {"error": "OUTLOOK_EMAIL env var not set"}
+        return {"error": "IMAP_EMAIL env var not set"}
     if not outlook_pass:
-        return {"error": "OUTLOOK_PASSWORD env var not set"}
+        return {"error": "IMAP_PASSWORD env var not set"}
 
     try:
         mail = imaplib.IMAP4_SSL(IMAP_HOST, IMAP_PORT)

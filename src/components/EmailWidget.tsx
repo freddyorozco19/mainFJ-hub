@@ -150,7 +150,7 @@ export function EmailWidget() {
             </div>
             <div>
               <h3 className="text-sm font-semibold text-white leading-none">Correos</h3>
-              <p className="text-[10px] text-slate-600 mt-0.5">Outlook — growdata</p>
+              <p className="text-[10px] text-slate-600 mt-0.5">Gmail — inbox</p>
             </div>
           </div>
           <button
