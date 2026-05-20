@@ -10,6 +10,7 @@ import { useDashboard } from '../store/dashboardStore'
 import { api } from '../api'
 import { SkeletonCard, SkeletonRow } from '../components/Skeleton'
 import { EmptyState } from '../components/EmptyState'
+import { CalendarWidget } from '../components/CalendarWidget'
 
 interface FinanceSummary {
   essentials: { count: number; total_cop: number }
@@ -251,7 +252,7 @@ export function Home() {
         </div>
 
         {/* Main bento grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
 
           {/* Finance breakdown */}
           <div className="rounded-2xl border border-white/[0.06] bg-card p-5 space-y-4">
@@ -335,6 +336,9 @@ export function Home() {
               )
             }
           </div>
+
+          {/* Calendar widget */}
+          <CalendarWidget />
 
           {/* Recent finance records */}
           <div className="rounded-2xl border border-white/[0.06] bg-card p-5 space-y-4">
