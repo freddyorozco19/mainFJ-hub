@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { Bot, TrendingUp, DollarSign, PiggyBank, AlertCircle, ShoppingCart, Activity, Wallet, Heart, Layers, ArrowUpRight, Zap } from 'lucide-react'
+import { Bot, TrendingUp, PiggyBank, AlertCircle, ShoppingCart, Activity, Wallet, Heart, Layers, ArrowUpRight, Zap } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { useDashboard } from '../store/dashboardStore'
 import { api, API_BASE, getToken } from '../api'
@@ -58,8 +58,6 @@ export function Home() {
   const { agents, logs, financeRefreshTick } = useDashboard()
   const [summary, setSummary]               = useState<Partial<FinanceSummary>>({})
   const [summaryLoading, setSummaryLoading] = useState(true)
-  const [recentRecords, setRecentRecords]   = useState<Record<string, string | number>[]>([])
-  const [recordsLoading, setRecordsLoading] = useState(true)
   const [backlogTasks, setBacklogTasks]     = useState<any[]>([])
   const [backlogLoading, setBacklogLoading] = useState(true)
   const [healthData, setHealthData]         = useState<any>(null)
@@ -68,7 +66,6 @@ export function Home() {
 
   useEffect(() => {
     loadSummary()
-    loadRecentRecords()
     loadBacklog()
     loadHealth()
     const t = setInterval(() => setNow(new Date()), 60000)
@@ -79,19 +76,6 @@ export function Home() {
     setSummaryLoading(true)
     try { const res = await api('/finance/summary'); setSummary(await res.json()) }
     catch { /* ignore */ } finally { setSummaryLoading(false) }
-  }
-
-  async function loadRecentRecords() {
-    setRecordsLoading(true)
-    try {
-      const all: Record<string, string | number>[] = []
-      for (const tab of ['shops', 'basket', 'essentials']) {
-        const res = await api('/finance/data/' + tab)
-        const data = await res.json()
-        if (data.records) all.push(...data.records.slice(-3).map((r: any) => ({ ...r, _tab: tab })))
-      }
-      setRecentRecords(all.slice(-6).reverse())
-    } catch { /* ignore */ } finally { setRecordsLoading(false) }
   }
 
   async function loadBacklog() {
@@ -253,7 +237,7 @@ export function Home() {
         </div>
 
         {/* Bento grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 gap-4">
 
           {/* Finance */}
           <div className="rounded-2xl border border-white/[0.06] bg-card p-5 space-y-4">
@@ -342,53 +326,6 @@ export function Home() {
 
           {/* Email Inbox */}
           <EmailWidget />
-
-          {/* Recent finance records */}
-          <div className="rounded-2xl border border-white/[0.06] bg-card p-5 space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-sm font-semibold text-white">Ultimos registros</h3>
-                <p className="text-[11px] text-slate-600 mt-0.5">Movimientos recientes</p>
-              </div>
-              <Link to="/finance" className="flex items-center gap-1 text-[11px] text-slate-600 hover:text-primary transition-colors">
-                Ver todo <ArrowUpRight size={11} />
-              </Link>
-            </div>
-            {recordsLoading
-              ? <div className="space-y-2"><SkeletonRow /><SkeletonRow /><SkeletonRow /></div>
-              : recentRecords.length === 0
-                ? <EmptyState icon={DollarSign} title="Sin registros recientes" />
-                : (
-                  <div className="space-y-2">
-                    {recentRecords.map((rec, i) => {
-                      const tabColors: Record<string, string> = {
-                        shops:      'badge-primary',
-                        basket:     'badge badge-primary',
-                        essentials: 'badge badge-warning',
-                      }
-                      return (
-                        <div key={i} className="flex items-center justify-between py-2 border-b border-white/[0.04] last:border-0 gap-2">
-                          <div className="flex-1 min-w-0">
-                            <p className="text-xs text-slate-300 truncate">
-                              {String(rec.PRODUCTO || rec.NOMBRE || rec.CONCEPTO || rec.PRODUCT || 'Registro')}
-                            </p>
-                            <div className="flex items-center gap-1.5 mt-0.5">
-                              <span className={`badge ${tabColors[String(rec._tab)] || 'badge-primary'}`}>{String(rec._tab)}</span>
-                              {(rec.FECHA || rec.MES || rec.DATE) &&
-                                <span className="text-[10px] text-slate-700">{String(rec.FECHA || rec.MES || rec.DATE)}</span>
-                              }
-                            </div>
-                          </div>
-                          <span className="text-xs font-mono text-emerald-400 flex-shrink-0">
-                            {fmt(Number(String(rec.VALOR || rec.VALUE || 0).replace(/\D/g, '')) || 0)}
-                          </span>
-                        </div>
-                      )
-                    })}
-                  </div>
-                )
-            }
-          </div>
         </div>
 
         {/* Quick access */}
