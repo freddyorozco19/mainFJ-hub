@@ -4,7 +4,7 @@ import {
   Bot, MessageSquare, BarChart3, ScrollText, PanelLeftClose, PanelLeft,
   Home, Trophy, Brain, TrendingUp, Heart, Wallet, LogOut, X, Menu,
   User, Network, Activity, Webhook, Building2, Layers, Zap, Cpu,
-  Wifi, WifiOff, ChevronRight,
+  
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { getToken } from '../api'
