@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Calendar, Clock, MapPin, Users, ChevronRight, AlertCircle } from 'lucide-react'
-import { Link } from 'react-router-dom'
+import { Calendar, Clock, MapPin, Users, AlertCircle } from 'lucide-react'
 import { api } from '../api'
 
 interface CalEvent {
@@ -24,12 +23,6 @@ const DAY_LABELS: Record<string, string> = {
 }
 
 const MONTH_SHORT = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic']
-
-function fmtDate(iso: string) {
-  const d = new Date(iso)
-  const dayName = d.toLocaleDateString('en-US', { weekday: 'long' })
-  return `${DAY_LABELS[dayName] ?? dayName} ${d.getDate()} ${MONTH_SHORT[d.getMonth()]}`
-}
 
 function durationLabel(min: number) {
   if (min < 60) return `${min}min`
@@ -94,7 +87,7 @@ export function CalendarWidget() {
   const [events, setEvents] = useState<CalEvent[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [todayCount, setTodayCount] = useState(0)
+  const [_todayCount, setTodayCount] = useState(0)
   const [weekCount, setWeekCount] = useState(0)
 
   useEffect(() => {
