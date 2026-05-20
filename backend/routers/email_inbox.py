@@ -40,7 +40,7 @@ ACCOUNTS = [
     },
     {
         "key":      "outlook",
-        "host":     "outlook.office365.com",
+        "host":     "imap-mail.outlook.com",
         "port":     993,
         "email_var":    "OUTLOOK_EMAIL",
         "pass_var":     "OUTLOOK_PASSWORD",
