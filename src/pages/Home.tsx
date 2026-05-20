@@ -58,14 +58,12 @@ function Sparkline({ data, color = '#7C3AED' }: { data: number[]; color?: string
   )
 }
 
-const LOG_COLORS: Record<string, string> = {
   error:   'bg-danger',
   warn:    'bg-warning',
   success: 'bg-success',
   info:    'bg-primary',
 }
 
-const LOG_BADGES: Record<string, string> = {
   error:   'badge badge-danger',
   warn:    'badge badge-warning',
   success: 'badge badge-success',
@@ -79,6 +77,8 @@ export function Home() {
   const [summaryLoading, setSummaryLoading] = useState(true)
   const [recentRecords, setRecentRecords] = useState<Record<string, string | number>[]>([])
   const [recordsLoading, setRecordsLoading] = useState(true)
+  const [backlogTasks, setBacklogTasks] = useState<any[]>([])
+  const [backlogLoading, setBacklogLoading] = useState(true)
   const [now, setNow] = useState(new Date())
 
   useEffect(() => {
@@ -107,11 +107,19 @@ export function Home() {
     } catch { /* ignore */ } finally { setRecordsLoading(false) }
   }
 
+  async function loadBacklog() \{
+    setBacklogLoading(true)
+    try \{
+      const res = await api('/backlog/tasks?limit=6')
+      const data = await res.json()
+      setBacklogTasks((data ?? []).filter((t: any) => t.status !== 'done').slice(0, 6))
+    \} catch \{ /* ignore */ \} finally \{ setBacklogLoading(false) \}
+  \}
+
   const totalGastos = Object.values(summary).reduce((acc, s) => acc + (s?.total_cop ?? 0), 0)
   const totalRegistros = Object.values(summary).reduce((acc, s) => acc + (s?.count ?? 0), 0)
   const totalConversaciones = Object.values(chatHistories).reduce((acc, msgs) => acc + msgs.length, 0)
   const agentesOnline = agents.filter(a => a.status === 'online').length || 4
-  const ultimosLogs = logs.slice(0, 6)
   const fmt = (n: number) => new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(n)
   const fmtM = (n: number) => n >= 1_000_000 ? `${(n/1_000_000).toFixed(1)}M` : n >= 1_000 ? `${(n/1_000).toFixed(0)}K` : String(n)
 
@@ -300,40 +308,54 @@ export function Home() {
             }
           </div>
 
-          {/* Recent activity / logs */}
+          {/* Backlog panel */}
           <div className="rounded-2xl border border-white/[0.06] bg-card p-5 space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-sm font-semibold text-white">Actividad</h3>
-                <p className="text-[11px] text-slate-600 mt-0.5">Eventos en tiempo real</p>
+                <h3 className="text-sm font-semibold text-white">Backlog</h3>
+                <p className="text-[11px] text-slate-600 mt-0.5">Tareas pendientes</p>
               </div>
-              <Link to="/logs" className="flex items-center gap-1 text-[11px] text-slate-600 hover:text-primary transition-colors">
-                Ver logs <ArrowUpRight size={11} />
+              <Link to="/backlog" className="flex items-center gap-1 text-[11px] text-slate-600 hover:text-primary transition-colors">
+                Ver todo <ArrowUpRight size={11} />
               </Link>
             </div>
 
-            {ultimosLogs.length === 0
-              ? <EmptyState icon={Activity} title="Sin actividad reciente" description="Los eventos aparecerán aquí en tiempo real" />
-              : (
-                <div className="space-y-2">
-                  {ultimosLogs.map((log, i) => (
-                    <div key={i} className="flex items-start gap-2.5 py-2 border-b border-white/[0.04] last:border-0">
-                      <div className={`w-1.5 h-1.5 rounded-full mt-1.5 flex-shrink-0 ${LOG_COLORS[log.level] || 'bg-primary'}`} />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs text-slate-300 truncate">{log.action}</p>
-                        <div className="flex items-center gap-2 mt-0.5">
-                          <span className="text-[10px] text-slate-700">{log.agentSlug}</span>
-                          <span className="text-[10px] text-slate-700">·</span>
-                          <span className="text-[10px] text-slate-700">
-                            {new Date(log.timestamp).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })}
-                          </span>
+            {backlogLoading
+              ? <div className="space-y-2"><SkeletonRow /><SkeletonRow /><SkeletonRow /></div>
+              : backlogTasks.length === 0
+                ? <EmptyState icon={Layers} title="Sin tareas pendientes" description="El backlog esta vacio" />
+                : (
+                  <div className="space-y-1.5">
+                    {backlogTasks.map((task) => {
+                      const PRIORITY_STYLES: Record<string, { dot: string; label: string }> = {
+                        critical: { dot: 'bg-red-400',    label: 'Critica'  },
+                        high:     { dot: 'bg-orange-400', label: 'Alta'     },
+                        medium:   { dot: 'bg-yellow-400', label: 'Media'    },
+                        low:      { dot: 'bg-slate-500',  label: 'Baja'     },
+                      }
+                      const STATUS_STYLES: Record<string, string> = {
+                        in_progress: 'text-blue-400',
+                        review:      'text-amber-400',
+                        backlog:     'text-slate-500',
+                      }
+                      const p = PRIORITY_STYLES[task.priority] ?? { dot: 'bg-slate-500', label: task.priority }
+                      const statusColor = STATUS_STYLES[task.status] ?? 'text-slate-500'
+                      return (
+                        <div key={task.id} className="flex items-start gap-2.5 py-2 border-b border-white/[0.04] last:border-0">
+                          <div className={`w-1.5 h-1.5 rounded-full mt-1.5 flex-shrink-0 ${p.dot}`} />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs text-slate-300 truncate">{task.title}</p>
+                            <div className="flex items-center gap-2 mt-0.5">
+                              {task.project && <span className="text-[10px] text-slate-700 truncate max-w-[80px]">{task.project}</span>}
+                              <span className={`text-[10px] ${statusColor}`}>{task.status === 'in_progress' ? 'En progreso' : task.status === 'review' ? 'Review' : 'Backlog'}</span>
+                            </div>
+                          </div>
+                          <span className="text-[10px] text-slate-600 flex-shrink-0">{p.label}</span>
                         </div>
-                      </div>
-                      <span className={LOG_BADGES[log.level] || 'badge badge-primary'}>{log.level}</span>
-                    </div>
-                  ))}
-                </div>
-              )
+                      )
+                    })}
+                  </div>
+                )
             }
           </div>
 
