@@ -4,6 +4,7 @@ import { api } from '../api'
 
 interface InboxEmail {
   uid: string
+  source: 'gmail' | 'outlook'
   subject: string
   sender_name: string | null
   sender_email: string | null
@@ -12,6 +13,11 @@ interface InboxEmail {
   snippet: string | null
   unread: boolean
 }
+
+const SOURCE_STYLES = {
+  gmail:   { label: 'Gmail',   dot: 'bg-red-400',  text: 'text-red-400',  bg: 'bg-red-500/10 border-red-500/20'   },
+  outlook: { label: 'Outlook', dot: 'bg-blue-400', text: 'text-blue-400', bg: 'bg-blue-500/10 border-blue-500/20' },
+} as const
 
 interface EmailPopupProps {
   email: InboxEmail
@@ -96,10 +102,13 @@ function EmailRow({ em, onClick }: { em: InboxEmail; onClick: () => void }) {
           <p className="text-[10px] text-slate-600 truncate mt-0.5">{em.snippet}</p>
         )}
       </div>
-      {/* Unread dot */}
-      {em.unread && (
-        <div className="w-1.5 h-1.5 rounded-full bg-cyan-400 flex-shrink-0 mt-2" />
-      )}
+      {/* Source + unread */}
+      <div className="flex flex-col items-end gap-1 flex-shrink-0">
+        <span className={`text-[9px] font-medium px-1.5 py-0.5 rounded-md border ${SOURCE_STYLES[em.source]?.bg ?? ''} ${SOURCE_STYLES[em.source]?.text ?? ''}`}>
+          {SOURCE_STYLES[em.source]?.label ?? em.source}
+        </span>
+        {em.unread && <div className="w-1.5 h-1.5 rounded-full bg-cyan-400" />}
+      </div>
     </button>
   )
 }
@@ -150,7 +159,7 @@ export function EmailWidget() {
             </div>
             <div>
               <h3 className="text-sm font-semibold text-white leading-none">Correos</h3>
-              <p className="text-[10px] text-slate-600 mt-0.5">Gmail — inbox</p>
+              <p className="text-[10px] text-slate-600 mt-0.5">Gmail + Outlook</p>
             </div>
           </div>
           <button
