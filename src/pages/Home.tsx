@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { Bot, TrendingUp, DollarSign, PiggyBank, AlertCircle, ShoppingCart, Activity, Wallet, Heart, Layers, ArrowUpRight, Zap } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { useDashboard } from '../store/dashboardStore'
-import { api } from '../api'
+import { api, API_BASE, getToken } from '../api'
 import { SkeletonCard, SkeletonRow } from '../components/Skeleton'
 import { EmptyState } from '../components/EmptyState'
 import { CalendarWidget } from '../components/CalendarWidget'
@@ -105,7 +105,10 @@ export function Home() {
   async function loadHealth() {
     setHealthLoading(true)
     try {
-      const res = await api('/health/summary')
+      const t = getToken()
+      const res = await fetch(`${API_BASE}/health/summary`, {
+        headers: t ? { Authorization: `Bearer ${t}` } : {},
+      })
       if (res.ok) setHealthData(await res.json())
     } catch { /* ignore */ } finally { setHealthLoading(false) }
   }
