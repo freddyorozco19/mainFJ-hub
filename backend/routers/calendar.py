@@ -137,28 +137,43 @@ def _event_to_dict(component, source: str) -> dict:
             "status": params.get("PARTSTAT", ""),
         })
 
+    # Extract emails + names mentioned in description (Outlook strips ORGANIZER field)
+    mentioned_contacts = []
+    if description:
+        # Pattern: Name<mailto:email> or mailto:email or plain email
+        for m in re.finditer(r'([^<\n\\,;]{3,50})<mailto:([^>]+)>', description):
+            name  = m.group(1).strip().lstrip('@').strip()
+            email = m.group(2).strip()
+            if name and email and '@' in email:
+                mentioned_contacts.append({"name": name, "email": email})
+        if not mentioned_contacts:
+            for m in re.finditer(r'[\w.\-+]+@[\w.\-]+\.[a-z]{2,}', description, re.IGNORECASE):
+                mentioned_contacts.append({"name": None, "email": m.group(0)})
+        mentioned_contacts = mentioned_contacts[:5]
+
     clean_desc = None
     if description:
         clean_desc = re.sub(r'<[^>]+>', ' ', description)
         clean_desc = re.sub(r'\s{3,}', '\n', clean_desc).strip()[:500]
 
     return {
-        "uid":             str(component.get("UID", "")),
-        "source":          source,
-        "summary":         summary,
-        "start":           start_dt.isoformat(),
-        "end":             end_dt.isoformat(),
-        "start_date":      start_dt.date().isoformat(),
-        "start_time":      None if all_day else start_dt.strftime("%H:%M"),
-        "end_time":        None if all_day else end_dt.strftime("%H:%M"),
-        "all_day":         all_day,
-        "duration_min":    duration_min,
-        "location":        location,
-        "description":     clean_desc,
-        "meeting_url":     meeting_url,
-        "organizer_name":  organizer_name,
-        "organizer_email": organizer_email,
-        "attendees":       attendee_list,
+        "uid":                str(component.get("UID", "")),
+        "source":             source,
+        "summary":            summary,
+        "start":              start_dt.isoformat(),
+        "end":                end_dt.isoformat(),
+        "start_date":         start_dt.date().isoformat(),
+        "start_time":         None if all_day else start_dt.strftime("%H:%M"),
+        "end_time":           None if all_day else end_dt.strftime("%H:%M"),
+        "all_day":            all_day,
+        "duration_min":       duration_min,
+        "location":           location,
+        "description":        clean_desc,
+        "meeting_url":        meeting_url,
+        "organizer_name":     organizer_name,
+        "organizer_email":    organizer_email,
+        "attendees":          attendee_list,
+        "mentioned_contacts": mentioned_contacts,
         "attendee_count":  len(attendees),
     }
 
