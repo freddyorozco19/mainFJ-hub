@@ -38,7 +38,7 @@ async def verify_auth(
         try:
             token   = authorization.replace("Bearer ", "")
             payload = pyjwt.decode(
-                token, "MainFJ-Dashboard-SecretKey-2026-FJ", algorithms=["HS256"]
+                token, os.getenv("JWT_SECRET_KEY", "MainFJ-Dashboard-SecretKey-2026-FJ"), algorithms=["HS256"]
             )
             return {"method": "jwt", "sub": payload.get("sub")}
         except pyjwt.PyJWTError:
