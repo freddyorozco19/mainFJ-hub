@@ -199,6 +199,40 @@ def get_unread_count(current_user=Depends(get_current_user)):
     return {"unread": unread, "total": len(emails)}
 
 
+@router.get("/oauth-callback")
+def oauth_callback(code: str = "", error: str = ""):
+    """Intercambia el authorization code por refresh token — endpoint temporal."""
+    if error:
+        return {"error": error}
+    if not code:
+        return {"error": "No code received"}
+
+    import httpx
+    client_id     = os.getenv("MS_CLIENT_ID", "858c20f7-d60d-4296-858f-802082ea291c")
+    client_secret = os.getenv("MS_CLIENT_SECRET", "")
+    redirect_uri  = "https://mainfj-hub.onrender.com/inbox/oauth-callback"
+
+    resp = httpx.post(
+        "https://login.microsoftonline.com/consumers/oauth2/v2.0/token",
+        data={
+            "client_id":     client_id,
+            "client_secret": client_secret,
+            "code":          code,
+            "redirect_uri":  redirect_uri,
+            "grant_type":    "authorization_code",
+            "scope":         "https://graph.microsoft.com/Mail.Read offline_access",
+        },
+    )
+    result = resp.json()
+    if "refresh_token" in result:
+        return {
+            "status":        "ok",
+            "refresh_token": result["refresh_token"],
+            "message":       "Copia este refresh_token y guardalo en Render como MS_REFRESH_TOKEN",
+        }
+    return {"error": result}
+
+
 @router.get("/debug")
 def debug_imap():
     results = {}
