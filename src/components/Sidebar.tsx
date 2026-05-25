@@ -6,6 +6,8 @@ import {
   User, Network, Activity, Webhook, Building2, Layers, Zap, Cpu,
   
 } from 'lucide-react'
+=======
+import { Bot, MessageSquare, BarChart3, ScrollText, Wifi, WifiOff, PanelLeftClose, PanelLeft, Home, Trophy, Brain, TrendingUp, Heart, Wallet, LogOut, X, Menu, User, Network, Activity, Webhook, Building2, GraduationCap } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { getToken } from '../api'
 
@@ -27,7 +29,8 @@ const MODULE_COLORS: Record<string, { icon: string; bg: string; glow: string }> 
   '/health':  { icon: 'text-red-400',    bg: 'bg-red-500/10    border-red-500/20',    glow: 'shadow-[0_0_12px_rgba(239,68,68,0.3)]'   },
   '/webhooks':{ icon: 'text-cyan-400',   bg: 'bg-cyan-500/10   border-cyan-500/20',   glow: 'shadow-[0_0_12px_rgba(6,182,212,0.3)]'   },
   '/banca':   { icon: 'text-sky-400',    bg: 'bg-sky-500/10    border-sky-500/20',    glow: 'shadow-[0_0_12px_rgba(14,165,233,0.3)]'  },
-  '/backlog': { icon: 'text-purple-400', bg: 'bg-purple-500/10 border-purple-500/20', glow: 'shadow-[0_0_12px_rgba(168,85,247,0.3)]'  },
+  '/backlog':         { icon: 'text-purple-400',  bg: 'bg-purple-500/10  border-purple-500/20',  glow: 'shadow-[0_0_12px_rgba(168,85,247,0.3)]'  },
+  '/certifications': { icon: 'text-emerald-400', bg: 'bg-emerald-500/10 border-emerald-500/20', glow: 'shadow-[0_0_12px_rgba(16,185,129,0.3)]'   },
   '/profile': { icon: 'text-amber-400',  bg: 'bg-amber-500/10  border-amber-500/20',  glow: 'shadow-[0_0_12px_rgba(245,158,11,0.3)]'  },
 }
 
@@ -49,7 +52,20 @@ const SYSTEMS_NAV = [
   { to: '/winstats',icon: Trophy,     label: 'WinStats'    },
   { to: '/expertia',icon: Brain,      label: 'ArchiTechIA' },
   { to: '/growdata',icon: TrendingUp, label: 'GrowData'    },
-  { to: '/webhooks',icon: Webhook,    label: 'Webhooks'    },
+  { to: '/webhooks',      icon: Webhook,       label: 'Webhooks'        },
+  { to: '/certifications', icon: GraduationCap,  label: 'Certificaciones' },
+=======
+  { to: '/home',       icon: Home,        label: 'Home'        },
+  { to: '/finance',    icon: Wallet,      label: 'Finanzas'    },
+  { to: '/kronos',     icon: Network,     label: 'KRONOS'      },
+  { to: '/winstats',   icon: Trophy,      label: 'WinStats'    },
+  { to: '/expertia',   icon: Brain,       label: 'ArchiTechIA' },
+  { to: '/growdata',   icon: TrendingUp,  label: 'Grow Data'   },
+  { to: '/life',       icon: Heart,       label: 'LIFE'        },
+  { to: '/health',     icon: Activity,    label: 'Health'      },
+  { to: '/webhooks',   icon: Webhook,     label: 'Webhooks'    },
+  { to: '/banca',           icon: Building2,      label: 'Banca'           },
+  { to: '/certifications',  icon: GraduationCap,  label: 'Certificaciones' },
 ]
 
 interface SidebarProps {
