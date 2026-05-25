@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react'
 import {
   Search, ChevronDown, ChevronUp, BookOpen, CheckCircle, XCircle,
   ImageIcon, Filter, RefreshCw, ChevronRight, ArrowLeft, Lock,
-  Eye, EyeOff, RotateCcw,
+  Eye, EyeOff, RotateCcw, ExternalLink,
 } from 'lucide-react'
 
 // ─── Config de proveedores y exámenes ────────────────────────────────────────
@@ -190,6 +190,17 @@ const TAG_COLOR: Record<string, string> = {
   gray:   'bg-gray-800/60 text-gray-400 border-gray-600/50',
 }
 
+/** Dado "Question 42" o "Pregunta 42" devuelve el número entero */
+function parseQuestionNumber(numStr: string): number | null {
+  const m = numStr?.match(/\d+/)
+  return m ? parseInt(m[0], 10) : null
+}
+
+/** Calcula la página en examprepper (5 preguntas por página) */
+function examPage(questionNumber: number): number {
+  return Math.ceil(questionNumber / 5)
+}
+
 function getQuestionTags(q: Question): TagDef[] {
   const corpus = [q.number, q.questionText, ...(q.options ?? []), q.correctAnswer]
     .filter(Boolean).join(' ')
@@ -312,13 +323,14 @@ function TypeBadge({ type }: { type: ReturnType<typeof getType> }) {
 }
 
 function QuestionCard({
-  q, qEs, index, activeTag, onTagClick,
+  q, qEs, index, activeTag, onTagClick, examId,
 }: {
   q: Question
   qEs?: Question
   index: number
   activeTag: string | null
   onTagClick: (label: string) => void
+  examId: number
 }) {
   const [open,     setOpen]     = useState(false)
   const [es,       setEs]       = useState(false)
@@ -375,6 +387,24 @@ function QuestionCard({
                 : <XCircle     size={13} className="text-red-400" />
             )}
             {q.images?.length ? <ImageIcon size={13} className="text-purple-400" /> : null}
+            {/* Enlace a examprepper */}
+            {(() => {
+              const n = parseQuestionNumber(q.number)
+              if (!n) return null
+              const url = `https://www.examprepper.co/exam/${examId}/${examPage(n)}`
+              return (
+                <a
+                  href={url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  title={`Ver pregunta ${n} en examprepper.co`}
+                  onClick={e => e.stopPropagation()}
+                  className="flex items-center justify-center w-6 h-6 rounded border bg-slate-800 border-slate-600 text-slate-400 hover:text-sky-400 hover:border-sky-500/60 transition-colors"
+                >
+                  <ExternalLink size={11} />
+                </a>
+              )
+            })()}
             {/* Toggle EN / ES */}
             {qEs && (
               <button
@@ -693,6 +723,7 @@ function ExamViewer({ exam }: { exam: ExamConfig; provider?: ProviderConfig }) {
                 index={(page - 1) * PER_PAGE + i}
                 activeTag={activeTag}
                 onTagClick={handleTagClick}
+                examId={data.examId}
               />
             )
           })}</div>
