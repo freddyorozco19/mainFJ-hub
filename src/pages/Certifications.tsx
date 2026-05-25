@@ -533,7 +533,7 @@ function QuestionCard({
 
 const PER_PAGE = 25
 
-function ExamViewer({ exam, provider }: { exam: ExamConfig; provider: ProviderConfig }) {
+function ExamViewer({ exam }: { exam: ExamConfig; provider?: ProviderConfig }) {
   const [data,   setData]   = useState<ExamData | null>(null)
   const [esData, setEsData] = useState<ExamData | null>(null)
   const [loading, setLoading] = useState(true)
