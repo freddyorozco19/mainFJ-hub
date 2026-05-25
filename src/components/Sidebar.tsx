@@ -4,10 +4,8 @@ import {
   Bot, MessageSquare, BarChart3, ScrollText, PanelLeftClose, PanelLeft,
   Home, Trophy, Brain, TrendingUp, Heart, Wallet, LogOut, X, Menu,
   User, Network, Activity, Webhook, Building2, Layers, Zap, Cpu,
-  
+  GraduationCap,
 } from 'lucide-react'
-=======
-import { Bot, MessageSquare, BarChart3, ScrollText, Wifi, WifiOff, PanelLeftClose, PanelLeft, Home, Trophy, Brain, TrendingUp, Heart, Wallet, LogOut, X, Menu, User, Network, Activity, Webhook, Building2, GraduationCap } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { getToken } from '../api'
 
@@ -15,23 +13,23 @@ const API = import.meta.env.VITE_API_URL || 'http://localhost:8001'
 
 /* ── Module color maps ─────────────────────────────────────── */
 const MODULE_COLORS: Record<string, { icon: string; bg: string; glow: string }> = {
-  '/agents':  { icon: 'text-violet-400', bg: 'bg-violet-500/10 border-violet-500/20', glow: 'shadow-[0_0_12px_rgba(139,92,246,0.3)]' },
-  '/chat':    { icon: 'text-blue-400',   bg: 'bg-blue-500/10   border-blue-500/20',   glow: 'shadow-[0_0_12px_rgba(59,130,246,0.3)]'  },
-  '/metrics': { icon: 'text-indigo-400', bg: 'bg-indigo-500/10 border-indigo-500/20', glow: 'shadow-[0_0_12px_rgba(99,102,241,0.3)]'  },
-  '/logs':    { icon: 'text-slate-400',  bg: 'bg-slate-500/10  border-slate-500/20',  glow: 'shadow-[0_0_12px_rgba(100,116,139,0.3)]' },
-  '/home':    { icon: 'text-emerald-400',bg: 'bg-emerald-500/10 border-emerald-500/20',glow:'shadow-[0_0_12px_rgba(16,185,129,0.3)]'  },
-  '/finance': { icon: 'text-green-400',  bg: 'bg-green-500/10  border-green-500/20',  glow: 'shadow-[0_0_12px_rgba(34,197,94,0.3)]'  },
-  '/kronos':  { icon: 'text-orange-400', bg: 'bg-orange-500/10 border-orange-500/20', glow: 'shadow-[0_0_12px_rgba(249,115,22,0.3)]'  },
-  '/winstats':{ icon: 'text-yellow-400', bg: 'bg-yellow-500/10 border-yellow-500/20', glow: 'shadow-[0_0_12px_rgba(234,179,8,0.3)]'   },
-  '/expertia':{ icon: 'text-pink-400',   bg: 'bg-pink-500/10   border-pink-500/20',   glow: 'shadow-[0_0_12px_rgba(236,72,153,0.3)]'  },
-  '/growdata':{ icon: 'text-teal-400',   bg: 'bg-teal-500/10   border-teal-500/20',   glow: 'shadow-[0_0_12px_rgba(20,184,166,0.3)]'  },
-  '/life':    { icon: 'text-rose-400',   bg: 'bg-rose-500/10   border-rose-500/20',   glow: 'shadow-[0_0_12px_rgba(244,63,94,0.3)]'   },
-  '/health':  { icon: 'text-red-400',    bg: 'bg-red-500/10    border-red-500/20',    glow: 'shadow-[0_0_12px_rgba(239,68,68,0.3)]'   },
-  '/webhooks':{ icon: 'text-cyan-400',   bg: 'bg-cyan-500/10   border-cyan-500/20',   glow: 'shadow-[0_0_12px_rgba(6,182,212,0.3)]'   },
-  '/banca':   { icon: 'text-sky-400',    bg: 'bg-sky-500/10    border-sky-500/20',    glow: 'shadow-[0_0_12px_rgba(14,165,233,0.3)]'  },
-  '/backlog':         { icon: 'text-purple-400',  bg: 'bg-purple-500/10  border-purple-500/20',  glow: 'shadow-[0_0_12px_rgba(168,85,247,0.3)]'  },
-  '/certifications': { icon: 'text-emerald-400', bg: 'bg-emerald-500/10 border-emerald-500/20', glow: 'shadow-[0_0_12px_rgba(16,185,129,0.3)]'   },
-  '/profile': { icon: 'text-amber-400',  bg: 'bg-amber-500/10  border-amber-500/20',  glow: 'shadow-[0_0_12px_rgba(245,158,11,0.3)]'  },
+  '/agents':          { icon: 'text-violet-400',  bg: 'bg-violet-500/10  border-violet-500/20',  glow: 'shadow-[0_0_12px_rgba(139,92,246,0.3)]'  },
+  '/chat':            { icon: 'text-blue-400',    bg: 'bg-blue-500/10    border-blue-500/20',    glow: 'shadow-[0_0_12px_rgba(59,130,246,0.3)]'   },
+  '/metrics':         { icon: 'text-indigo-400',  bg: 'bg-indigo-500/10  border-indigo-500/20',  glow: 'shadow-[0_0_12px_rgba(99,102,241,0.3)]'   },
+  '/logs':            { icon: 'text-slate-400',   bg: 'bg-slate-500/10   border-slate-500/20',   glow: 'shadow-[0_0_12px_rgba(100,116,139,0.3)]'  },
+  '/home':            { icon: 'text-emerald-400', bg: 'bg-emerald-500/10 border-emerald-500/20', glow: 'shadow-[0_0_12px_rgba(16,185,129,0.3)]'   },
+  '/finance':         { icon: 'text-green-400',   bg: 'bg-green-500/10   border-green-500/20',   glow: 'shadow-[0_0_12px_rgba(34,197,94,0.3)]'    },
+  '/kronos':          { icon: 'text-orange-400',  bg: 'bg-orange-500/10  border-orange-500/20',  glow: 'shadow-[0_0_12px_rgba(249,115,22,0.3)]'   },
+  '/winstats':        { icon: 'text-yellow-400',  bg: 'bg-yellow-500/10  border-yellow-500/20',  glow: 'shadow-[0_0_12px_rgba(234,179,8,0.3)]'    },
+  '/expertia':        { icon: 'text-pink-400',    bg: 'bg-pink-500/10    border-pink-500/20',    glow: 'shadow-[0_0_12px_rgba(236,72,153,0.3)]'   },
+  '/growdata':        { icon: 'text-teal-400',    bg: 'bg-teal-500/10    border-teal-500/20',    glow: 'shadow-[0_0_12px_rgba(20,184,166,0.3)]'   },
+  '/life':            { icon: 'text-rose-400',    bg: 'bg-rose-500/10    border-rose-500/20',    glow: 'shadow-[0_0_12px_rgba(244,63,94,0.3)]'    },
+  '/health':          { icon: 'text-red-400',     bg: 'bg-red-500/10     border-red-500/20',     glow: 'shadow-[0_0_12px_rgba(239,68,68,0.3)]'    },
+  '/webhooks':        { icon: 'text-cyan-400',    bg: 'bg-cyan-500/10    border-cyan-500/20',    glow: 'shadow-[0_0_12px_rgba(6,182,212,0.3)]'    },
+  '/banca':           { icon: 'text-sky-400',     bg: 'bg-sky-500/10     border-sky-500/20',     glow: 'shadow-[0_0_12px_rgba(14,165,233,0.3)]'   },
+  '/backlog':         { icon: 'text-purple-400',  bg: 'bg-purple-500/10  border-purple-500/20',  glow: 'shadow-[0_0_12px_rgba(168,85,247,0.3)]'   },
+  '/certifications':  { icon: 'text-emerald-400', bg: 'bg-emerald-500/10 border-emerald-500/20', glow: 'shadow-[0_0_12px_rgba(16,185,129,0.3)]'   },
+  '/profile':         { icon: 'text-amber-400',   bg: 'bg-amber-500/10   border-amber-500/20',   glow: 'shadow-[0_0_12px_rgba(245,158,11,0.3)]'   },
 }
 
 const ORCHESTRATOR_NAV = [
@@ -42,30 +40,18 @@ const ORCHESTRATOR_NAV = [
 ]
 
 const SYSTEMS_NAV = [
-  { to: '/home',    icon: Home,       label: 'Home'        },
-  { to: '/finance', icon: Wallet,     label: 'Finanzas'    },
-  { to: '/backlog', icon: Layers,     label: 'Backlog'     },
-  { to: '/health',  icon: Activity,   label: 'Health'      },
-  { to: '/life',    icon: Heart,      label: 'LIFE'        },
-  { to: '/kronos',  icon: Network,    label: 'KRONOS'      },
-  { to: '/banca',   icon: Building2,  label: 'Banca'       },
-  { to: '/winstats',icon: Trophy,     label: 'WinStats'    },
-  { to: '/expertia',icon: Brain,      label: 'ArchiTechIA' },
-  { to: '/growdata',icon: TrendingUp, label: 'GrowData'    },
-  { to: '/webhooks',      icon: Webhook,       label: 'Webhooks'        },
-  { to: '/certifications', icon: GraduationCap,  label: 'Certificaciones' },
-=======
-  { to: '/home',       icon: Home,        label: 'Home'        },
-  { to: '/finance',    icon: Wallet,      label: 'Finanzas'    },
-  { to: '/kronos',     icon: Network,     label: 'KRONOS'      },
-  { to: '/winstats',   icon: Trophy,      label: 'WinStats'    },
-  { to: '/expertia',   icon: Brain,       label: 'ArchiTechIA' },
-  { to: '/growdata',   icon: TrendingUp,  label: 'Grow Data'   },
-  { to: '/life',       icon: Heart,       label: 'LIFE'        },
-  { to: '/health',     icon: Activity,    label: 'Health'      },
-  { to: '/webhooks',   icon: Webhook,     label: 'Webhooks'    },
-  { to: '/banca',           icon: Building2,      label: 'Banca'           },
-  { to: '/certifications',  icon: GraduationCap,  label: 'Certificaciones' },
+  { to: '/home',           icon: Home,          label: 'Home'           },
+  { to: '/finance',        icon: Wallet,        label: 'Finanzas'       },
+  { to: '/backlog',        icon: Layers,        label: 'Backlog'        },
+  { to: '/health',         icon: Activity,      label: 'Health'         },
+  { to: '/life',           icon: Heart,         label: 'LIFE'           },
+  { to: '/kronos',         icon: Network,       label: 'KRONOS'         },
+  { to: '/banca',          icon: Building2,     label: 'Banca'          },
+  { to: '/winstats',       icon: Trophy,        label: 'WinStats'       },
+  { to: '/expertia',       icon: Brain,         label: 'ArchiTechIA'    },
+  { to: '/growdata',       icon: TrendingUp,    label: 'GrowData'       },
+  { to: '/webhooks',       icon: Webhook,       label: 'Webhooks'       },
+  { to: '/certifications', icon: GraduationCap, label: 'Certificaciones'},
 ]
 
 interface SidebarProps {
