@@ -571,7 +571,9 @@ function ExamViewer({ exam }: { exam: ExamConfig; provider?: ProviderConfig }) {
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState<FilterType>('all')
   const [page, setPage] = useState(1)
-  const [activeTag, setActiveTag] = useState<string | null>(null)
+  const [activeTag,    setActiveTag]    = useState<string | null>(null)
+  const [showTagPanel, setShowTagPanel] = useState(false)
+  const [tagSearch,    setTagSearch]    = useState('')
 
   const handleTagClick = (label: string) => {
     setActiveTag(prev => prev === label ? null : label)
@@ -611,6 +613,24 @@ function ExamViewer({ exam }: { exam: ExamConfig; provider?: ProviderConfig }) {
       return true
     })
   }, [data, search, filter, activeTag])
+
+  // Conteo de tags sobre TODAS las preguntas (no solo las filtradas)
+  const allTagCounts = useMemo(() => {
+    if (!data) return []
+    const map = new Map<string, { tag: TagDef; count: number }>()
+    data.questions.forEach(q => {
+      getQuestionTags(q).forEach(tag => {
+        const e = map.get(tag.label)
+        if (e) e.count++
+        else map.set(tag.label, { tag, count: 1 })
+      })
+    })
+    return [...map.values()].sort((a, b) => b.count - a.count)
+  }, [data])
+
+  const visibleTags = tagSearch.trim()
+    ? allTagCounts.filter(({ tag }) => tag.label.toLowerCase().includes(tagSearch.toLowerCase()))
+    : allTagCounts
 
   const totalPages = Math.ceil(filtered.length / PER_PAGE)
   const pageItems = filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE)
@@ -685,24 +705,97 @@ function ExamViewer({ exam }: { exam: ExamConfig; provider?: ProviderConfig }) {
         </div>
       </div>
 
-      {/* Tag activo */}
-      {activeTag && (
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-slate-500">Etiqueta activa:</span>
-          {(() => {
-            const tagDef = TAG_RULES.find(r => r.label === activeTag)
-            return tagDef
-              ? <TagChip tag={tagDef} active onClick={handleTagClick} />
-              : null
-          })()}
-          <button
-            onClick={() => { setActiveTag(null); setPage(1) }}
-            className="text-xs text-slate-500 hover:text-slate-300 underline underline-offset-2 transition-colors"
-          >
-            Quitar filtro
-          </button>
-        </div>
-      )}
+      {/* ── Panel filtro por concepto ── */}
+      <div className="bg-surface border border-border rounded-xl overflow-hidden">
+
+        {/* Header del panel */}
+        <button
+          onClick={() => setShowTagPanel(v => !v)}
+          className="w-full flex items-center justify-between px-4 py-3 hover:bg-white/5 transition-colors"
+        >
+          <div className="flex items-center gap-2.5">
+            <Filter size={14} className="text-slate-500" />
+            <span className="text-sm font-medium text-slate-300">Filtrar por concepto</span>
+            {activeTag && (
+              <span className="text-[10px] bg-primary/20 border border-primary/40 text-primary px-2 py-0.5 rounded-full font-semibold">
+                {activeTag}
+              </span>
+            )}
+            <span className="text-[11px] text-slate-600">
+              {allTagCounts.length} conceptos
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            {activeTag && (
+              <button
+                onClick={e => { e.stopPropagation(); setActiveTag(null); setPage(1) }}
+                className="text-[11px] text-slate-500 hover:text-red-400 transition-colors px-2 py-0.5 rounded border border-slate-700 hover:border-red-500/50"
+              >
+                ✕ Quitar
+              </button>
+            )}
+            {showTagPanel
+              ? <ChevronUp size={14} className="text-slate-500" />
+              : <ChevronDown size={14} className="text-slate-500" />
+            }
+          </div>
+        </button>
+
+        {/* Contenido expandido */}
+        {showTagPanel && (
+          <div className="border-t border-border px-4 py-3 space-y-3">
+
+            {/* Buscador de concepto */}
+            <div className="relative">
+              <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-500" />
+              <input
+                type="text"
+                value={tagSearch}
+                onChange={e => setTagSearch(e.target.value)}
+                placeholder="Buscar concepto..."
+                className="w-full bg-slate-800/60 border border-border rounded-lg pl-8 pr-3 py-1.5 text-xs text-slate-300 placeholder:text-slate-600 focus:outline-none focus:border-primary/60 transition-colors"
+              />
+              {tagSearch && (
+                <button
+                  onClick={() => setTagSearch('')}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+
+            {/* Grid de tags con conteo */}
+            {visibleTags.length === 0
+              ? <p className="text-xs text-slate-600 py-2">Sin resultados para "{tagSearch}"</p>
+              : (
+                <div className="flex flex-wrap gap-1.5 max-h-52 overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
+                  {visibleTags.map(({ tag, count }) => {
+                    const isActive = activeTag === tag.label
+                    const base = TAG_COLOR[tag.color] ?? TAG_COLOR.slate
+                    return (
+                      <button
+                        key={tag.label}
+                        onClick={() => handleTagClick(tag.label)}
+                        className={`inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-full border transition-all duration-100
+                          ${base}
+                          ${isActive
+                            ? 'ring-1 ring-offset-1 ring-offset-surface ring-current scale-105'
+                            : 'opacity-70 hover:opacity-100 hover:scale-105'
+                          }`}
+                      >
+                        {isActive && <span className="text-[9px]">✕</span>}
+                        {tag.label}
+                        <span className="text-[10px] opacity-60 font-normal">{count}</span>
+                      </button>
+                    )
+                  })}
+                </div>
+              )
+            }
+          </div>
+        )}
+      </div>
 
       {/* Count + page */}
       <div className="flex items-center justify-between text-xs text-slate-500">
