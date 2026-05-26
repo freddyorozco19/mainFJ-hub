@@ -294,7 +294,11 @@ interface ScanEntry {
   scannedProducts: number   // cantidad de productos encontrados
   scannedStores: number     // cantidad de tiendas únicas
   minPrice: number | null
+  minPriceStore: string | null   // tienda con el precio mínimo
+  minPriceStoreCount: number     // cuántas tiendas tienen ese precio mínimo
   maxPrice: number | null
+  maxPriceStore: string | null   // tienda con el precio máximo
+  maxPriceStoreCount: number     // cuántas tiendas tienen ese precio máximo
   promoDetected: boolean    // al menos un producto tenía hasDiscount
 }
 
@@ -475,13 +479,28 @@ function LiveSearch({
 
   const saveToRegister = () => {
     if (!results || !selectedRegId) return
+    const prods = results.products
+
+    const minPrice = results.minPrice
+    const maxPrice = results.maxPrice
+
+    const minItems = prods.filter(p => p.price === minPrice)
+    const maxItems = prods.filter(p => p.price === maxPrice)
+
+    const minStores = [...new Set(minItems.map(p => p.store).filter(Boolean))]
+    const maxStores = [...new Set(maxItems.map(p => p.store).filter(Boolean))]
+
     const entry: ScanEntry = {
-      date:            new Date().toISOString(),
-      scannedProducts: results.count,
-      scannedStores:   results.stores.length,
-      minPrice:        results.minPrice,
-      maxPrice:        results.maxPrice,
-      promoDetected:   results.products.some(p => p.hasDiscount),
+      date:                new Date().toISOString(),
+      scannedProducts:     results.count,
+      scannedStores:       results.stores.length,
+      minPrice,
+      minPriceStore:       minStores[0] ?? null,
+      minPriceStoreCount:  minStores.length,
+      maxPrice,
+      maxPriceStore:       maxStores[0] ?? null,
+      maxPriceStoreCount:  maxStores.length,
+      promoDetected:       prods.some(p => p.hasDiscount),
     }
     onScanSave(selectedRegId, entry)
     setSaveDone(true)
@@ -1022,24 +1041,32 @@ function Registers({
                         <table className="w-full text-[10px]">
                           <thead>
                             <tr className="text-slate-500 border-b border-slate-700/40">
-                              <th className="py-1.5 pr-3 text-left font-medium">Fecha de Scan</th>
-                              <th className="py-1.5 pr-3 text-right font-medium">Productos</th>
+                              <th className="py-1.5 pr-3 text-left font-medium whitespace-nowrap">Fecha de Scan</th>
+                              <th className="py-1.5 pr-3 text-right font-medium">Prods</th>
                               <th className="py-1.5 pr-3 text-right font-medium">Tiendas</th>
-                              <th className="py-1.5 pr-3 text-right font-medium">Min Valor</th>
-                              <th className="py-1.5 pr-3 text-right font-medium">Max Valor</th>
+                              <th className="py-1.5 pr-3 text-right font-medium whitespace-nowrap">Min Valor</th>
+                              <th className="py-1.5 pr-3 text-left font-medium whitespace-nowrap">Tienda Min</th>
+                              <th className="py-1.5 pr-3 text-right font-medium whitespace-nowrap"># Min</th>
+                              <th className="py-1.5 pr-3 text-right font-medium whitespace-nowrap">Max Valor</th>
+                              <th className="py-1.5 pr-3 text-left font-medium whitespace-nowrap">Tienda Max</th>
+                              <th className="py-1.5 pr-3 text-right font-medium whitespace-nowrap"># Max</th>
                               <th className="py-1.5 text-center font-medium">Promo</th>
                             </tr>
                           </thead>
                           <tbody>
                             {[...scans].reverse().map((s, i) => (
                               <tr key={i} className="border-b border-slate-700/20 last:border-0 hover:bg-white/[0.02]">
-                                <td className="py-1.5 pr-3 text-slate-400">
+                                <td className="py-1.5 pr-3 text-slate-400 whitespace-nowrap">
                                   {new Date(s.date).toLocaleString('es-CO', { dateStyle: 'short', timeStyle: 'short' })}
                                 </td>
                                 <td className="py-1.5 pr-3 text-right text-slate-300">{s.scannedProducts}</td>
                                 <td className="py-1.5 pr-3 text-right text-slate-300">{s.scannedStores}</td>
-                                <td className="py-1.5 pr-3 text-right text-emerald-400 font-medium">{formatCOP(s.minPrice)}</td>
-                                <td className="py-1.5 pr-3 text-right text-slate-300">{formatCOP(s.maxPrice)}</td>
+                                <td className="py-1.5 pr-3 text-right text-emerald-400 font-medium whitespace-nowrap">{formatCOP(s.minPrice)}</td>
+                                <td className="py-1.5 pr-3 text-left text-slate-300 max-w-[100px] truncate">{s.minPriceStore ?? '—'}</td>
+                                <td className="py-1.5 pr-3 text-right text-slate-400">{s.minPriceStoreCount ?? '—'}</td>
+                                <td className="py-1.5 pr-3 text-right text-slate-300 whitespace-nowrap">{formatCOP(s.maxPrice)}</td>
+                                <td className="py-1.5 pr-3 text-left text-slate-300 max-w-[100px] truncate">{s.maxPriceStore ?? '—'}</td>
+                                <td className="py-1.5 pr-3 text-right text-slate-400">{s.maxPriceStoreCount ?? '—'}</td>
                                 <td className="py-1.5 text-center">
                                   {s.promoDetected
                                     ? <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/30"><Tag size={8} />Sí</span>
