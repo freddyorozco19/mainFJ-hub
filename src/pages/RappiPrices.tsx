@@ -476,14 +476,15 @@ interface RegisteredProduct {
   name: string
   brand?: string
   size?: string
-  keywords: string[]
+  searchNames: string[]   // distintos nombres del producto (para buscar variantes)
+  keywords: string[]      // términos Rappi específicos
 }
 
 const DEFAULT_PRODUCTS: RegisteredProduct[] = [
-  { id: 'leche',           name: 'Leche Entera',                             brand: 'Alquería',  size: '1L',   keywords: ['leche entera']            },
-  { id: 'arroz',           name: 'Arroz Blanco',                             brand: 'Roa',       size: '500g', keywords: ['arroz blanco']            },
-  { id: 'huevos',          name: 'Huevos',                                   brand: '',          size: 'x12',  keywords: ['huevos x12']              },
-  { id: 'purina-one-gatos',name: 'Purina One Gatos Esterilizados Carne',     brand: 'Purina',    size: '85g',  keywords: ['purina one esterilizados'] },
+  { id: 'leche',           name: 'Leche Entera',                         brand: 'Alquería', size: '1L',   searchNames: ['leche entera', 'leche larga vida', 'leche UHT'],               keywords: ['leche entera']            },
+  { id: 'arroz',           name: 'Arroz Blanco',                         brand: 'Roa',      size: '500g', searchNames: ['arroz blanco', 'arroz premium'],                               keywords: ['arroz blanco']            },
+  { id: 'huevos',          name: 'Huevos',                               brand: '',         size: 'x12',  searchNames: ['huevos x12', 'huevos por 12', 'docena huevos'],               keywords: ['huevos x12']              },
+  { id: 'purina-one-gatos',name: 'Purina One Gatos Esterilizados Carne', brand: 'Purina',   size: '85g',  searchNames: ['purina one esterilizados', 'purina gato carne', 'purina one gato'], keywords: ['purina one esterilizados'] },
 ]
 
 function loadProducts(): RegisteredProduct[] {
@@ -501,16 +502,18 @@ function saveProducts(products: RegisteredProduct[]) {
 
 function Registers() {
   const [products, setProducts] = useState<RegisteredProduct[]>(loadProducts)
-  const [editingId, setEditingId]       = useState<string | null>(null)
-  const [editName, setEditName]         = useState('')
-  const [editBrand, setEditBrand]       = useState('')
-  const [editSize, setEditSize]         = useState('')
-  const [editKeywords, setEditKeywords] = useState('')
-  const [adding, setAdding]             = useState(false)
-  const [newName, setNewName]           = useState('')
-  const [newBrand, setNewBrand]         = useState('')
-  const [newSize, setNewSize]           = useState('')
-  const [newKeywords, setNewKeywords]   = useState('')
+  const [editingId, setEditingId]             = useState<string | null>(null)
+  const [editName, setEditName]               = useState('')
+  const [editBrand, setEditBrand]             = useState('')
+  const [editSize, setEditSize]               = useState('')
+  const [editSearchNames, setEditSearchNames] = useState('')
+  const [editKeywords, setEditKeywords]       = useState('')
+  const [adding, setAdding]                   = useState(false)
+  const [newName, setNewName]                 = useState('')
+  const [newBrand, setNewBrand]               = useState('')
+  const [newSize, setNewSize]                 = useState('')
+  const [newSearchNames, setNewSearchNames]   = useState('')
+  const [newKeywords, setNewKeywords]         = useState('')
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
   const [view, setView]             = useState<'cards' | 'table'>('cards')
 
@@ -519,11 +522,14 @@ function Registers() {
     saveProducts(updated)
   }
 
+  const splitComma = (s: string) => s.split(',').map(v => v.trim()).filter(Boolean)
+
   const startEdit = (p: RegisteredProduct) => {
     setEditingId(p.id)
     setEditName(p.name)
     setEditBrand(p.brand ?? '')
     setEditSize(p.size ?? '')
+    setEditSearchNames((p.searchNames ?? []).join(', '))
     setEditKeywords(p.keywords.join(', '))
     setDeleteConfirm(null)
   }
@@ -531,7 +537,7 @@ function Registers() {
   const saveEdit = () => {
     if (!editName.trim()) return
     persist(products.map(p => p.id === editingId
-      ? { ...p, name: editName.trim(), brand: editBrand.trim(), size: editSize.trim(), keywords: editKeywords.split(',').map(k => k.trim()).filter(Boolean) }
+      ? { ...p, name: editName.trim(), brand: editBrand.trim(), size: editSize.trim(), searchNames: splitComma(editSearchNames), keywords: splitComma(editKeywords) }
       : p
     ))
     setEditingId(null)
@@ -545,10 +551,12 @@ function Registers() {
   const addProduct = () => {
     if (!newName.trim()) return
     const id = newName.trim().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')
-    const keywords = newKeywords.split(',').map(k => k.trim()).filter(Boolean)
+    const searchNames = splitComma(newSearchNames)
+    if (searchNames.length === 0) searchNames.push(newName.trim().toLowerCase())
+    const keywords = splitComma(newKeywords)
     if (keywords.length === 0) keywords.push(newName.trim().toLowerCase())
-    persist([...products, { id: `${id}-${Date.now()}`, name: newName.trim(), brand: newBrand.trim(), size: newSize.trim(), keywords }])
-    setNewName(''); setNewBrand(''); setNewSize(''); setNewKeywords(''); setAdding(false)
+    persist([...products, { id: `${id}-${Date.now()}`, name: newName.trim(), brand: newBrand.trim(), size: newSize.trim(), searchNames, keywords }])
+    setNewName(''); setNewBrand(''); setNewSize(''); setNewSearchNames(''); setNewKeywords(''); setAdding(false)
   }
 
   return (
@@ -585,6 +593,7 @@ function Registers() {
                 <th className="px-4 py-2.5 text-slate-500 font-medium">Nombre</th>
                 <th className="px-4 py-2.5 text-slate-500 font-medium">Marca</th>
                 <th className="px-4 py-2.5 text-slate-500 font-medium">Tamaño</th>
+                <th className="px-4 py-2.5 text-slate-500 font-medium">Search Name</th>
                 <th className="px-4 py-2.5 text-slate-500 font-medium">Keywords</th>
                 <th className="px-4 py-2.5 text-slate-500 font-medium text-right">Acciones</th>
               </tr>
@@ -596,6 +605,15 @@ function Registers() {
                   <td className="px-4 py-3 text-slate-200 font-medium">{p.name}</td>
                   <td className="px-4 py-3 text-slate-400">{p.brand || <span className="text-slate-600">—</span>}</td>
                   <td className="px-4 py-3 text-slate-400">{p.size || <span className="text-slate-600">—</span>}</td>
+                  <td className="px-4 py-3">
+                    <div className="flex flex-wrap gap-1">
+                      {(p.searchNames ?? []).map(s => (
+                        <span key={s} className="px-1.5 py-0.5 rounded bg-sky-900/40 text-sky-400 border border-sky-700/40 whitespace-nowrap">
+                          {s}
+                        </span>
+                      ))}
+                    </div>
+                  </td>
                   <td className="px-4 py-3">
                     <div className="flex flex-wrap gap-1">
                       {p.keywords.map(k => (
@@ -671,7 +689,18 @@ function Registers() {
               </div>
               <div>
                 <label className="text-[10px] text-slate-500 uppercase tracking-wide mb-1 block">
-                  Keywords de búsqueda <span className="normal-case">(separadas por coma)</span>
+                  Search Name <span className="normal-case">(nombres del producto separados por coma)</span>
+                </label>
+                <input
+                  value={editSearchNames}
+                  onChange={e => setEditSearchNames(e.target.value)}
+                  placeholder="ej: leche entera, leche larga vida, leche UHT"
+                  className="w-full bg-slate-800 border border-sky-700/40 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-sky-500/60"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] text-slate-500 uppercase tracking-wide mb-1 block">
+                  Keywords Rappi <span className="normal-case">(términos de búsqueda en Rappi, separados por coma)</span>
                 </label>
                 <input
                   value={editKeywords}
@@ -701,13 +730,24 @@ function Registers() {
                   {p.brand && <span className="text-[11px] text-orange-400/80 font-medium shrink-0">{p.brand}</span>}
                   {p.size  && <span className="text-[11px] text-slate-400 shrink-0">{p.size}</span>}
                 </div>
-                <div className="flex flex-wrap gap-1 mt-1">
-                  {p.keywords.map(k => (
-                    <span key={k} className="text-[10px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700/50">
-                      {k}
-                    </span>
-                  ))}
-                </div>
+                {(p.searchNames ?? []).length > 0 && (
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    {(p.searchNames ?? []).map(s => (
+                      <span key={s} className="text-[10px] px-1.5 py-0.5 rounded bg-sky-900/40 text-sky-400 border border-sky-700/40">
+                        {s}
+                      </span>
+                    ))}
+                  </div>
+                )}
+                {p.keywords.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    {p.keywords.map(k => (
+                      <span key={k} className="text-[10px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700/50">
+                        {k}
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
               <div className="flex items-center gap-1 flex-shrink-0">
                 <button
@@ -772,17 +812,28 @@ function Registers() {
           </div>
           <div>
             <label className="text-[10px] text-slate-500 uppercase tracking-wide mb-1 block">
-              Keywords <span className="normal-case">(separadas por coma — cómo buscarlo en Rappi)</span>
+              Search Name <span className="normal-case">(nombres del producto separados por coma)</span>
+            </label>
+            <input
+              value={newSearchNames}
+              onChange={e => setNewSearchNames(e.target.value)}
+              placeholder="Ej: aceite girasol, aceite vegetal, aceite de girasol"
+              className="w-full bg-slate-800 border border-sky-700/40 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-sky-500/60"
+            />
+          </div>
+          <div>
+            <label className="text-[10px] text-slate-500 uppercase tracking-wide mb-1 block">
+              Keywords Rappi <span className="normal-case">(términos de búsqueda en Rappi, separados por coma)</span>
             </label>
             <input
               value={newKeywords}
               onChange={e => setNewKeywords(e.target.value)}
-              placeholder="Ej: aceite girasol, aceite vegetal"
+              placeholder="Ej: aceite girasol 1L"
               className="w-full bg-slate-800 border border-slate-700/60 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-orange-500/60"
             />
           </div>
           <div className="flex gap-2 justify-end">
-            <button onClick={() => { setAdding(false); setNewName(''); setNewBrand(''); setNewSize(''); setNewKeywords('') }} className="px-3 py-1.5 text-xs text-slate-400 hover:text-slate-200 transition-colors">
+            <button onClick={() => { setAdding(false); setNewName(''); setNewBrand(''); setNewSize(''); setNewSearchNames(''); setNewKeywords('') }} className="px-3 py-1.5 text-xs text-slate-400 hover:text-slate-200 transition-colors">
               Cancelar
             </button>
             <button onClick={addProduct} disabled={!newName.trim()} className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-orange-500/15 hover:bg-orange-500/25 text-orange-400 rounded-lg border border-orange-500/30 transition-colors disabled:opacity-40">
