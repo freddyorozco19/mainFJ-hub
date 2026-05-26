@@ -73,6 +73,16 @@ const PROVIDERS: ProviderConfig[] = [
       { id: 'cism', code: 'CISM', name: 'Certified Information Security Manager', level: 'Professional' },
     ],
   },
+  {
+    id: 'cdmp',
+    name: 'CDMP',
+    color: '#14B8A6',
+    bgGradient: 'from-teal-950 to-slate-900',
+    logo: '◭',
+    exams: [
+      { id: 'dmf', code: 'DMF', name: 'Data Management Fundamentals', level: 'Fundamental' },
+    ],
+  },
 ]
 
 // ─── Types de preguntas ───────────────────────────────────────────────────────
