@@ -446,12 +446,18 @@ export default function RappiPrices() {
             Historial de precios mínimos por producto en Colombia
           </p>
         </div>
-        {data?.lastUpdated && (
-          <div className="flex items-center gap-1.5 text-xs text-slate-500 bg-slate-800/60 px-3 py-1.5 rounded-full border border-slate-700/50">
-            <RefreshCw size={11} />
-            Actualizado {relativeDays(data.lastUpdated.split('T')[0])}
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 text-xs text-emerald-400 bg-emerald-500/10 px-3 py-1.5 rounded-full border border-emerald-500/25">
+            <span>📍</span>
+            HOME
           </div>
-        )}
+          {data?.lastUpdated && (
+            <div className="flex items-center gap-1.5 text-xs text-slate-500 bg-slate-800/60 px-3 py-1.5 rounded-full border border-slate-700/50">
+              <RefreshCw size={11} />
+              Actualizado {relativeDays(data.lastUpdated.split('T')[0])}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Búsqueda en vivo contra el backend */}
