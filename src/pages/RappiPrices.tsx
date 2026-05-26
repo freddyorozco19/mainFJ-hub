@@ -1,9 +1,10 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import {
   ShoppingCart, TrendingDown, TrendingUp, Minus,
   RefreshCw, Package, Store, ChevronDown, ChevronUp,
-  AlertCircle, Calendar, Search, Plus,
+  AlertCircle, Calendar, Search, Plus, Zap,
 } from 'lucide-react'
+import { API_BASE } from '../api'
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
@@ -257,6 +258,131 @@ function ProductCard({ product }: { productId: string; product: TrackedProduct }
   )
 }
 
+// ─── Tipos búsqueda en vivo ───────────────────────────────────────────────────
+
+interface LiveResult {
+  id: string | null
+  name: string
+  price: number
+  originalPrice: number
+  hasDiscount: boolean
+  pum: string | null
+  unitType: string | null
+  inStock: boolean
+  store: string | null
+  storeType: string | null
+  image: string | null
+}
+
+interface LiveSearchResponse {
+  query: string
+  count: number
+  total: number
+  products: LiveResult[]
+  stores: string[]
+  minPrice: number | null
+  maxPrice: number | null
+}
+
+// ─── Panel de búsqueda en vivo ────────────────────────────────────────────────
+
+function LiveSearch() {
+  const [query, setQuery]       = useState('')
+  const [results, setResults]   = useState<LiveSearchResponse | null>(null)
+  const [searching, setSearching] = useState(false)
+  const [liveError, setLiveError] = useState<string | null>(null)
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const handleSearch = async (q: string) => {
+    if (q.trim().length < 2) { setResults(null); return }
+    setSearching(true); setLiveError(null)
+    try {
+      const res = await fetch(`${API_BASE}/rappi/search?query=${encodeURIComponent(q)}&limit=30`)
+      if (!res.ok) throw new Error(`Error ${res.status}`)
+      const data: LiveSearchResponse = await res.json()
+      setResults(data)
+    } catch (e: any) {
+      setLiveError(e.message || 'Error al buscar')
+      setResults(null)
+    } finally {
+      setSearching(false)
+    }
+  }
+
+  const onInput = (val: string) => {
+    setQuery(val)
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    debounceRef.current = setTimeout(() => handleSearch(val), 600)
+  }
+
+  return (
+    <div className="bg-slate-900 border border-slate-700/60 rounded-xl p-4 mb-6">
+      <div className="flex items-center gap-2 mb-3">
+        <Zap size={14} className="text-orange-400" />
+        <span className="text-sm font-medium text-white">Búsqueda en vivo</span>
+        <span className="text-xs text-slate-500">— consulta precios actuales directamente desde Rappi</span>
+      </div>
+
+      <div className="relative">
+        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+        <input
+          type="text"
+          value={query}
+          onChange={e => onInput(e.target.value)}
+          placeholder="Ej: purina one gatos, leche entera alpina..."
+          className="w-full bg-slate-800 border border-slate-700/60 rounded-lg pl-9 pr-3 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-orange-500/60"
+        />
+        {searching && (
+          <RefreshCw size={13} className="absolute right-3 top-1/2 -translate-y-1/2 text-orange-400 animate-spin" />
+        )}
+      </div>
+
+      {liveError && (
+        <p className="text-xs text-red-400 mt-2 flex items-center gap-1">
+          <AlertCircle size={11} /> {liveError}
+        </p>
+      )}
+
+      {results && !searching && (
+        <div className="mt-3">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs text-slate-400">
+              {results.count} resultados en {results.stores.length} tiendas
+            </span>
+            {results.minPrice && (
+              <span className="text-xs text-emerald-400 font-medium">
+                Desde {formatCOP(results.minPrice)}
+              </span>
+            )}
+          </div>
+          <div className="space-y-1.5 max-h-64 overflow-y-auto">
+            {results.products.map((p, i) => (
+              <div
+                key={i}
+                className={`flex items-center gap-2 px-2.5 py-2 rounded-lg ${
+                  i === 0 ? 'bg-emerald-950/40 border border-emerald-700/30' : 'bg-slate-800/40'
+                }`}
+              >
+                <Store size={11} className={i === 0 ? 'text-emerald-400 flex-shrink-0' : 'text-slate-500 flex-shrink-0'} />
+                <div className="flex-1 min-w-0">
+                  <div className="text-xs text-slate-200 truncate">{p.name}</div>
+                  <div className="text-[10px] text-slate-500">{p.store || '?'} {p.pum ? `· ${p.pum}` : ''}</div>
+                </div>
+                {p.originalPrice > p.price && (
+                  <span className="text-[10px] text-slate-500 line-through">{formatCOP(p.originalPrice)}</span>
+                )}
+                <span className={`text-xs font-semibold flex-shrink-0 ${i === 0 ? 'text-emerald-400' : 'text-slate-200'}`}>
+                  {formatCOP(p.price)}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ─── Página principal ─────────────────────────────────────────────────────────
 
 export default function RappiPrices() {
@@ -315,6 +441,9 @@ export default function RappiPrices() {
           </div>
         )}
       </div>
+
+      {/* Búsqueda en vivo contra el backend */}
+      <LiveSearch />
 
       {/* Stats */}
       {stats && (

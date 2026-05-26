@@ -14,7 +14,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 
-from backend.routers import chat, agents, metrics, logs, finance, auth, health, search, webhooks, proxy, belvo, backlog, calendar, email_inbox
+from backend.routers import chat, agents, metrics, logs, finance, auth, health, search, webhooks, proxy, belvo, backlog, calendar, email_inbox, rappi
 from backend.db import init_db
 from backend.events import event_manager
 
@@ -49,6 +49,7 @@ app.include_router(belvo.router)
 app.include_router(backlog.router)
 app.include_router(calendar.router)
 app.include_router(email_inbox.router)
+app.include_router(rappi.router)
 
 
 @app.get("/")
