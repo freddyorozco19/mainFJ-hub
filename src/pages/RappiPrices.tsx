@@ -4,6 +4,7 @@ import {
   RefreshCw, Package, Store, ChevronDown, ChevronUp,
   AlertCircle, Calendar, Search, Plus, Zap, ExternalLink,
   MapPin, X, ChevronRight, Home, Pencil, Trash2, Check, ScanLine, BookOpen,
+  LayoutGrid, Table2,
 } from 'lucide-react'
 import { API_BASE } from '../api'
 
@@ -505,6 +506,7 @@ function Registers() {
   const [newName, setNewName]       = useState('')
   const [newKeywords, setNewKeywords] = useState('')
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
+  const [view, setView]             = useState<'cards' | 'table'>('cards')
 
   const persist = (updated: RegisteredProduct[]) => {
     setProducts(updated)
@@ -543,8 +545,88 @@ function Registers() {
 
   return (
     <div className="space-y-3">
-      {/* Lista */}
-      {products.map(p => (
+
+      {/* Toggle Cards / Table */}
+      <div className="flex items-center justify-between mb-1">
+        <span className="text-xs text-slate-500">{products.length} producto{products.length !== 1 ? 's' : ''} registrado{products.length !== 1 ? 's' : ''}</span>
+        <div className="flex gap-0.5 p-0.5 bg-slate-800 border border-slate-700/60 rounded-lg">
+          {([
+            { key: 'cards', icon: LayoutGrid },
+            { key: 'table', icon: Table2    },
+          ] as const).map(({ key, icon: Icon }) => (
+            <button
+              key={key}
+              onClick={() => setView(key)}
+              className={`p-1.5 rounded-md transition-colors ${
+                view === key ? 'bg-slate-700 text-white' : 'text-slate-500 hover:text-slate-300'
+              }`}
+            >
+              <Icon size={14} />
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* ── Vista TABLE ── */}
+      {view === 'table' && (
+        <div className="bg-slate-900 border border-slate-700/60 rounded-xl overflow-hidden">
+          <table className="w-full text-xs">
+            <thead>
+              <tr className="border-b border-slate-700/60 text-left">
+                <th className="px-4 py-2.5 text-slate-500 font-medium w-8">#</th>
+                <th className="px-4 py-2.5 text-slate-500 font-medium">ID</th>
+                <th className="px-4 py-2.5 text-slate-500 font-medium">Nombre</th>
+                <th className="px-4 py-2.5 text-slate-500 font-medium">Keywords</th>
+                <th className="px-4 py-2.5 text-slate-500 font-medium text-right">Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              {products.map((p, i) => (
+                <tr key={p.id} className="border-b border-slate-700/30 last:border-0 hover:bg-white/[0.02] transition-colors">
+                  <td className="px-4 py-3 text-slate-600">{i + 1}</td>
+                  <td className="px-4 py-3 font-mono text-slate-500 max-w-[120px] truncate">{p.id}</td>
+                  <td className="px-4 py-3 text-slate-200 font-medium">{p.name}</td>
+                  <td className="px-4 py-3">
+                    <div className="flex flex-wrap gap-1">
+                      {p.keywords.map(k => (
+                        <span key={k} className="px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700/50 whitespace-nowrap">
+                          {k}
+                        </span>
+                      ))}
+                    </div>
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-1 justify-end">
+                      <button
+                        onClick={() => { setView('cards'); startEdit(p) }}
+                        className="w-6 h-6 flex items-center justify-center rounded text-slate-500 hover:text-slate-200 hover:bg-white/5 transition-colors"
+                      >
+                        <Pencil size={12} />
+                      </button>
+                      {deleteConfirm === p.id ? (
+                        <div className="flex items-center gap-1">
+                          <button onClick={() => deleteProduct(p.id)} className="px-2 py-0.5 text-[10px] bg-red-500/20 text-red-400 rounded border border-red-500/30 hover:bg-red-500/30">Sí</button>
+                          <button onClick={() => setDeleteConfirm(null)} className="px-2 py-0.5 text-[10px] text-slate-400 hover:text-slate-200">No</button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => setDeleteConfirm(p.id)}
+                          className="w-6 h-6 flex items-center justify-center rounded text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                        >
+                          <Trash2 size={12} />
+                        </button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* ── Vista CARDS ── */}
+      {view === 'cards' && <>{products.map(p => (
         <div key={p.id} className="bg-slate-900 border border-slate-700/60 rounded-xl overflow-hidden">
           {editingId === p.id ? (
             /* ── Modo edición ── */
@@ -618,7 +700,7 @@ function Registers() {
             </div>
           )}
         </div>
-      ))}
+      ))}</>}
 
       {/* Formulario agregar */}
       {adding ? (
