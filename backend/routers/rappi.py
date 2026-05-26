@@ -58,6 +58,7 @@ def extract_products(next_data: dict, keyword: str) -> list[dict]:
             store_name = store.get("storeName") or store.get("store_name") or store.get("name")
             store_id   = store.get("storeId")
             store_type = store.get("storeType")
+            store_path = store.get("url") or ""  # ej: "/tiendas/turbo/900103835/turbo"
 
             for p in store.get("products", []):
                 name  = p.get("name", "")
@@ -72,6 +73,15 @@ def extract_products(next_data: dict, keyword: str) -> list[dict]:
                     continue
                 seen.add(key)
 
+                # URL directa al producto en la tienda de Rappi
+                product_id = p.get("productId") or p.get("masterProductId")
+                if store_path and product_id:
+                    rappi_url = f"https://www.rappi.com.co{store_path}?product_id={product_id}"
+                elif store_path:
+                    rappi_url = f"https://www.rappi.com.co{store_path}"
+                else:
+                    rappi_url = None
+
                 results.append({
                     "id":            p.get("masterProductId") or p.get("productId"),
                     "name":          name,
@@ -85,6 +95,7 @@ def extract_products(next_data: dict, keyword: str) -> list[dict]:
                     "storeId":       store_id,
                     "storeType":     store_type,
                     "image":         p.get("image"),
+                    "rappiUrl":      rappi_url,
                 })
 
     return sorted(results, key=lambda x: x["price"])

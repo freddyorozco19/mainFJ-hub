@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useRef } from 'react'
 import {
   ShoppingCart, TrendingDown, TrendingUp, Minus,
   RefreshCw, Package, Store, ChevronDown, ChevronUp,
-  AlertCircle, Calendar, Search, Plus, Zap,
+  AlertCircle, Calendar, Search, Plus, Zap, ExternalLink,
 } from 'lucide-react'
 import { API_BASE } from '../api'
 
@@ -272,6 +272,7 @@ interface LiveResult {
   store: string | null
   storeType: string | null
   image: string | null
+  rappiUrl: string | null
 }
 
 interface LiveSearchResponse {
@@ -374,6 +375,17 @@ function LiveSearch() {
                 <span className={`text-xs font-semibold flex-shrink-0 ${i === 0 ? 'text-emerald-400' : 'text-slate-200'}`}>
                   {formatCOP(p.price)}
                 </span>
+                {p.rappiUrl && (
+                  <a
+                    href={p.rappiUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title={`Ver en Rappi — ${p.store}`}
+                    className="flex-shrink-0 flex items-center justify-center w-6 h-6 rounded border bg-slate-700/60 border-slate-600/60 text-slate-400 hover:text-orange-400 hover:border-orange-500/50 transition-colors"
+                  >
+                    <ExternalLink size={10} />
+                  </a>
+                )}
               </div>
             ))}
           </div>
