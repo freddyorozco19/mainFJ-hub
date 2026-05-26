@@ -896,7 +896,7 @@ export function Certifications() {
   const selectExam = (e: ExamConfig) => { setSelectedExam(e); setView('viewer') }
 
   return (
-    <div className="p-6 w-full space-y-6">
+    <div className="px-10 py-6 w-full space-y-6">
 
       {/* Page header */}
       <div className="flex items-start justify-between gap-4 flex-wrap">
