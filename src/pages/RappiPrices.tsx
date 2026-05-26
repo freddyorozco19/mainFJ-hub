@@ -474,14 +474,16 @@ function LiveSearch() {
 interface RegisteredProduct {
   id: string
   name: string
+  brand?: string
+  size?: string
   keywords: string[]
 }
 
 const DEFAULT_PRODUCTS: RegisteredProduct[] = [
-  { id: 'leche',           name: 'Leche Entera',                          keywords: ['leche entera']            },
-  { id: 'arroz',           name: 'Arroz Blanco 500g',                     keywords: ['arroz blanco']            },
-  { id: 'huevos',          name: 'Huevos x12',                            keywords: ['huevos x12']              },
-  { id: 'purina-one-gatos',name: 'Purina One Gatos Esterilizados Carne 85g', keywords: ['purina one esterilizados'] },
+  { id: 'leche',           name: 'Leche Entera',                             brand: 'Alquería',  size: '1L',   keywords: ['leche entera']            },
+  { id: 'arroz',           name: 'Arroz Blanco',                             brand: 'Roa',       size: '500g', keywords: ['arroz blanco']            },
+  { id: 'huevos',          name: 'Huevos',                                   brand: '',          size: 'x12',  keywords: ['huevos x12']              },
+  { id: 'purina-one-gatos',name: 'Purina One Gatos Esterilizados Carne',     brand: 'Purina',    size: '85g',  keywords: ['purina one esterilizados'] },
 ]
 
 function loadProducts(): RegisteredProduct[] {
@@ -499,12 +501,16 @@ function saveProducts(products: RegisteredProduct[]) {
 
 function Registers() {
   const [products, setProducts] = useState<RegisteredProduct[]>(loadProducts)
-  const [editingId, setEditingId]   = useState<string | null>(null)
-  const [editName, setEditName]     = useState('')
+  const [editingId, setEditingId]       = useState<string | null>(null)
+  const [editName, setEditName]         = useState('')
+  const [editBrand, setEditBrand]       = useState('')
+  const [editSize, setEditSize]         = useState('')
   const [editKeywords, setEditKeywords] = useState('')
-  const [adding, setAdding]         = useState(false)
-  const [newName, setNewName]       = useState('')
-  const [newKeywords, setNewKeywords] = useState('')
+  const [adding, setAdding]             = useState(false)
+  const [newName, setNewName]           = useState('')
+  const [newBrand, setNewBrand]         = useState('')
+  const [newSize, setNewSize]           = useState('')
+  const [newKeywords, setNewKeywords]   = useState('')
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
   const [view, setView]             = useState<'cards' | 'table'>('cards')
 
@@ -516,6 +522,8 @@ function Registers() {
   const startEdit = (p: RegisteredProduct) => {
     setEditingId(p.id)
     setEditName(p.name)
+    setEditBrand(p.brand ?? '')
+    setEditSize(p.size ?? '')
     setEditKeywords(p.keywords.join(', '))
     setDeleteConfirm(null)
   }
@@ -523,7 +531,7 @@ function Registers() {
   const saveEdit = () => {
     if (!editName.trim()) return
     persist(products.map(p => p.id === editingId
-      ? { ...p, name: editName.trim(), keywords: editKeywords.split(',').map(k => k.trim()).filter(Boolean) }
+      ? { ...p, name: editName.trim(), brand: editBrand.trim(), size: editSize.trim(), keywords: editKeywords.split(',').map(k => k.trim()).filter(Boolean) }
       : p
     ))
     setEditingId(null)
@@ -539,8 +547,8 @@ function Registers() {
     const id = newName.trim().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')
     const keywords = newKeywords.split(',').map(k => k.trim()).filter(Boolean)
     if (keywords.length === 0) keywords.push(newName.trim().toLowerCase())
-    persist([...products, { id: `${id}-${Date.now()}`, name: newName.trim(), keywords }])
-    setNewName(''); setNewKeywords(''); setAdding(false)
+    persist([...products, { id: `${id}-${Date.now()}`, name: newName.trim(), brand: newBrand.trim(), size: newSize.trim(), keywords }])
+    setNewName(''); setNewBrand(''); setNewSize(''); setNewKeywords(''); setAdding(false)
   }
 
   return (
@@ -574,8 +582,9 @@ function Registers() {
             <thead>
               <tr className="border-b border-slate-700/60 text-left">
                 <th className="px-4 py-2.5 text-slate-500 font-medium w-8">#</th>
-                <th className="px-4 py-2.5 text-slate-500 font-medium">ID</th>
                 <th className="px-4 py-2.5 text-slate-500 font-medium">Nombre</th>
+                <th className="px-4 py-2.5 text-slate-500 font-medium">Marca</th>
+                <th className="px-4 py-2.5 text-slate-500 font-medium">Tamaño</th>
                 <th className="px-4 py-2.5 text-slate-500 font-medium">Keywords</th>
                 <th className="px-4 py-2.5 text-slate-500 font-medium text-right">Acciones</th>
               </tr>
@@ -584,8 +593,9 @@ function Registers() {
               {products.map((p, i) => (
                 <tr key={p.id} className="border-b border-slate-700/30 last:border-0 hover:bg-white/[0.02] transition-colors">
                   <td className="px-4 py-3 text-slate-600">{i + 1}</td>
-                  <td className="px-4 py-3 font-mono text-slate-500 max-w-[120px] truncate">{p.id}</td>
                   <td className="px-4 py-3 text-slate-200 font-medium">{p.name}</td>
+                  <td className="px-4 py-3 text-slate-400">{p.brand || <span className="text-slate-600">—</span>}</td>
+                  <td className="px-4 py-3 text-slate-400">{p.size || <span className="text-slate-600">—</span>}</td>
                   <td className="px-4 py-3">
                     <div className="flex flex-wrap gap-1">
                       {p.keywords.map(k => (
@@ -639,6 +649,26 @@ function Registers() {
                   className="w-full bg-slate-800 border border-slate-700/60 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-orange-500/60"
                 />
               </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-[10px] text-slate-500 uppercase tracking-wide mb-1 block">Marca</label>
+                  <input
+                    value={editBrand}
+                    onChange={e => setEditBrand(e.target.value)}
+                    placeholder="Ej: Alquería"
+                    className="w-full bg-slate-800 border border-slate-700/60 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-orange-500/60"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] text-slate-500 uppercase tracking-wide mb-1 block">Tamaño</label>
+                  <input
+                    value={editSize}
+                    onChange={e => setEditSize(e.target.value)}
+                    placeholder="Ej: 1L, 500g, x12"
+                    className="w-full bg-slate-800 border border-slate-700/60 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-orange-500/60"
+                  />
+                </div>
+              </div>
               <div>
                 <label className="text-[10px] text-slate-500 uppercase tracking-wide mb-1 block">
                   Keywords de búsqueda <span className="normal-case">(separadas por coma)</span>
@@ -666,7 +696,11 @@ function Registers() {
                 <Package size={14} className="text-orange-400" />
               </div>
               <div className="flex-1 min-w-0">
-                <div className="text-sm font-medium text-white truncate">{p.name}</div>
+                <div className="flex items-baseline gap-2 flex-wrap">
+                  <span className="text-sm font-medium text-white truncate">{p.name}</span>
+                  {p.brand && <span className="text-[11px] text-orange-400/80 font-medium shrink-0">{p.brand}</span>}
+                  {p.size  && <span className="text-[11px] text-slate-400 shrink-0">{p.size}</span>}
+                </div>
                 <div className="flex flex-wrap gap-1 mt-1">
                   {p.keywords.map(k => (
                     <span key={k} className="text-[10px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700/50">
@@ -712,9 +746,29 @@ function Registers() {
               autoFocus
               value={newName}
               onChange={e => setNewName(e.target.value)}
-              placeholder="Ej: Aceite Girasol 1L"
+              placeholder="Ej: Aceite Girasol"
               className="w-full bg-slate-800 border border-slate-700/60 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-orange-500/60"
             />
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="text-[10px] text-slate-500 uppercase tracking-wide mb-1 block">Marca</label>
+              <input
+                value={newBrand}
+                onChange={e => setNewBrand(e.target.value)}
+                placeholder="Ej: Nutrioli"
+                className="w-full bg-slate-800 border border-slate-700/60 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-orange-500/60"
+              />
+            </div>
+            <div>
+              <label className="text-[10px] text-slate-500 uppercase tracking-wide mb-1 block">Tamaño</label>
+              <input
+                value={newSize}
+                onChange={e => setNewSize(e.target.value)}
+                placeholder="Ej: 1L, 500g, x12"
+                className="w-full bg-slate-800 border border-slate-700/60 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-orange-500/60"
+              />
+            </div>
           </div>
           <div>
             <label className="text-[10px] text-slate-500 uppercase tracking-wide mb-1 block">
@@ -728,7 +782,7 @@ function Registers() {
             />
           </div>
           <div className="flex gap-2 justify-end">
-            <button onClick={() => { setAdding(false); setNewName(''); setNewKeywords('') }} className="px-3 py-1.5 text-xs text-slate-400 hover:text-slate-200 transition-colors">
+            <button onClick={() => { setAdding(false); setNewName(''); setNewBrand(''); setNewSize(''); setNewKeywords('') }} className="px-3 py-1.5 text-xs text-slate-400 hover:text-slate-200 transition-colors">
               Cancelar
             </button>
             <button onClick={addProduct} disabled={!newName.trim()} className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-orange-500/15 hover:bg-orange-500/25 text-orange-400 rounded-lg border border-orange-500/30 transition-colors disabled:opacity-40">
