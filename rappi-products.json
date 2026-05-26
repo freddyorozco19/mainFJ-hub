@@ -1,0 +1,8 @@
+{
+  "city": "bogota",
+  "products": [
+    { "id": "leche", "name": "Leche Entera", "keywords": ["leche entera", "leche"] },
+    { "id": "arroz", "name": "Arroz Blanco 500g", "keywords": ["arroz blanco", "arroz"] },
+    { "id": "huevos", "name": "Huevos x12", "keywords": ["huevos x12", "huevos"] }
+  ]
+}

@@ -18,6 +18,7 @@ import { Webhooks } from './pages/Webhooks'
 import { Banca } from './pages/Banca'
 import { Backlog } from './pages/Backlog'
 import { Certifications } from './pages/Certifications'
+import RappiPrices from './pages/RappiPrices'
 import { Login } from './pages/Login'
 import { ForgotPassword } from './pages/ForgotPassword'
 import { ResetPassword } from './pages/ResetPassword'
@@ -189,6 +190,7 @@ export default function App() {
             <Route path="/banca"    element={<Banca />}    />
             <Route path="/backlog"          element={<Backlog />}         />
             <Route path="/certifications"  element={<Certifications />}  />
+            <Route path="/rappi-prices"    element={<RappiPrices />}     />
             <Route path="/profile"  element={<Profile />}  />
           </Route>
         </Route>

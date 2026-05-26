@@ -4,7 +4,7 @@ import {
   Bot, MessageSquare, BarChart3, ScrollText, PanelLeftClose, PanelLeft,
   Home, Trophy, Brain, TrendingUp, Heart, Wallet, LogOut, X, Menu,
   User, Network, Activity, Webhook, Building2, Layers, Zap, Cpu,
-  GraduationCap,
+  GraduationCap, ShoppingCart,
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { getToken } from '../api'
@@ -29,6 +29,7 @@ const MODULE_COLORS: Record<string, { icon: string; bg: string; glow: string }> 
   '/banca':           { icon: 'text-sky-400',     bg: 'bg-sky-500/10     border-sky-500/20',     glow: 'shadow-[0_0_12px_rgba(14,165,233,0.3)]'   },
   '/backlog':         { icon: 'text-purple-400',  bg: 'bg-purple-500/10  border-purple-500/20',  glow: 'shadow-[0_0_12px_rgba(168,85,247,0.3)]'   },
   '/certifications':  { icon: 'text-emerald-400', bg: 'bg-emerald-500/10 border-emerald-500/20', glow: 'shadow-[0_0_12px_rgba(16,185,129,0.3)]'   },
+  '/rappi-prices':    { icon: 'text-orange-400',  bg: 'bg-orange-500/10  border-orange-500/20',  glow: 'shadow-[0_0_12px_rgba(249,115,22,0.3)]'   },
   '/profile':         { icon: 'text-amber-400',   bg: 'bg-amber-500/10   border-amber-500/20',   glow: 'shadow-[0_0_12px_rgba(245,158,11,0.3)]'   },
 }
 
@@ -52,6 +53,7 @@ const SYSTEMS_NAV = [
   { to: '/growdata',       icon: TrendingUp,    label: 'GrowData'       },
   { to: '/webhooks',       icon: Webhook,       label: 'Webhooks'       },
   { to: '/certifications', icon: GraduationCap, label: 'Certificaciones'},
+  { to: '/rappi-prices',   icon: ShoppingCart,  label: 'Precios Rappi' },
 ]
 
 interface SidebarProps {
