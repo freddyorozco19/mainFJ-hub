@@ -730,15 +730,6 @@ function Registers() {
                   {p.brand && <span className="text-[11px] text-orange-400/80 font-medium shrink-0">{p.brand}</span>}
                   {p.size  && <span className="text-[11px] text-slate-400 shrink-0">{p.size}</span>}
                 </div>
-                {(p.searchNames ?? []).length > 0 && (
-                  <div className="flex flex-wrap gap-1 mt-1">
-                    {(p.searchNames ?? []).map(s => (
-                      <span key={s} className="text-[10px] px-1.5 py-0.5 rounded bg-sky-900/40 text-sky-400 border border-sky-700/40">
-                        {s}
-                      </span>
-                    ))}
-                  </div>
-                )}
                 {p.keywords.length > 0 && (
                   <div className="flex flex-wrap gap-1 mt-1">
                     {p.keywords.map(k => (
