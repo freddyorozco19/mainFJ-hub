@@ -3,7 +3,7 @@ import {
   ShoppingCart, TrendingDown, TrendingUp, Minus,
   RefreshCw, Package, Store, ChevronDown, ChevronUp,
   AlertCircle, Calendar, Search, Plus, Zap, ExternalLink,
-  MapPin, X, ChevronRight, Home,
+  MapPin, X, ChevronRight, Home, Pencil, Trash2, Check, ScanLine, BookOpen,
 } from 'lucide-react'
 import { API_BASE } from '../api'
 
@@ -468,6 +468,205 @@ function LiveSearch() {
   )
 }
 
+// ─── Tipo producto rastreado ──────────────────────────────────────────────────
+
+interface RegisteredProduct {
+  id: string
+  name: string
+  keywords: string[]
+}
+
+const DEFAULT_PRODUCTS: RegisteredProduct[] = [
+  { id: 'leche',           name: 'Leche Entera',                          keywords: ['leche entera']            },
+  { id: 'arroz',           name: 'Arroz Blanco 500g',                     keywords: ['arroz blanco']            },
+  { id: 'huevos',          name: 'Huevos x12',                            keywords: ['huevos x12']              },
+  { id: 'purina-one-gatos',name: 'Purina One Gatos Esterilizados Carne 85g', keywords: ['purina one esterilizados'] },
+]
+
+function loadProducts(): RegisteredProduct[] {
+  try {
+    const s = localStorage.getItem('rappi_registers')
+    if (s) return JSON.parse(s)
+  } catch {}
+  return DEFAULT_PRODUCTS
+}
+function saveProducts(products: RegisteredProduct[]) {
+  localStorage.setItem('rappi_registers', JSON.stringify(products))
+}
+
+// ─── Componente Registers ─────────────────────────────────────────────────────
+
+function Registers() {
+  const [products, setProducts] = useState<RegisteredProduct[]>(loadProducts)
+  const [editingId, setEditingId]   = useState<string | null>(null)
+  const [editName, setEditName]     = useState('')
+  const [editKeywords, setEditKeywords] = useState('')
+  const [adding, setAdding]         = useState(false)
+  const [newName, setNewName]       = useState('')
+  const [newKeywords, setNewKeywords] = useState('')
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
+
+  const persist = (updated: RegisteredProduct[]) => {
+    setProducts(updated)
+    saveProducts(updated)
+  }
+
+  const startEdit = (p: RegisteredProduct) => {
+    setEditingId(p.id)
+    setEditName(p.name)
+    setEditKeywords(p.keywords.join(', '))
+    setDeleteConfirm(null)
+  }
+
+  const saveEdit = () => {
+    if (!editName.trim()) return
+    persist(products.map(p => p.id === editingId
+      ? { ...p, name: editName.trim(), keywords: editKeywords.split(',').map(k => k.trim()).filter(Boolean) }
+      : p
+    ))
+    setEditingId(null)
+  }
+
+  const deleteProduct = (id: string) => {
+    persist(products.filter(p => p.id !== id))
+    setDeleteConfirm(null)
+  }
+
+  const addProduct = () => {
+    if (!newName.trim()) return
+    const id = newName.trim().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')
+    const keywords = newKeywords.split(',').map(k => k.trim()).filter(Boolean)
+    if (keywords.length === 0) keywords.push(newName.trim().toLowerCase())
+    persist([...products, { id: `${id}-${Date.now()}`, name: newName.trim(), keywords }])
+    setNewName(''); setNewKeywords(''); setAdding(false)
+  }
+
+  return (
+    <div className="space-y-3">
+      {/* Lista */}
+      {products.map(p => (
+        <div key={p.id} className="bg-slate-900 border border-slate-700/60 rounded-xl overflow-hidden">
+          {editingId === p.id ? (
+            /* ── Modo edición ── */
+            <div className="p-4 space-y-3">
+              <div>
+                <label className="text-[10px] text-slate-500 uppercase tracking-wide mb-1 block">Nombre</label>
+                <input
+                  value={editName}
+                  onChange={e => setEditName(e.target.value)}
+                  className="w-full bg-slate-800 border border-slate-700/60 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-orange-500/60"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] text-slate-500 uppercase tracking-wide mb-1 block">
+                  Keywords de búsqueda <span className="normal-case">(separadas por coma)</span>
+                </label>
+                <input
+                  value={editKeywords}
+                  onChange={e => setEditKeywords(e.target.value)}
+                  placeholder="ej: purina one esterilizados, purina gato carne"
+                  className="w-full bg-slate-800 border border-slate-700/60 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-orange-500/60"
+                />
+              </div>
+              <div className="flex gap-2 justify-end">
+                <button onClick={() => setEditingId(null)} className="px-3 py-1.5 text-xs text-slate-400 hover:text-slate-200 transition-colors">
+                  Cancelar
+                </button>
+                <button onClick={saveEdit} className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-400 rounded-lg border border-emerald-500/30 transition-colors">
+                  <Check size={12} /> Guardar
+                </button>
+              </div>
+            </div>
+          ) : (
+            /* ── Vista normal ── */
+            <div className="flex items-center gap-3 px-4 py-3">
+              <div className="w-8 h-8 rounded-lg bg-orange-500/10 border border-orange-500/20 flex items-center justify-center flex-shrink-0">
+                <Package size={14} className="text-orange-400" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-medium text-white truncate">{p.name}</div>
+                <div className="flex flex-wrap gap-1 mt-1">
+                  {p.keywords.map(k => (
+                    <span key={k} className="text-[10px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700/50">
+                      {k}
+                    </span>
+                  ))}
+                </div>
+              </div>
+              <div className="flex items-center gap-1 flex-shrink-0">
+                <button
+                  onClick={() => startEdit(p)}
+                  className="w-7 h-7 flex items-center justify-center rounded-lg text-slate-500 hover:text-slate-200 hover:bg-white/5 transition-colors"
+                >
+                  <Pencil size={13} />
+                </button>
+                {deleteConfirm === p.id ? (
+                  <div className="flex items-center gap-1">
+                    <span className="text-xs text-red-400">¿Eliminar?</span>
+                    <button onClick={() => deleteProduct(p.id)} className="px-2 py-1 text-xs bg-red-500/20 text-red-400 rounded border border-red-500/30 hover:bg-red-500/30 transition-colors">Sí</button>
+                    <button onClick={() => setDeleteConfirm(null)} className="px-2 py-1 text-xs text-slate-400 hover:text-slate-200 transition-colors">No</button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setDeleteConfirm(p.id)}
+                    className="w-7 h-7 flex items-center justify-center rounded-lg text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                  >
+                    <Trash2 size={13} />
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      ))}
+
+      {/* Formulario agregar */}
+      {adding ? (
+        <div className="bg-slate-900 border border-orange-500/30 rounded-xl p-4 space-y-3">
+          <p className="text-xs font-medium text-orange-400">Nuevo producto</p>
+          <div>
+            <label className="text-[10px] text-slate-500 uppercase tracking-wide mb-1 block">Nombre</label>
+            <input
+              autoFocus
+              value={newName}
+              onChange={e => setNewName(e.target.value)}
+              placeholder="Ej: Aceite Girasol 1L"
+              className="w-full bg-slate-800 border border-slate-700/60 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-orange-500/60"
+            />
+          </div>
+          <div>
+            <label className="text-[10px] text-slate-500 uppercase tracking-wide mb-1 block">
+              Keywords <span className="normal-case">(separadas por coma — cómo buscarlo en Rappi)</span>
+            </label>
+            <input
+              value={newKeywords}
+              onChange={e => setNewKeywords(e.target.value)}
+              placeholder="Ej: aceite girasol, aceite vegetal"
+              className="w-full bg-slate-800 border border-slate-700/60 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-orange-500/60"
+            />
+          </div>
+          <div className="flex gap-2 justify-end">
+            <button onClick={() => { setAdding(false); setNewName(''); setNewKeywords('') }} className="px-3 py-1.5 text-xs text-slate-400 hover:text-slate-200 transition-colors">
+              Cancelar
+            </button>
+            <button onClick={addProduct} disabled={!newName.trim()} className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-orange-500/15 hover:bg-orange-500/25 text-orange-400 rounded-lg border border-orange-500/30 transition-colors disabled:opacity-40">
+              <Plus size={12} /> Agregar
+            </button>
+          </div>
+        </div>
+      ) : (
+        <button
+          onClick={() => setAdding(true)}
+          className="w-full flex items-center justify-center gap-2 py-3 text-sm text-slate-400 hover:text-orange-400 border border-dashed border-slate-700/60 hover:border-orange-500/40 rounded-xl transition-colors"
+        >
+          <Plus size={14} />
+          Agregar producto
+        </button>
+      )}
+    </div>
+  )
+}
+
 // ─── Página principal ─────────────────────────────────────────────────────────
 
 export default function RappiPrices() {
@@ -475,8 +674,8 @@ export default function RappiPrices() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [search, setSearch] = useState('')
-  const [addingProduct, setAddingProduct] = useState(false)
   const [showLocationPopup, setShowLocationPopup] = useState(false)
+  const [tab, setTab] = useState<'scan' | 'registers'>('scan')
 
   useEffect(() => {
     setLoading(true)
@@ -547,6 +746,33 @@ export default function RappiPrices() {
         </div>
       </div>
 
+      {/* Tab switcher */}
+      <div className="flex gap-1 p-1 bg-slate-900 border border-slate-700/60 rounded-xl mb-6 w-fit">
+        {([
+          { key: 'scan',      label: 'Scan',      icon: ScanLine  },
+          { key: 'registers', label: 'Registers',  icon: BookOpen  },
+        ] as const).map(({ key, label, icon: Icon }) => (
+          <button
+            key={key}
+            onClick={() => setTab(key)}
+            className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+              tab === key
+                ? 'bg-orange-500/15 text-orange-400 border border-orange-500/30'
+                : 'text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            <Icon size={14} />
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {/* ── Tab: REGISTERS ── */}
+      {tab === 'registers' && <Registers />}
+
+      {/* ── Tab: SCAN ── */}
+      {tab === 'scan' && <>
+
       {/* Búsqueda en vivo contra el backend */}
       <LiveSearch />
 
@@ -570,41 +796,17 @@ export default function RappiPrices() {
         </div>
       )}
 
-      {/* Barra de búsqueda */}
-      <div className="flex gap-2 mb-4">
-        <div className="relative flex-1">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
-          <input
-            type="text"
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            placeholder="Filtrar productos..."
-            className="w-full bg-slate-900 border border-slate-700/60 rounded-lg pl-9 pr-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-primary/60"
-          />
-        </div>
-        <button
-          onClick={() => setAddingProduct(a => !a)}
-          className="flex items-center gap-1.5 px-3 py-2 text-sm bg-orange-500/10 hover:bg-orange-500/20 border border-orange-500/30 text-orange-400 rounded-lg transition-colors"
-        >
-          <Plus size={14} />
-          Agregar producto
-        </button>
+      {/* Barra de búsqueda historial */}
+      <div className="relative mb-4">
+        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+        <input
+          type="text"
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          placeholder="Filtrar historial de productos..."
+          className="w-full bg-slate-900 border border-slate-700/60 rounded-lg pl-9 pr-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-primary/60"
+        />
       </div>
-
-      {/* Agregar producto */}
-      {addingProduct && (
-        <div className="mb-4 p-4 bg-slate-900 border border-slate-700/60 rounded-xl">
-          <p className="text-xs text-slate-400 mb-3">
-            Edita <code className="text-orange-400 bg-slate-800 px-1 rounded">rappi-products.json</code> en la raíz del proyecto y agrega el producto, luego corre:
-          </p>
-          <code className="block bg-slate-800 rounded-lg px-3 py-2 text-sm text-emerald-400">
-            node rappi-tracker.cjs
-          </code>
-          <p className="text-xs text-slate-500 mt-2">
-            Los resultados se guardarán automáticamente en <code className="text-slate-400">public/data/rappi_prices.json</code>
-          </p>
-        </div>
-      )}
 
       {/* Instrucción inicial */}
       {error && (
@@ -641,6 +843,8 @@ export default function RappiPrices() {
           )}
         </div>
       )}
+
+      </> /* fin tab SCAN */}
     </div>
   )
 }
