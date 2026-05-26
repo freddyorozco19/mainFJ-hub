@@ -1,273 +1,187 @@
 /**
- * rappi-tracker.cjs
- * Busca productos en Rappi Colombia e intercepta los endpoints internos
- * para extraer precios por tienda y guardar historial en JSON.
+ * rappi-tracker.cjs (v4 — extrae __NEXT_DATA__ de Next.js SSR)
+ *
+ * Rappi renderiza los resultados de búsqueda en el servidor (Next.js SSR)
+ * y los embebe en el HTML como __NEXT_DATA__. Los extraemos directamente.
  *
  * Uso:
- *   node rappi-tracker.cjs                 → usa rappi-products.json
- *   node rappi-tracker.cjs --explore       → modo exploración (loguea todos los requests)
+ *   node rappi-tracker.cjs         → busca todos los productos del config
+ *   node rappi-tracker.cjs leche   → busca solo "leche" (modo rápido)
  */
 
 const { chromium } = require('playwright');
-const fs = require('fs');
+const fs   = require('fs');
 const path = require('path');
 
-const EXPLORE_MODE = process.argv.includes('--explore');
 const CONFIG_FILE = path.join(__dirname, 'rappi-products.json');
 const OUTPUT_FILE = path.join(__dirname, 'public/data/rappi_prices.json');
-const RAPPI_BASE = 'https://www.rappi.com.co';
+const RAPPI_HOME  = 'https://www.rappi.com.co';
 
-// ─── Cargar config de productos ──────────────────────────────────────────────
-const config = JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf-8'));
+function log(msg) { console.log(`[rappi] ${msg}`); }
+function today()  { return new Date().toISOString().split('T')[0]; }
 
-// ─── Cargar historial previo ─────────────────────────────────────────────────
-let history = { products: {}, lastUpdated: null };
-if (fs.existsSync(OUTPUT_FILE)) {
-  try { history = JSON.parse(fs.readFileSync(OUTPUT_FILE, 'utf-8')); }
-  catch (_) {}
+function formatCOP(n) {
+  return `$${Number(n).toLocaleString('es-CO')}`;
 }
 
-// ─── Utilidades ──────────────────────────────────────────────────────────────
-function today() {
-  return new Date().toISOString().split('T')[0];
-}
+// ─── Extraer productos del __NEXT_DATA__ de una página de búsqueda ───────────
+async function extractFromPage(page, keyword) {
+  const nextData = await page.evaluate(() => {
+    const el = document.getElementById('__NEXT_DATA__');
+    if (!el) return null;
+    try { return JSON.parse(el.textContent || ''); } catch { return null; }
+  });
 
-function log(msg) {
-  console.log(`[rappi-tracker] ${msg}`);
-}
+  if (!nextData) {
+    log('  ⚠ __NEXT_DATA__ no encontrado — Rappi puede estar pidiendo ubicación');
+    return [];
+  }
 
-// Intenta extraer items de producto de una respuesta JSON de Rappi
-function extractProductsFromResponse(json, keyword) {
+  const fallback = nextData?.props?.pageProps?.fallback;
+  if (!fallback) return [];
+
   const results = [];
+  const kw = keyword.toLowerCase().split(' ').filter(w => w.length > 2);
 
-  // Diferentes estructuras que Rappi puede usar:
-  const candidates = [
-    json?.data?.components,         // estructura antigua
-    json?.data?.products,           // estructura de búsqueda
-    json?.products,
-    json?.results,
-    json?.items,
-    json?.data,
-  ].filter(Array.isArray);
+  function matchesKeyword(name) {
+    const n = String(name).toLowerCase();
+    return kw.every(w => n.includes(w));
+  }
 
-  for (const arr of candidates) {
-    for (const item of arr) {
-      // Producto directo
-      if (item?.price && item?.name) {
-        if (item.name.toLowerCase().includes(keyword.toLowerCase())) {
-          results.push(normalizeProduct(item));
-        }
-      }
-      // Producto anidado dentro de componente
-      if (Array.isArray(item?.products)) {
-        for (const p of item.products) {
-          if (p?.price && p?.name) {
-            if (p.name.toLowerCase().includes(keyword.toLowerCase())) {
-              results.push(normalizeProduct(p));
-            }
-          }
-        }
-      }
-      // Estructura type/resource
-      if (item?.resource?.products) {
-        for (const p of item.resource.products) {
-          if (p?.price && p?.name) {
-            results.push(normalizeProduct(p));
-          }
-        }
+  // Recorrer todas las tiendas en el fallback
+  for (const key of Object.keys(fallback)) {
+    const entry = fallback[key];
+    if (!entry?.stores) continue;
+
+    for (const store of entry.stores) {
+      const storeName = store.storeName || store.store_name || store.name || null;
+      const storeId   = store.storeId   || null;
+      const storeType = store.storeType || null;
+
+      for (const p of (store.products || [])) {
+        if (!p.name || p.price == null) continue;
+        if (!matchesKeyword(p.name)) continue;
+
+        results.push({
+          id:            p.masterProductId || p.productId || p.id || null,
+          name:          p.name,
+          price:         Number(p.price),
+          originalPrice: Number(p.realPrice || p.price),
+          hasDiscount:   p.hasDiscount || false,
+          pum:           p.pum || null,     // precio por unidad (ej: "8.13/ml")
+          unitType:      p.unitType || null,
+          inStock:       p.inStock !== false,
+          store:         storeName,
+          storeId:       storeId,
+          storeType:     storeType,
+          image:         p.image || null,
+        });
       }
     }
   }
 
-  return results;
-}
-
-function normalizeProduct(item) {
-  return {
-    id: item.id || item.product_id || null,
-    name: item.name || item.product_name || '',
-    price: parseFloat(item.price || item.real_price || 0),
-    originalPrice: parseFloat(item.real_price || item.original_price || item.price || 0),
-    discount: item.discount || null,
-    store: item.store_name || item.restaurant_name || item.storeName || null,
-    storeId: item.store_id || item.restaurant_id || null,
-    image: item.image || item.image_url || null,
-    unit: item.unit_type || item.unit || null,
-  };
+  // Deduplicar por producto + tienda
+  const seen = new Set();
+  return results
+    .filter(p => {
+      const key = `${p.id}_${p.storeId}`;
+      if (seen.has(key) || p.price <= 0) return false;
+      seen.add(key);
+      return true;
+    })
+    .sort((a, b) => a.price - b.price);
 }
 
 // ─── Script principal ─────────────────────────────────────────────────────────
 (async () => {
-  log('Iniciando navegador...');
+  const config = JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf-8'));
 
+  // Si se pasa un término por argumento, buscar solo ese
+  const argTerm = process.argv.slice(2).find(a => !a.startsWith('--'));
+  const products = argTerm
+    ? [{ id: 'manual', name: argTerm, keywords: [argTerm] }]
+    : config.products;
+
+  let history = { products: {}, lastUpdated: null };
+  if (fs.existsSync(OUTPUT_FILE)) {
+    try { history = JSON.parse(fs.readFileSync(OUTPUT_FILE, 'utf-8')); } catch (_) {}
+  }
+
+  log('Iniciando navegador...');
   const browser = await chromium.launch({
-    headless: false,  // false para ver qué hace (cambiar a true en producción)
+    headless: true,   // silencioso — sin ventana
     args: ['--lang=es-CO'],
   });
-
   const context = await browser.newContext({
     locale: 'es-CO',
     timezoneId: 'America/Bogota',
     userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
   });
-
   const page = await context.newPage();
 
-  // ── Interceptar todas las respuestas de la API de Rappi ──
-  const capturedRequests = [];
+  // Cargar home para inicializar cookies/sesión
+  log('Inicializando sesión...');
+  await page.goto(RAPPI_HOME, { waitUntil: 'networkidle', timeout: 30000 }).catch(() => {});
+  await page.waitForTimeout(2000);
 
-  page.on('response', async (response) => {
-    const url = response.url();
-    const isApi = url.includes('services.rappi') ||
-                  url.includes('/api/') ||
-                  url.includes('api-apies') ||
-                  url.includes('/ms/') ||
-                  (url.includes('rappi') && url.includes('search'));
-
-    if (!isApi) return;
-
-    try {
-      const ct = response.headers()['content-type'] || '';
-      if (!ct.includes('json')) return;
-
-      const json = await response.json().catch(() => null);
-      if (!json) return;
-
-      if (EXPLORE_MODE) {
-        console.log(`\n🔗 URL: ${url}`);
-        console.log('📦 Keys:', Object.keys(json).join(', '));
-        if (json.data) console.log('  data keys:', Object.keys(json.data || {}).join(', '));
-      }
-
-      capturedRequests.push({ url, json });
-
-    } catch (_) {}
-  });
-
-  // ── Navegar a Rappi ──
-  log(`Navegando a ${RAPPI_BASE}...`);
-  await page.goto(RAPPI_BASE, { waitUntil: 'networkidle', timeout: 30000 }).catch(() => {
-    log('timeout en networkidle, continuando...');
-  });
-
-  await page.waitForTimeout(3000);
-
-  // Cerrar popup de ubicación si aparece
-  await page.keyboard.press('Escape').catch(() => {});
-  await page.waitForTimeout(1000);
-
-  // ─── Por cada producto en el config ─────────────────────────────────────────
   const dateKey = today();
-  const sessionResults = {};
 
-  for (const product of config.products) {
+  for (const product of products) {
     log(`\nBuscando: "${product.name}"...`);
-    const keyword = product.keywords[0];
-    capturedRequests.length = 0; // limpiar requests anteriores
+    let allFound = [];
 
-    try {
-      // Navegar a la URL de búsqueda de Rappi
-      const searchUrl = `${RAPPI_BASE}/tiendas/search?term=${encodeURIComponent(keyword)}`;
-      await page.goto(searchUrl, { waitUntil: 'networkidle', timeout: 20000 }).catch(() => {});
-      await page.waitForTimeout(4000);
+    for (const keyword of product.keywords) {
+      const searchUrl = `${RAPPI_HOME}/search?query=${encodeURIComponent(keyword)}`;
+      await page.goto(searchUrl, { waitUntil: 'networkidle', timeout: 25000 }).catch(() => {});
+      await page.waitForTimeout(2000);
 
-      // Extraer productos de los requests capturados
-      let found = [];
-      for (const { url, json } of capturedRequests) {
-        const extracted = extractProductsFromResponse(json, keyword);
-        if (extracted.length > 0) {
-          log(`  ✓ ${extracted.length} productos encontrados desde: ${url.substring(0, 80)}...`);
-          found.push(...extracted);
-        }
+      const found = await extractFromPage(page, keyword);
+      if (found.length > 0) {
+        allFound = found;
+        break;
       }
+      await page.waitForTimeout(1000);
+    }
 
-      // Deduplicar por id+store
-      const seen = new Set();
-      found = found.filter(p => {
-        const key = `${p.id}_${p.storeId}`;
-        if (seen.has(key)) return false;
-        seen.add(key);
-        return true;
+    if (allFound.length === 0) {
+      log(`  ⚠ Sin resultados`);
+    } else {
+      log(`  ✓ ${allFound.length} productos encontrados en ${new Set(allFound.map(p => p.store)).size} tiendas`);
+      allFound.slice(0, 5).forEach((p, i) => {
+        const disc = p.originalPrice > p.price
+          ? ` (antes ${formatCOP(p.originalPrice)})`
+          : '';
+        const pum = p.pum ? ` [${p.pum}]` : '';
+        log(`  ${i === 0 ? '🏆' : '  '} ${formatCOP(p.price)}${disc}${pum} — ${p.name} | ${p.store || '?'}`);
       });
-
-      // Ordenar por precio
-      found.sort((a, b) => a.price - b.price);
-
-      if (found.length === 0) {
-        log(`  ⚠ No se encontraron productos para "${keyword}"`);
-        // Intentar también extrayendo desde el DOM como fallback
-        const domPrices = await page.evaluate((kw) => {
-          const results = [];
-          // Buscar precios en el DOM (estructura genérica)
-          const cards = document.querySelectorAll('[class*="product"], [class*="item"], [data-testid*="product"]');
-          cards.forEach(card => {
-            const nameEl = card.querySelector('[class*="name"], [class*="title"], h3, h4');
-            const priceEl = card.querySelector('[class*="price"]');
-            if (nameEl && priceEl) {
-              const name = nameEl.textContent?.trim() || '';
-              const priceText = priceEl.textContent?.trim() || '';
-              const price = parseFloat(priceText.replace(/[^0-9.]/g, ''));
-              if (name.toLowerCase().includes(kw.toLowerCase()) && price > 0) {
-                results.push({ name, price, source: 'dom' });
-              }
-            }
-          });
-          return results;
-        }, keyword).catch(() => []);
-
-        if (domPrices.length > 0) {
-          log(`  ✓ ${domPrices.length} precios encontrados via DOM`);
-          found = domPrices;
-        }
-      }
-
-      sessionResults[product.id] = {
-        name: product.name,
-        keyword,
-        results: found,
-        count: found.length,
-        minPrice: found.length > 0 ? Math.min(...found.map(p => p.price)) : null,
-        maxPrice: found.length > 0 ? Math.max(...found.map(p => p.price)) : null,
-      };
-
-      found.slice(0, 5).forEach(p => {
-        log(`    💰 $${p.price.toLocaleString('es-CO')} — ${p.name} (${p.store || 'tienda desconocida'})`);
-      });
-
-    } catch (err) {
-      log(`  ❌ Error buscando "${product.name}": ${err.message}`);
-      sessionResults[product.id] = { name: product.name, keyword, error: err.message };
     }
 
-    await page.waitForTimeout(2000);
-  }
-
-  // ─── Guardar historial ───────────────────────────────────────────────────────
-  for (const [productId, data] of Object.entries(sessionResults)) {
-    if (!history.products[productId]) {
-      history.products[productId] = { name: data.name, history: [] };
+    // Guardar historial
+    if (!history.products[product.id]) {
+      history.products[product.id] = { name: product.name, history: [] };
     }
 
-    history.products[productId].history.push({
-      date: dateKey,
-      minPrice: data.minPrice,
-      maxPrice: data.maxPrice,
-      count: data.count || 0,
-      results: data.results || [],
-      error: data.error || null,
-    });
+    const entry = {
+      date:     dateKey,
+      minPrice: allFound.length > 0 ? Math.min(...allFound.map(p => p.price)) : null,
+      maxPrice: allFound.length > 0 ? Math.max(...allFound.map(p => p.price)) : null,
+      count:    allFound.length,
+      stores:   [...new Set(allFound.map(p => p.store))].filter(Boolean),
+      results:  allFound,
+    };
 
-    // Mantener máximo 90 días de historial
-    if (history.products[productId].history.length > 90) {
-      history.products[productId].history = history.products[productId].history.slice(-90);
-    }
+    const hist = history.products[product.id].history;
+    const idx  = hist.findIndex(h => h.date === dateKey);
+    if (idx >= 0) hist[idx] = entry; else hist.push(entry);
+    if (hist.length > 90) history.products[product.id].history = hist.slice(-90);
+
+    await page.waitForTimeout(1500);
   }
 
   history.lastUpdated = new Date().toISOString();
-
   fs.mkdirSync(path.dirname(OUTPUT_FILE), { recursive: true });
   fs.writeFileSync(OUTPUT_FILE, JSON.stringify(history, null, 2), 'utf-8');
-  log(`\n✅ Datos guardados en ${OUTPUT_FILE}`);
+  log(`\n✅ Guardado en ${OUTPUT_FILE}`);
 
   await browser.close();
   log('Listo.');
