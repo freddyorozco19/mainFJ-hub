@@ -3,6 +3,7 @@
   "products": [
     { "id": "leche", "name": "Leche Entera", "keywords": ["leche entera", "leche"] },
     { "id": "arroz", "name": "Arroz Blanco 500g", "keywords": ["arroz blanco", "arroz"] },
-    { "id": "huevos", "name": "Huevos x12", "keywords": ["huevos x12", "huevos"] }
+    { "id": "huevos", "name": "Huevos x12", "keywords": ["huevos x12", "huevos"] },
+    { "id": "purina-one-gatos", "name": "Purina One Gatos Esterilizados Carne 85g", "keywords": ["purina one esterilizados", "purina one gato carne"] }
   ]
 }

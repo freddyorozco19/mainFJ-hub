@@ -694,8 +694,8 @@
               "unitType": "und",
               "inStock": true,
               "store": "Oxxo",
-              "storeId": 900412692,
-              "storeType": "oxxo_express_nc",
+              "storeId": 900402969,
+              "storeType": "oxxo_licores_nc",
               "image": "https://images.rappi.com/products/d6446b74-4c05-4969-b67a-4a9384d355af.png?e=webp&q=80&d=130x130"
             },
             {
@@ -947,7 +947,271 @@
           "error": null
         }
       ]
+    },
+    "manual": {
+      "name": "purina one esterilizados",
+      "history": [
+        {
+          "date": "2026-05-26",
+          "minPrice": 5200,
+          "maxPrice": 6300,
+          "count": 8,
+          "stores": [
+            "Animals",
+            "Sawar Floresta",
+            "Kumpet",
+            "Gupet.Co",
+            "Turbo"
+          ],
+          "results": [
+            {
+              "id": 4845465,
+              "name": "Purina One Pouch Super Foods Gatos Adultos Y Esterilizados Salmon X 85gr",
+              "price": 5200,
+              "originalPrice": 5200,
+              "hasDiscount": false,
+              "pum": "61.18/g",
+              "unitType": "gr",
+              "inStock": true,
+              "store": "Animals",
+              "storeId": 900022944,
+              "storeType": "animals_new",
+              "image": "https://images.rappi.com/products/1726176815526_1726176813022_1726176811657.png?e=webp&q=80&d=130x130"
+            },
+            {
+              "id": 4845462,
+              "name": "Purina One Pouch Super Nutrientes Gatos Adultos Y Esterilizados Carne X 85gr",
+              "price": 5200,
+              "originalPrice": 5200,
+              "hasDiscount": false,
+              "pum": "61.18/g",
+              "unitType": "gr",
+              "inStock": true,
+              "store": "Animals",
+              "storeId": 900022944,
+              "storeType": "animals_new",
+              "image": "https://images.rappi.com/products/1726176768245_1726176766840_1726176763352.png?e=webp&q=80&d=130x130"
+            },
+            {
+              "id": 2357209,
+              "name": "Comida húmeda para gatos Esterilizados Purina One sabor a Salmón x 85gr",
+              "price": 5200,
+              "originalPrice": 5200,
+              "hasDiscount": false,
+              "pum": "61.18/g",
+              "unitType": "gr",
+              "inStock": true,
+              "store": "Sawar Floresta",
+              "storeId": 900422349,
+              "storeType": "clinicaveterinariasawarsa_mt_enc",
+              "image": "https://images.rappi.com/products/656172300462_ulgjbxohcupj_194978484035_hxdiwpayaqvw_07891000332382_3110.png?e=webp&q=80&d=130x130"
+            },
+            {
+              "id": 2357210,
+              "name": "Comida húmeda para gatos Esterilizados Purina One sabor a Carne x 85gr",
+              "price": 5200,
+              "originalPrice": 5200,
+              "hasDiscount": false,
+              "pum": "61.18/g",
+              "unitType": "gr",
+              "inStock": true,
+              "store": "Sawar Floresta",
+              "storeId": 900422349,
+              "storeType": "clinicaveterinariasawarsa_mt_enc",
+              "image": "https://images.rappi.com/products/122038470643_uljsbxqyaurm_436104745237_nqfaeddwleww_07891000332429_3094.png?e=webp&q=80&d=130x130"
+            },
+            {
+              "id": 2357210,
+              "name": "Comida húmeda para gatos Esterilizados Purina One sabor a Carne x 85gr",
+              "price": 5200,
+              "originalPrice": 5200,
+              "hasDiscount": false,
+              "pum": "61.18/g",
+              "unitType": "gr",
+              "inStock": true,
+              "store": "Kumpet",
+              "storeId": 900397688,
+              "storeType": "kumpet_mt_nc",
+              "image": "https://images.rappi.com/products/122038470643_uljsbxqyaurm_436104745237_nqfaeddwleww_07891000332429_3094.png?e=webp&q=80&d=130x130"
+            },
+            {
+              "id": 2357209,
+              "name": "Comida húmeda para gatos Esterilizados Purina One sabor a Salmón x 85gr",
+              "price": 5900,
+              "originalPrice": 5900,
+              "hasDiscount": false,
+              "pum": "69.42/g",
+              "unitType": "gr",
+              "inStock": true,
+              "store": "Gupet.Co",
+              "storeId": 900079121,
+              "storeType": "gupet",
+              "image": "https://images.rappi.com/products/656172300462_ulgjbxohcupj_194978484035_hxdiwpayaqvw_07891000332382_3110.png?e=webp&q=80&d=130x130"
+            },
+            {
+              "id": 2357210,
+              "name": "Comida húmeda para gatos Esterilizados Purina One sabor a Carne x 85gr",
+              "price": 6250,
+              "originalPrice": 6250,
+              "hasDiscount": false,
+              "pum": "73.53/g",
+              "unitType": "gr",
+              "inStock": true,
+              "store": "Gupet.Co",
+              "storeId": 900079121,
+              "storeType": "gupet",
+              "image": "https://images.rappi.com/products/122038470643_uljsbxqyaurm_436104745237_nqfaeddwleww_07891000332429_3094.png?e=webp&q=80&d=130x130"
+            },
+            {
+              "id": 2357210,
+              "name": "Comida húmeda para gatos Esterilizados Purina One sabor a Carne x 85gr",
+              "price": 6300,
+              "originalPrice": 6300,
+              "hasDiscount": false,
+              "pum": "74.12/g",
+              "unitType": "gr",
+              "inStock": true,
+              "store": "Turbo",
+              "storeId": 900103835,
+              "storeType": "turbo",
+              "image": "https://images.rappi.com/products/122038470643_uljsbxqyaurm_436104745237_nqfaeddwleww_07891000332429_3094.png?e=webp&q=80&d=130x130"
+            }
+          ]
+        }
+      ]
+    },
+    "purina-one-gatos": {
+      "name": "Purina One Gatos Esterilizados Carne 85g",
+      "history": [
+        {
+          "date": "2026-05-26",
+          "minPrice": 5200,
+          "maxPrice": 6300,
+          "count": 8,
+          "stores": [
+            "Animals",
+            "Sawar Floresta",
+            "Kumpet",
+            "Gupet.Co",
+            "Turbo"
+          ],
+          "results": [
+            {
+              "id": 4845465,
+              "name": "Purina One Pouch Super Foods Gatos Adultos Y Esterilizados Salmon X 85gr",
+              "price": 5200,
+              "originalPrice": 5200,
+              "hasDiscount": false,
+              "pum": "61.18/g",
+              "unitType": "gr",
+              "inStock": true,
+              "store": "Animals",
+              "storeId": 900022944,
+              "storeType": "animals_new",
+              "image": "https://images.rappi.com/products/1726176815526_1726176813022_1726176811657.png?e=webp&q=80&d=130x130"
+            },
+            {
+              "id": 4845462,
+              "name": "Purina One Pouch Super Nutrientes Gatos Adultos Y Esterilizados Carne X 85gr",
+              "price": 5200,
+              "originalPrice": 5200,
+              "hasDiscount": false,
+              "pum": "61.18/g",
+              "unitType": "gr",
+              "inStock": true,
+              "store": "Animals",
+              "storeId": 900022944,
+              "storeType": "animals_new",
+              "image": "https://images.rappi.com/products/1726176768245_1726176766840_1726176763352.png?e=webp&q=80&d=130x130"
+            },
+            {
+              "id": 2357209,
+              "name": "Comida húmeda para gatos Esterilizados Purina One sabor a Salmón x 85gr",
+              "price": 5200,
+              "originalPrice": 5200,
+              "hasDiscount": false,
+              "pum": "61.18/g",
+              "unitType": "gr",
+              "inStock": true,
+              "store": "Sawar Floresta",
+              "storeId": 900422349,
+              "storeType": "clinicaveterinariasawarsa_mt_enc",
+              "image": "https://images.rappi.com/products/656172300462_ulgjbxohcupj_194978484035_hxdiwpayaqvw_07891000332382_3110.png?e=webp&q=80&d=130x130"
+            },
+            {
+              "id": 2357210,
+              "name": "Comida húmeda para gatos Esterilizados Purina One sabor a Carne x 85gr",
+              "price": 5200,
+              "originalPrice": 5200,
+              "hasDiscount": false,
+              "pum": "61.18/g",
+              "unitType": "gr",
+              "inStock": true,
+              "store": "Sawar Floresta",
+              "storeId": 900422349,
+              "storeType": "clinicaveterinariasawarsa_mt_enc",
+              "image": "https://images.rappi.com/products/122038470643_uljsbxqyaurm_436104745237_nqfaeddwleww_07891000332429_3094.png?e=webp&q=80&d=130x130"
+            },
+            {
+              "id": 2357210,
+              "name": "Comida húmeda para gatos Esterilizados Purina One sabor a Carne x 85gr",
+              "price": 5200,
+              "originalPrice": 5200,
+              "hasDiscount": false,
+              "pum": "61.18/g",
+              "unitType": "gr",
+              "inStock": true,
+              "store": "Kumpet",
+              "storeId": 900397688,
+              "storeType": "kumpet_mt_nc",
+              "image": "https://images.rappi.com/products/122038470643_uljsbxqyaurm_436104745237_nqfaeddwleww_07891000332429_3094.png?e=webp&q=80&d=130x130"
+            },
+            {
+              "id": 2357209,
+              "name": "Comida húmeda para gatos Esterilizados Purina One sabor a Salmón x 85gr",
+              "price": 5900,
+              "originalPrice": 5900,
+              "hasDiscount": false,
+              "pum": "69.42/g",
+              "unitType": "gr",
+              "inStock": true,
+              "store": "Gupet.Co",
+              "storeId": 900079121,
+              "storeType": "gupet",
+              "image": "https://images.rappi.com/products/656172300462_ulgjbxohcupj_194978484035_hxdiwpayaqvw_07891000332382_3110.png?e=webp&q=80&d=130x130"
+            },
+            {
+              "id": 2357210,
+              "name": "Comida húmeda para gatos Esterilizados Purina One sabor a Carne x 85gr",
+              "price": 6250,
+              "originalPrice": 6250,
+              "hasDiscount": false,
+              "pum": "73.53/g",
+              "unitType": "gr",
+              "inStock": true,
+              "store": "Gupet.Co",
+              "storeId": 900079121,
+              "storeType": "gupet",
+              "image": "https://images.rappi.com/products/122038470643_uljsbxqyaurm_436104745237_nqfaeddwleww_07891000332429_3094.png?e=webp&q=80&d=130x130"
+            },
+            {
+              "id": 2357210,
+              "name": "Comida húmeda para gatos Esterilizados Purina One sabor a Carne x 85gr",
+              "price": 6300,
+              "originalPrice": 6300,
+              "hasDiscount": false,
+              "pum": "74.12/g",
+              "unitType": "gr",
+              "inStock": true,
+              "store": "Turbo",
+              "storeId": 900103835,
+              "storeType": "turbo",
+              "image": "https://images.rappi.com/products/122038470643_uljsbxqyaurm_436104745237_nqfaeddwleww_07891000332429_3094.png?e=webp&q=80&d=130x130"
+            }
+          ]
+        }
+      ]
     }
   },
-  "lastUpdated": "2026-05-26T02:59:33.540Z"
+  "lastUpdated": "2026-05-26T03:03:28.545Z"
 }
