@@ -3,6 +3,7 @@ import {
   ShoppingCart, TrendingDown, TrendingUp, Minus,
   RefreshCw, Package, Store, ChevronDown, ChevronUp,
   AlertCircle, Calendar, Search, Plus, Zap, ExternalLink,
+  MapPin, X, ChevronRight, Home,
 } from 'lucide-react'
 import { API_BASE } from '../api'
 
@@ -285,6 +286,78 @@ interface LiveSearchResponse {
   maxPrice: number | null
 }
 
+// ─── Config de ubicaciones ────────────────────────────────────────────────────
+
+const LOCATIONS = [
+  {
+    id: 'home',
+    label: 'HOME',
+    address: 'Calle 94A #61-57',
+    city: 'Bogotá',
+    barrio: 'Barrios Unidos',
+    lat: 4.6850868,
+    lng: -74.0703650,
+  },
+]
+
+// ─── Popup de ubicación ───────────────────────────────────────────────────────
+
+function LocationPopup({ lastUpdated, onClose }: { lastUpdated: string | null; onClose: () => void }) {
+  const loc = LOCATIONS[0]
+
+  return (
+    <>
+      {/* Backdrop */}
+      <div className="fixed inset-0 z-40" onClick={onClose} />
+
+      {/* Popup */}
+      <div className="absolute top-full right-0 mt-2 z-50 w-72 bg-slate-900 border border-slate-700/70 rounded-xl shadow-2xl shadow-black/40 overflow-hidden">
+        {/* Header */}
+        <div className="flex items-center justify-between px-4 py-3 border-b border-slate-700/60">
+          <div className="flex items-center gap-2">
+            <Home size={13} className="text-emerald-400" />
+            <span className="text-sm font-semibold text-white">Ubicación activa</span>
+          </div>
+          <button onClick={onClose} className="text-slate-500 hover:text-slate-300 transition-colors">
+            <X size={14} />
+          </button>
+        </div>
+
+        {/* Detalle */}
+        <div className="px-4 py-3 space-y-2.5">
+          {[
+            { label: 'Dirección', value: loc.address },
+            { label: 'Ciudad',    value: loc.city    },
+            { label: 'Barrio',    value: loc.barrio  },
+            { label: 'Últ. act.',
+              value: lastUpdated
+                ? new Date(lastUpdated).toLocaleString('es-CO', { dateStyle: 'short', timeStyle: 'short' })
+                : '—'
+            },
+          ].map(({ label, value }) => (
+            <div key={label} className="flex items-center justify-between">
+              <span className="text-xs text-slate-500">{label}</span>
+              <span className="text-xs text-slate-200 font-medium">{value}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* Acciones */}
+        <div className="border-t border-slate-700/60 px-3 py-2 space-y-1">
+          <button className="w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs text-slate-300 hover:bg-white/5 transition-colors">
+            <span>Cambiar ubicación</span>
+            <ChevronRight size={12} className="text-slate-500" />
+          </button>
+          <button className="w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs text-slate-300 hover:bg-white/5 transition-colors">
+            <span className="flex items-center gap-1.5"><Plus size={11} />Agregar ubicación</span>
+            <ChevronRight size={12} className="text-slate-500" />
+          </button>
+        </div>
+      </div>
+    </>
+  )
+}
+
 // ─── Panel de búsqueda en vivo ────────────────────────────────────────────────
 
 function LiveSearch() {
@@ -403,6 +476,7 @@ export default function RappiPrices() {
   const [error, setError] = useState<string | null>(null)
   const [search, setSearch] = useState('')
   const [addingProduct, setAddingProduct] = useState(false)
+  const [showLocationPopup, setShowLocationPopup] = useState(false)
 
   useEffect(() => {
     setLoading(true)
@@ -440,17 +514,30 @@ export default function RappiPrices() {
         <div>
           <div className="flex items-center gap-2 mb-1">
             <ShoppingCart size={20} className="text-orange-400" />
-            <h1 className="text-xl font-bold text-white">Precios Rappi</h1>
+            <h1 className="text-xl font-bold text-white">Rappi Scan</h1>
           </div>
           <p className="text-slate-400 text-sm">
             Historial de precios mínimos por producto en Colombia
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1.5 text-xs text-emerald-400 bg-emerald-500/10 px-3 py-1.5 rounded-full border border-emerald-500/25">
-            <span>📍</span>
-            HOME
+          {/* Pill HOME con popup */}
+          <div className="relative">
+            <button
+              onClick={() => setShowLocationPopup(p => !p)}
+              className="flex items-center gap-1.5 text-xs text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/15 px-3 py-1.5 rounded-full border border-emerald-500/25 transition-colors"
+            >
+              <MapPin size={11} />
+              HOME
+            </button>
+            {showLocationPopup && (
+              <LocationPopup
+                lastUpdated={data?.lastUpdated ?? null}
+                onClose={() => setShowLocationPopup(false)}
+              />
+            )}
           </div>
+
           {data?.lastUpdated && (
             <div className="flex items-center gap-1.5 text-xs text-slate-500 bg-slate-800/60 px-3 py-1.5 rounded-full border border-slate-700/50">
               <RefreshCw size={11} />
