@@ -7,7 +7,7 @@
   "questions": [
     {
       "number": "Pregunta 1",
-      "questionText": "ARRASTRE Y SUELTE -\nYour company intends to subscribe to an Azure support plan.\nThe support plan must allow for new support requests to be opened.\nWhich of the following are support plans that will allow this? Answer by dragging the correct option from the list to the answer area.\nSeleccionar y colocar:",
+      "questionText": "ARRASTRE Y SUELTE -\nSu empresa tiene la intención de suscribirse a un plan de soporte de Azure.\nEl plan de soporte debe permitir abrir nuevas solicitudes de soporte.\n¿Cuáles de los siguientes son planes de soporte que lo permitirán? Responda arrastrando la opción correcta de la lista al área de respuesta.\nSeleccionar y colocar:",
       "images": [
         "https://www.examtopics.com/assets/media/exam-media/04227/0000300001.png"
       ]
