@@ -4,7 +4,7 @@ import {
   RefreshCw, Package, Store, ChevronDown, ChevronUp,
   AlertCircle, Calendar, Search, Plus, Zap, ExternalLink,
   MapPin, X, ChevronRight, Home, Pencil, Trash2, Check, ScanLine, BookOpen,
-  LayoutGrid, Table2,
+  LayoutGrid, Table2, Tag, History,
 } from 'lucide-react'
 import { API_BASE } from '../api'
 
@@ -287,6 +287,17 @@ interface LiveSearchResponse {
   maxPrice: number | null
 }
 
+// ─── Tipo entrada de historial de scan ────────────────────────────────────────
+
+interface ScanEntry {
+  date: string              // ISO timestamp del momento del scan
+  scannedProducts: number   // cantidad de productos encontrados
+  scannedStores: number     // cantidad de tiendas únicas
+  minPrice: number | null
+  maxPrice: number | null
+  promoDetected: boolean    // al menos un producto tenía hasDiscount
+}
+
 // ─── Config de ubicaciones ────────────────────────────────────────────────────
 
 const LOCATIONS = [
@@ -361,11 +372,19 @@ function LocationPopup({ lastUpdated, onClose }: { lastUpdated: string | null; o
 
 // ─── Panel de búsqueda en vivo ────────────────────────────────────────────────
 
-function LiveSearch() {
-  const [query, setQuery]       = useState('')
-  const [results, setResults]   = useState<LiveSearchResponse | null>(null)
+function LiveSearch({
+  regProducts,
+  onScanSave,
+}: {
+  regProducts: RegisteredProduct[]
+  onScanSave: (productId: string, entry: ScanEntry) => void
+}) {
+  const [query, setQuery]         = useState('')
+  const [results, setResults]     = useState<LiveSearchResponse | null>(null)
   const [searching, setSearching] = useState(false)
   const [liveError, setLiveError] = useState<string | null>(null)
+  const [selectedRegId, setSelectedRegId] = useState('')
+  const [saveDone, setSaveDone]           = useState(false)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const handleSearch = async (q: string) => {
@@ -386,8 +405,25 @@ function LiveSearch() {
 
   const onInput = (val: string) => {
     setQuery(val)
+    setSaveDone(false)
+    setSelectedRegId('')
     if (debounceRef.current) clearTimeout(debounceRef.current)
     debounceRef.current = setTimeout(() => handleSearch(val), 600)
+  }
+
+  const saveToRegister = () => {
+    if (!results || !selectedRegId) return
+    const entry: ScanEntry = {
+      date:             new Date().toISOString(),
+      scannedProducts:  results.count,
+      scannedStores:    results.stores.length,
+      minPrice:         results.minPrice,
+      maxPrice:         results.maxPrice,
+      promoDetected:    results.products.some(p => p.hasDiscount),
+    }
+    onScanSave(selectedRegId, entry)
+    setSaveDone(true)
+    setTimeout(() => setSaveDone(false), 3000)
   }
 
   return (
@@ -463,6 +499,39 @@ function LiveSearch() {
               </div>
             ))}
           </div>
+
+          {/* ── Guardar escaneo en Registro ── */}
+          {regProducts.length > 0 && (
+            <div className="mt-3 pt-3 border-t border-slate-700/60 flex items-center gap-2">
+              <History size={13} className="text-slate-500 flex-shrink-0" />
+              <span className="text-xs text-slate-500 flex-shrink-0">Guardar en Registro:</span>
+              <select
+                value={selectedRegId}
+                onChange={e => { setSelectedRegId(e.target.value); setSaveDone(false) }}
+                className="flex-1 bg-slate-800 border border-slate-700/60 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:border-orange-500/60 min-w-0"
+              >
+                <option value="">— seleccionar producto —</option>
+                {regProducts.map(rp => (
+                  <option key={rp.id} value={rp.id}>
+                    {rp.name}{rp.brand ? ` · ${rp.brand}` : ''}{rp.size ? ` ${rp.size}` : ''}
+                  </option>
+                ))}
+              </select>
+              {saveDone ? (
+                <span className="flex items-center gap-1 text-xs text-emerald-400 flex-shrink-0">
+                  <Check size={12} /> Guardado
+                </span>
+              ) : (
+                <button
+                  onClick={saveToRegister}
+                  disabled={!selectedRegId}
+                  className="flex-shrink-0 flex items-center gap-1 px-3 py-1.5 text-xs bg-orange-500/15 hover:bg-orange-500/25 text-orange-400 rounded-lg border border-orange-500/30 transition-colors disabled:opacity-40"
+                >
+                  <Plus size={11} /> Confirmar
+                </button>
+              )}
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -478,6 +547,7 @@ interface RegisteredProduct {
   size?: string
   searchNames: string[]   // distintos nombres del producto (para buscar variantes)
   keywords: string[]      // términos Rappi específicos
+  scanHistory?: ScanEntry[]
 }
 
 const DEFAULT_PRODUCTS: RegisteredProduct[] = [
@@ -500,8 +570,13 @@ function saveProducts(products: RegisteredProduct[]) {
 
 // ─── Componente Registers ─────────────────────────────────────────────────────
 
-function Registers() {
-  const [products, setProducts] = useState<RegisteredProduct[]>(loadProducts)
+function Registers({
+  products,
+  persist,
+}: {
+  products: RegisteredProduct[]
+  persist: (updated: RegisteredProduct[]) => void
+}) {
   const [editingId, setEditingId]             = useState<string | null>(null)
   const [editName, setEditName]               = useState('')
   const [editBrand, setEditBrand]             = useState('')
@@ -515,12 +590,8 @@ function Registers() {
   const [newSearchNames, setNewSearchNames]   = useState('')
   const [newKeywords, setNewKeywords]         = useState('')
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
-  const [view, setView]             = useState<'cards' | 'table'>('cards')
-
-  const persist = (updated: RegisteredProduct[]) => {
-    setProducts(updated)
-    saveProducts(updated)
-  }
+  const [view, setView]                   = useState<'cards' | 'table'>('cards')
+  const [expandedScanId, setExpandedScanId] = useState<string | null>(null)
 
   const splitComma = (s: string) => s.split(',').map(v => v.trim()).filter(Boolean)
 
@@ -595,6 +666,7 @@ function Registers() {
                 <th className="px-4 py-2.5 text-slate-500 font-medium">Tamaño</th>
                 <th className="px-4 py-2.5 text-slate-500 font-medium">Search Name</th>
                 <th className="px-4 py-2.5 text-slate-500 font-medium">Keywords</th>
+                <th className="px-4 py-2.5 text-slate-500 font-medium text-center">Scans</th>
                 <th className="px-4 py-2.5 text-slate-500 font-medium text-right">Acciones</th>
               </tr>
             </thead>
@@ -622,6 +694,15 @@ function Registers() {
                         </span>
                       ))}
                     </div>
+                  </td>
+                  <td className="px-4 py-3 text-center">
+                    <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+                      (p.scanHistory?.length ?? 0) > 0
+                        ? 'bg-sky-900/40 text-sky-400 border border-sky-700/40'
+                        : 'text-slate-600'
+                    }`}>
+                      {p.scanHistory?.length ?? 0}
+                    </span>
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-1 justify-end">
@@ -764,6 +845,68 @@ function Registers() {
               </div>
             </div>
           )}
+
+          {/* ── Historial de scans ── */}
+          {(() => {
+            const scans = p.scanHistory ?? []
+            const isOpen = expandedScanId === p.id
+            return (
+              <div className="border-t border-slate-700/40">
+                <button
+                  onClick={() => setExpandedScanId(isOpen ? null : p.id)}
+                  className="w-full flex items-center gap-2 px-4 py-2 text-left hover:bg-white/[0.03] transition-colors"
+                >
+                  <History size={11} className="text-slate-500 flex-shrink-0" />
+                  <span className="text-[10px] text-slate-500 flex-1">
+                    Historial de scans
+                    {scans.length > 0 && <span className="ml-1 px-1.5 py-0.5 rounded-full bg-sky-900/40 text-sky-400 border border-sky-700/40">{scans.length}</span>}
+                  </span>
+                  {isOpen ? <ChevronUp size={11} className="text-slate-600" /> : <ChevronDown size={11} className="text-slate-600" />}
+                </button>
+                {isOpen && (
+                  <div className="px-4 pb-3">
+                    {scans.length === 0 ? (
+                      <p className="text-[11px] text-slate-600 text-center py-3">Sin scans guardados aún</p>
+                    ) : (
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-[10px]">
+                          <thead>
+                            <tr className="text-slate-500 border-b border-slate-700/40">
+                              <th className="py-1.5 pr-3 text-left font-medium">Fecha de Scan</th>
+                              <th className="py-1.5 pr-3 text-right font-medium">Productos</th>
+                              <th className="py-1.5 pr-3 text-right font-medium">Tiendas</th>
+                              <th className="py-1.5 pr-3 text-right font-medium">Min Valor</th>
+                              <th className="py-1.5 pr-3 text-right font-medium">Max Valor</th>
+                              <th className="py-1.5 text-center font-medium">Promo</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {[...scans].reverse().map((s, i) => (
+                              <tr key={i} className="border-b border-slate-700/20 last:border-0 hover:bg-white/[0.02]">
+                                <td className="py-1.5 pr-3 text-slate-400">
+                                  {new Date(s.date).toLocaleString('es-CO', { dateStyle: 'short', timeStyle: 'short' })}
+                                </td>
+                                <td className="py-1.5 pr-3 text-right text-slate-300">{s.scannedProducts}</td>
+                                <td className="py-1.5 pr-3 text-right text-slate-300">{s.scannedStores}</td>
+                                <td className="py-1.5 pr-3 text-right text-emerald-400 font-medium">{formatCOP(s.minPrice)}</td>
+                                <td className="py-1.5 pr-3 text-right text-slate-300">{formatCOP(s.maxPrice)}</td>
+                                <td className="py-1.5 text-center">
+                                  {s.promoDetected
+                                    ? <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/30"><Tag size={8} />Sí</span>
+                                    : <span className="text-slate-600">—</span>
+                                  }
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )
+          })()}
         </div>
       ))}</>}
 
@@ -854,6 +997,20 @@ export default function RappiPrices() {
   const [search, setSearch] = useState('')
   const [showLocationPopup, setShowLocationPopup] = useState(false)
   const [tab, setTab] = useState<'scan' | 'registers'>('scan')
+
+  // Estado compartido de productos registrados
+  const [regProducts, setRegProducts] = useState<RegisteredProduct[]>(loadProducts)
+  const persistProducts = (updated: RegisteredProduct[]) => {
+    setRegProducts(updated)
+    saveProducts(updated)
+  }
+  const handleScanSave = (productId: string, entry: ScanEntry) => {
+    persistProducts(regProducts.map(p =>
+      p.id === productId
+        ? { ...p, scanHistory: [...(p.scanHistory ?? []), entry] }
+        : p
+    ))
+  }
 
   useEffect(() => {
     setLoading(true)
@@ -946,13 +1103,13 @@ export default function RappiPrices() {
       </div>
 
       {/* ── Tab: REGISTERS ── */}
-      {tab === 'registers' && <Registers />}
+      {tab === 'registers' && <Registers products={regProducts} persist={persistProducts} />}
 
       {/* ── Tab: SCAN ── */}
       {tab === 'scan' && <>
 
       {/* Búsqueda en vivo contra el backend */}
-      <LiveSearch />
+      <LiveSearch regProducts={regProducts} onScanSave={handleScanSave} />
 
       {/* Stats */}
       {stats && (
