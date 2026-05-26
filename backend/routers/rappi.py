@@ -15,6 +15,10 @@ from fastapi import APIRouter, HTTPException, Query
 router = APIRouter(prefix="/rappi", tags=["rappi"])
 
 RAPPI_SEARCH_URL = "https://www.rappi.com.co/search?query={query}"
+
+# Coordenadas por defecto — Calle 94A, Barrios Unidos, Bogotá
+DEFAULT_LAT = 4.6850868
+DEFAULT_LNG = -74.0703650
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
@@ -107,6 +111,8 @@ def extract_products(next_data: dict, keyword: str) -> list[dict]:
 async def rappi_search(
     query: str = Query(..., min_length=2, description="Término de búsqueda"),
     limit: int = Query(20, ge=1, le=100, description="Máximo de resultados"),
+    lat: float = Query(DEFAULT_LAT, description="Latitud de entrega"),
+    lng: float = Query(DEFAULT_LNG, description="Longitud de entrega"),
 ):
     """
     Busca productos en Rappi Colombia y retorna precios por tienda.
@@ -114,9 +120,17 @@ async def rappi_search(
     """
     url = RAPPI_SEARCH_URL.format(query=query)
 
+    # Rappi usa estas cookies para determinar la ubicación del usuario
+    cookies = {
+        "userLat": str(lat),
+        "userLng": str(lng),
+        "lat":     str(lat),
+        "lng":     str(lng),
+    }
+
     try:
         async with httpx.AsyncClient(timeout=20.0, follow_redirects=True) as client:
-            resp = await client.get(url, headers=HEADERS)
+            resp = await client.get(url, headers=HEADERS, cookies=cookies)
             resp.raise_for_status()
             html = resp.text
     except httpx.TimeoutException:

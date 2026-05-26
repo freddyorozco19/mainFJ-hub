@@ -1,5 +1,7 @@
 {
   "city": "bogota",
+  "lat": 4.6850868,
+  "lng": -74.0703650,
   "products": [
     { "id": "leche", "name": "Leche Entera", "keywords": ["leche entera", "leche"] },
     { "id": "arroz", "name": "Arroz Blanco 500g", "keywords": ["arroz blanco", "arroz"] },

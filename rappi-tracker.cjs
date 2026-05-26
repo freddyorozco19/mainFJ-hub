@@ -16,6 +16,9 @@ const path = require('path');
 const CONFIG_FILE = path.join(__dirname, 'rappi-products.json');
 const OUTPUT_FILE = path.join(__dirname, 'public/data/rappi_prices.json');
 const RAPPI_HOME  = 'https://www.rappi.com.co';
+const config      = JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf-8'));
+const LAT         = config.lat  ?? 4.6850868;
+const LNG         = config.lng  ?? -74.0703650;
 
 function log(msg) { console.log(`[rappi] ${msg}`); }
 function today()  { return new Date().toISOString().split('T')[0]; }
@@ -94,7 +97,7 @@ async function extractFromPage(page, keyword) {
 
 // ─── Script principal ─────────────────────────────────────────────────────────
 (async () => {
-  const config = JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf-8'));
+  // config ya cargado al inicio del script
 
   // Si se pasa un término por argumento, buscar solo ese
   const argTerm = process.argv.slice(2).find(a => !a.startsWith('--'));
