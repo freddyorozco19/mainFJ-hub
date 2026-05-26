@@ -379,22 +379,24 @@ function LiveSearch({
   regProducts: RegisteredProduct[]
   onScanSave: (productId: string, entry: ScanEntry) => void
 }) {
-  const [query, setQuery]         = useState('')
-  const [results, setResults]     = useState<LiveSearchResponse | null>(null)
-  const [searching, setSearching] = useState(false)
-  const [liveError, setLiveError] = useState<string | null>(null)
-  const [selectedRegId, setSelectedRegId] = useState('')
-  const [saveDone, setSaveDone]           = useState(false)
+  const [query, setQuery]             = useState('')
+  const [results, setResults]         = useState<LiveSearchResponse | null>(null)
+  const [searching, setSearching]     = useState(false)
+  const [liveError, setLiveError]     = useState<string | null>(null)
+  const [selectedRegId, setSelectedRegId]         = useState('')
+  const [selectedInventoryId, setSelectedInventoryId] = useState('')
+  const [saveDone, setSaveDone]       = useState(false)
+  const [progress, setProgress]       = useState<{ current: number; total: number; name: string } | null>(null)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
+  // ── Búsqueda libre (texto) ──
   const handleSearch = async (q: string) => {
     if (q.trim().length < 2) { setResults(null); return }
-    setSearching(true); setLiveError(null)
+    setSearching(true); setLiveError(null); setProgress(null)
     try {
       const res = await fetch(`${API_BASE}/rappi/search?query=${encodeURIComponent(q)}&limit=30`)
       if (!res.ok) throw new Error(`Error ${res.status}`)
-      const data: LiveSearchResponse = await res.json()
-      setResults(data)
+      setResults(await res.json())
     } catch (e: any) {
       setLiveError(e.message || 'Error al buscar')
       setResults(null)
@@ -403,8 +405,68 @@ function LiveSearch({
     }
   }
 
+  // ── Multi-búsqueda por searchNames del producto del inventario ──
+  const runMultiSearch = async (searchNames: string[], productId: string) => {
+    if (searchNames.length === 0) return
+    setSearching(true); setLiveError(null); setResults(null); setProgress(null)
+    setSaveDone(false)
+
+    const allProducts: LiveResult[] = []
+    const allStores   = new Set<string>()
+    const seen        = new Set<string>()
+
+    for (let i = 0; i < searchNames.length; i++) {
+      const name = searchNames[i].trim()
+      if (!name) continue
+      setProgress({ current: i + 1, total: searchNames.length, name })
+      try {
+        const res = await fetch(`${API_BASE}/rappi/search?query=${encodeURIComponent(name)}&limit=30`)
+        if (!res.ok) continue
+        const data: LiveSearchResponse = await res.json()
+        for (const p of data.products) {
+          const key = `${p.name}_${p.store}`
+          if (!seen.has(key)) {
+            seen.add(key)
+            allProducts.push(p)
+            if (p.store) allStores.add(p.store)
+          }
+        }
+      } catch { /* continuar con el siguiente nombre */ }
+    }
+
+    allProducts.sort((a, b) => a.price - b.price)
+    const merged: LiveSearchResponse = {
+      query:    searchNames.join(', '),
+      count:    allProducts.length,
+      total:    allProducts.length,
+      products: allProducts,
+      stores:   [...allStores],
+      minPrice: allProducts[0]?.price ?? null,
+      maxPrice: allProducts[allProducts.length - 1]?.price ?? null,
+    }
+
+    setResults(merged)
+    setSearching(false)
+    setProgress(null)
+    // Pre-vincular el Confirmar al producto seleccionado
+    setSelectedRegId(productId)
+  }
+
+  const onInventorySelect = (id: string) => {
+    setSelectedInventoryId(id)
+    setQuery('')
+    setSaveDone(false)
+    setSelectedRegId('')
+    if (!id) { setResults(null); return }
+    const prod = regProducts.find(p => p.id === id)
+    if (!prod) return
+    const names = prod.searchNames?.length ? prod.searchNames : [prod.name]
+    runMultiSearch(names, id)
+  }
+
   const onInput = (val: string) => {
     setQuery(val)
+    setSelectedInventoryId('')
     setSaveDone(false)
     setSelectedRegId('')
     if (debounceRef.current) clearTimeout(debounceRef.current)
@@ -414,12 +476,12 @@ function LiveSearch({
   const saveToRegister = () => {
     if (!results || !selectedRegId) return
     const entry: ScanEntry = {
-      date:             new Date().toISOString(),
-      scannedProducts:  results.count,
-      scannedStores:    results.stores.length,
-      minPrice:         results.minPrice,
-      maxPrice:         results.maxPrice,
-      promoDetected:    results.products.some(p => p.hasDiscount),
+      date:            new Date().toISOString(),
+      scannedProducts: results.count,
+      scannedStores:   results.stores.length,
+      minPrice:        results.minPrice,
+      maxPrice:        results.maxPrice,
+      promoDetected:   results.products.some(p => p.hasDiscount),
     }
     onScanSave(selectedRegId, entry)
     setSaveDone(true)
@@ -434,19 +496,82 @@ function LiveSearch({
         <span className="text-xs text-slate-500">— consulta precios actuales directamente desde Rappi</span>
       </div>
 
+      {/* ── Selector de inventario ── */}
+      {regProducts.length > 0 && (
+        <div className="mb-3">
+          <label className="text-[10px] text-slate-500 uppercase tracking-wide mb-1 block">
+            Desde inventario de Registers
+          </label>
+          <div className="relative">
+            <Package size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-orange-400 pointer-events-none" />
+            <select
+              value={selectedInventoryId}
+              onChange={e => onInventorySelect(e.target.value)}
+              className="w-full bg-slate-800 border border-orange-500/40 rounded-lg pl-9 pr-3 py-2.5 text-sm text-white focus:outline-none focus:border-orange-500/70 appearance-none"
+            >
+              <option value="">— seleccionar producto del inventario —</option>
+              {regProducts.map(rp => (
+                <option key={rp.id} value={rp.id}>
+                  {rp.name}{rp.brand ? ` · ${rp.brand}` : ''}{rp.size ? ` ${rp.size}` : ''}
+                  {rp.searchNames?.length ? ` (${rp.searchNames.length} nombres)` : ''}
+                </option>
+              ))}
+            </select>
+            <ChevronDown size={13} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" />
+          </div>
+          {selectedInventoryId && (() => {
+            const prod = regProducts.find(p => p.id === selectedInventoryId)
+            const names = prod?.searchNames ?? []
+            return names.length > 0 ? (
+              <div className="mt-1.5 flex flex-wrap gap-1">
+                {names.map(n => (
+                  <span key={n} className="text-[10px] px-1.5 py-0.5 rounded bg-sky-900/40 text-sky-400 border border-sky-700/40">
+                    {n}
+                  </span>
+                ))}
+              </div>
+            ) : null
+          })()}
+        </div>
+      )}
+
+      {/* ── Divisor o búsqueda libre ── */}
+      <div className="flex items-center gap-2 mb-3">
+        <div className="flex-1 h-px bg-slate-700/60" />
+        <span className="text-[10px] text-slate-500 uppercase tracking-wide">o búsqueda libre</span>
+        <div className="flex-1 h-px bg-slate-700/60" />
+      </div>
+
       <div className="relative">
         <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
         <input
           type="text"
           value={query}
           onChange={e => onInput(e.target.value)}
-          placeholder="Ej: purina one gatos, leche entera alpina..."
-          className="w-full bg-slate-800 border border-slate-700/60 rounded-lg pl-9 pr-3 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-orange-500/60"
+          disabled={!!selectedInventoryId}
+          placeholder={selectedInventoryId ? 'Búsqueda libre desactivada — producto seleccionado arriba' : 'Ej: purina one gatos, leche entera alpina...'}
+          className="w-full bg-slate-800 border border-slate-700/60 rounded-lg pl-9 pr-3 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-orange-500/60 disabled:opacity-40 disabled:cursor-not-allowed"
         />
-        {searching && (
+        {searching && !progress && (
           <RefreshCw size={13} className="absolute right-3 top-1/2 -translate-y-1/2 text-orange-400 animate-spin" />
         )}
       </div>
+
+      {/* ── Progreso multi-búsqueda ── */}
+      {progress && (
+        <div className="mt-2 flex items-center gap-2">
+          <RefreshCw size={11} className="text-orange-400 animate-spin flex-shrink-0" />
+          <span className="text-xs text-slate-400 flex-1 truncate">
+            Buscando <span className="text-sky-400">"{progress.name}"</span>
+            <span className="text-slate-500"> — variante {progress.current} de {progress.total}</span>
+          </span>
+          <div className="flex gap-0.5">
+            {Array.from({ length: progress.total }).map((_, i) => (
+              <div key={i} className={`h-1 w-4 rounded-full ${i < progress.current ? 'bg-orange-400' : 'bg-slate-700'}`} />
+            ))}
+          </div>
+        </div>
+      )}
 
       {liveError && (
         <p className="text-xs text-red-400 mt-2 flex items-center gap-1">
@@ -501,37 +626,62 @@ function LiveSearch({
           </div>
 
           {/* ── Guardar escaneo en Registro ── */}
-          {regProducts.length > 0 && (
-            <div className="mt-3 pt-3 border-t border-slate-700/60 flex items-center gap-2">
-              <History size={13} className="text-slate-500 flex-shrink-0" />
-              <span className="text-xs text-slate-500 flex-shrink-0">Guardar en Registro:</span>
-              <select
-                value={selectedRegId}
-                onChange={e => { setSelectedRegId(e.target.value); setSaveDone(false) }}
-                className="flex-1 bg-slate-800 border border-slate-700/60 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:border-orange-500/60 min-w-0"
-              >
-                <option value="">— seleccionar producto —</option>
-                {regProducts.map(rp => (
-                  <option key={rp.id} value={rp.id}>
-                    {rp.name}{rp.brand ? ` · ${rp.brand}` : ''}{rp.size ? ` ${rp.size}` : ''}
-                  </option>
-                ))}
-              </select>
-              {saveDone ? (
-                <span className="flex items-center gap-1 text-xs text-emerald-400 flex-shrink-0">
-                  <Check size={12} /> Guardado
+          <div className="mt-3 pt-3 border-t border-slate-700/60">
+            {selectedInventoryId ? (
+              /* Producto ya pre-vinculado desde el inventario */
+              <div className="flex items-center gap-2">
+                <History size={13} className="text-slate-500 flex-shrink-0" />
+                <span className="text-xs text-slate-400 flex-1 truncate">
+                  Guardar scan en <span className="text-white font-medium">
+                    {regProducts.find(p => p.id === selectedInventoryId)?.name}
+                  </span>
                 </span>
-              ) : (
-                <button
-                  onClick={saveToRegister}
-                  disabled={!selectedRegId}
-                  className="flex-shrink-0 flex items-center gap-1 px-3 py-1.5 text-xs bg-orange-500/15 hover:bg-orange-500/25 text-orange-400 rounded-lg border border-orange-500/30 transition-colors disabled:opacity-40"
+                {saveDone ? (
+                  <span className="flex items-center gap-1 text-xs text-emerald-400">
+                    <Check size={12} /> Guardado
+                  </span>
+                ) : (
+                  <button
+                    onClick={saveToRegister}
+                    className="flex-shrink-0 flex items-center gap-1.5 px-4 py-1.5 text-xs bg-orange-500/20 hover:bg-orange-500/30 text-orange-400 rounded-lg border border-orange-500/40 transition-colors font-medium"
+                  >
+                    <Check size={12} /> Confirmar
+                  </button>
+                )}
+              </div>
+            ) : regProducts.length > 0 ? (
+              /* Búsqueda libre → selector manual */
+              <div className="flex items-center gap-2">
+                <History size={13} className="text-slate-500 flex-shrink-0" />
+                <span className="text-xs text-slate-500 flex-shrink-0">Guardar en Registro:</span>
+                <select
+                  value={selectedRegId}
+                  onChange={e => { setSelectedRegId(e.target.value); setSaveDone(false) }}
+                  className="flex-1 bg-slate-800 border border-slate-700/60 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:border-orange-500/60 min-w-0"
                 >
-                  <Plus size={11} /> Confirmar
-                </button>
-              )}
-            </div>
-          )}
+                  <option value="">— seleccionar producto —</option>
+                  {regProducts.map(rp => (
+                    <option key={rp.id} value={rp.id}>
+                      {rp.name}{rp.brand ? ` · ${rp.brand}` : ''}{rp.size ? ` ${rp.size}` : ''}
+                    </option>
+                  ))}
+                </select>
+                {saveDone ? (
+                  <span className="flex items-center gap-1 text-xs text-emerald-400 flex-shrink-0">
+                    <Check size={12} /> Guardado
+                  </span>
+                ) : (
+                  <button
+                    onClick={saveToRegister}
+                    disabled={!selectedRegId}
+                    className="flex-shrink-0 flex items-center gap-1 px-3 py-1.5 text-xs bg-orange-500/15 hover:bg-orange-500/25 text-orange-400 rounded-lg border border-orange-500/30 transition-colors disabled:opacity-40"
+                  >
+                    <Plus size={11} /> Confirmar
+                  </button>
+                )}
+              </div>
+            ) : null}
+          </div>
         </div>
       )}
     </div>
