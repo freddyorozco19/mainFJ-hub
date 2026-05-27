@@ -5,6 +5,7 @@ interface User {
   id: string
   email: string
   name: string
+  role: string
 }
 
 interface AuthContextType {
@@ -13,6 +14,7 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<boolean>
   logout: () => void
   isLoading: boolean
+  isReadOnly: boolean
 }
 
 const AuthContext = createContext<AuthContextType | null>(null)
@@ -69,8 +71,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     navigate('/login')
   }
 
+  const isReadOnly = user?.role === 'readonly'
+
   return (
-    <AuthContext.Provider value={{ user, token, login, logout, isLoading }}>
+    <AuthContext.Provider value={{ user, token, login, logout, isLoading, isReadOnly }}>
       {children}
     </AuthContext.Provider>
   )
