@@ -1195,7 +1195,18 @@ export default function RappiPrices() {
   const [regProducts, setRegProducts]     = useState<RegisteredProduct[]>([])
   const [_regLoading, setRegLoading]       = useState(true)
 
-  // Cargar desde API + migrar datos de localStorage si los hay
+  // ── Fuente de verdad: Supabase ────────────────────────────────────────────
+  /** Recarga la lista desde Supabase y actualiza el estado */
+  const reloadRegisters = async () => {
+    try {
+      const data = await apiGetRegisters()
+      setRegProducts(data)
+    } catch (e) {
+      console.error('[Registers] Error recargando desde Supabase:', e)
+    }
+  }
+
+  // Carga inicial: Supabase primero; migra localStorage si la tabla está vacía
   useEffect(() => {
     const localData: RegisteredProduct[] = (() => {
       try {
@@ -1206,46 +1217,47 @@ export default function RappiPrices() {
 
     apiGetRegisters()
       .then(async (apiData) => {
-        // Migrar a Supabase los items de localStorage que no están en la API
-        const apiIds = new Set(apiData.map(p => p.id))
-        const missing = localData.filter(p => !apiIds.has(p.id))
-        for (const p of missing) {
-          try { await apiCreateRegister(p) } catch {}
+        // Una sola vez: migrar items de localStorage que no existan en Supabase
+        if (apiData.length === 0 && localData.length > 0) {
+          for (const p of localData) {
+            try { await apiCreateRegister(p) } catch {}
+          }
+          return reloadRegisters()
         }
-        setRegProducts([...apiData, ...missing])
+        setRegProducts(apiData)
       })
       .catch(() => {
-        // API no disponible: usar localStorage como fallback
+        // Backend no disponible: mostrar datos locales como fallback temporal
         setRegProducts(localData)
       })
       .finally(() => setRegLoading(false))
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // Sincronizar a localStorage cada vez que cambie la lista (cache local)
-  useEffect(() => {
-    if (regProducts.length > 0)
-      localStorage.setItem('rappi_registers', JSON.stringify(regProducts))
-  }, [regProducts])
-
+  // Operaciones CRUD — Supabase primero, luego recarga estado desde la BD
   const handleAdd = async (p: RegisteredProduct) => {
-    setRegProducts(prev => [...prev, p])
-    try { await apiCreateRegister(p) } catch (e) { console.error('Error guardando producto:', e) }
+    try {
+      await apiCreateRegister(p)
+      await reloadRegisters()
+    } catch (e) { console.error('[Registers] Error al agregar:', e) }
   }
   const handleEdit = async (p: RegisteredProduct) => {
-    setRegProducts(prev => prev.map(r => r.id === p.id ? p : r))
-    try { await apiUpdateRegister(p) } catch (e) { console.error('Error actualizando producto:', e) }
+    try {
+      await apiUpdateRegister(p)
+      await reloadRegisters()
+    } catch (e) { console.error('[Registers] Error al editar:', e) }
   }
   const handleDeleteRegister = async (id: string) => {
-    setRegProducts(prev => prev.filter(r => r.id !== id))
-    try { await apiDeleteRegister(id) } catch (e) { console.error('Error eliminando producto:', e) }
+    try {
+      await apiDeleteRegister(id)
+      await reloadRegisters()
+    } catch (e) { console.error('[Registers] Error al eliminar:', e) }
   }
   const handleScanSave = async (productId: string, entry: ScanEntry) => {
-    setRegProducts(prev => prev.map(p =>
-      p.id === productId
-        ? { ...p, scanHistory: [...(p.scanHistory ?? []), entry] }
-        : p
-    ))
-    try { await apiAddScan(productId, entry) } catch (e) { console.error('Error guardando scan:', e) }
+    try {
+      await apiAddScan(productId, entry)
+      await reloadRegisters()
+    } catch (e) { console.error('[Registers] Error al guardar scan:', e) }
   }
 
   useEffect(() => {
