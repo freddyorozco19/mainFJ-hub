@@ -355,7 +355,6 @@ function QuestionCard({
   const [xlatError,   setXlatError]   = useState(false)
 
   // Versión a mostrar: pre-traducida (qEs) > on-demand (xlat) > original
-  const showingEs = (es && !!qEs) || !!xlat
   const shown = es && qEs ? qEs
               : xlat      ? { ...q, questionText: xlat.text, options: xlat.opts, correctAnswer: xlat.ans }
               :               q
