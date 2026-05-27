@@ -344,13 +344,21 @@ function QuestionCard({
   examId: number
   examTopicsPath?: string
 }) {
-  const [open,     setOpen]     = useState(false)
-  const [es,       setEs]       = useState(false)
-  const [selected, setSelected] = useState<number | null>(null)   // índice opción elegida
-  const [verified, setVerified] = useState(false)                  // si ya verificó
-  const [showAns,  setShowAns]  = useState(false)                  // para preguntas sin opciones
+  const [open,        setOpen]        = useState(false)
+  const [es,          setEs]          = useState(false)
+  const [selected,    setSelected]    = useState<number | null>(null)   // índice opción elegida
+  const [verified,    setVerified]    = useState(false)                  // si ya verificó
+  const [showAns,     setShowAns]     = useState(false)                  // para preguntas sin opciones
+  // Traducción on-demand (cuando no hay qEs pre-traducido)
+  const [xlat,        setXlat]        = useState<{ text: string; opts: string[]; ans: string } | null>(null)
+  const [xlatLoading, setXlatLoading] = useState(false)
+  const [xlatError,   setXlatError]   = useState(false)
 
-  const shown = es && qEs ? qEs : q
+  // Versión a mostrar: pre-traducida (qEs) > on-demand (xlat) > original
+  const showingEs = (es && !!qEs) || !!xlat
+  const shown = es && qEs ? qEs
+              : xlat      ? { ...q, questionText: xlat.text, options: xlat.opts, correctAnswer: xlat.ans }
+              :               q
   const type  = getType(q)
   const tags  = useMemo(() => getQuestionTags(q), [q])
 
@@ -367,6 +375,32 @@ function QuestionCard({
   }
 
   const reset = () => { setSelected(null); setVerified(false); setShowAns(false) }
+
+  /** Traduce la pregunta actual con MyMemory API (gratis, sin key) */
+  const translate = async () => {
+    if (xlat || xlatLoading) { setXlat(null); return }   // toggle off
+    setXlatLoading(true); setXlatError(false)
+    try {
+      const tx = async (str: string) => {
+        const r = await fetch(
+          `https://api.mymemory.translated.net/get?q=${encodeURIComponent(str)}&langpair=en|es`,
+          { signal: AbortSignal.timeout(8000) }
+        )
+        const d = await r.json()
+        return (d.responseData?.translatedText as string) || str
+      }
+      const [text, ...opts] = await Promise.all([
+        tx(q.questionText || ""),
+        ...((q.options ?? []).map(o => tx(o))),
+      ])
+      const ans = q.correctAnswer ? await tx(q.correctAnswer) : ""
+      setXlat({ text, opts, ans })
+    } catch {
+      setXlatError(true)
+    } finally {
+      setXlatLoading(false)
+    }
+  }
 
   // Resetear quiz al cambiar idioma o al colapsar
   const handleToggleOpen = () => {
@@ -436,6 +470,24 @@ function QuestionCard({
                 </a>
               )
             })()}
+            {/* Traducción on-demand (cuando no hay pre-traducción) */}
+            {!qEs && (
+              <button
+                type="button"
+                title={xlat ? "Volver al inglés" : "Traducir al español"}
+                onClick={e => { e.stopPropagation(); translate() }}
+                disabled={xlatLoading}
+                className={`flex items-center gap-0.5 text-[10px] font-bold px-1.5 py-0.5 rounded border transition-colors ${
+                  xlat
+                    ? "bg-amber-900/50 border-amber-600/60 text-amber-300"
+                    : xlatError
+                    ? "bg-red-900/40 border-red-600/50 text-red-400"
+                    : "bg-slate-800 border-slate-600 text-slate-400 hover:border-slate-400 hover:text-slate-200"
+                } disabled:opacity-40`}
+              >
+                {xlatLoading ? "..." : xlat ? "🇪🇸" : "🇺🇸"}
+              </button>
+            )}
             {/* Toggle EN / ES */}
             {qEs && (
               <button
