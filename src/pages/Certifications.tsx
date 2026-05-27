@@ -80,7 +80,7 @@ const PROVIDERS: ProviderConfig[] = [
     bgGradient: 'from-teal-950 to-slate-900',
     logo: '◭',
     exams: [
-      { id: 'dmf', code: 'DMF', name: 'Data Management Fundamentals', level: 'Fundamental' },
+      { id: 'dmf', code: 'DMF', name: 'Data Management Fundamentals', dataFile: '/data/exam_dmf.json', questions: 150, level: 'Fundamental' },
     ],
   },
 ]
