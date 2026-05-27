@@ -33,7 +33,15 @@ USERS_DB = {
         "email": os.getenv("ADMIN_EMAIL", "freddy.orozco729@gmail.com"),
         "name": os.getenv("ADMIN_NAME", "Freddy J. Orozco"),
         "password": os.getenv("ADMIN_PASSWORD", "admin123"),
-    }
+        "role": "superadmin",
+    },
+    os.getenv("READER_EMAIL", "sarita.urbano@gmail.com"): {
+        "id": "2",
+        "email": os.getenv("READER_EMAIL", "sarita.urbano@gmail.com"),
+        "name": os.getenv("READER_NAME", "Sarita Urbano"),
+        "password": os.getenv("READER_PASSWORD", "Mochi2026*"),
+        "role": "readonly",
+    },
 }
 
 
@@ -46,6 +54,7 @@ class User(BaseModel):
     id: str
     email: str
     name: str
+    role: str = "readonly"
 
 
 class ForgotPasswordRequest(BaseModel):
@@ -90,7 +99,12 @@ async def get_current_user(token: str = Depends(oauth2_scheme)) -> User:
     user = get_user(email)
     if user is None:
         raise credentials_exception
-    return User(id=user["id"], email=user["email"], name=user["name"])
+    return User(
+        id=user["id"],
+        email=user["email"],
+        name=user["name"],
+        role=user.get("role", "readonly"),
+    )
 
 
 # ── Password Reset Helpers ───────────────────────────────────────────────────
