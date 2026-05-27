@@ -1195,19 +1195,37 @@ export default function RappiPrices() {
   const [regProducts, setRegProducts]     = useState<RegisteredProduct[]>([])
   const [_regLoading, setRegLoading]       = useState(true)
 
-  // Cargar desde API al montar
+  // Cargar desde API + migrar datos de localStorage si los hay
   useEffect(() => {
+    const localData: RegisteredProduct[] = (() => {
+      try {
+        const s = localStorage.getItem('rappi_registers')
+        return s ? JSON.parse(s) : []
+      } catch { return [] }
+    })()
+
     apiGetRegisters()
-      .then(setRegProducts)
+      .then(async (apiData) => {
+        // Migrar a Supabase los items de localStorage que no están en la API
+        const apiIds = new Set(apiData.map(p => p.id))
+        const missing = localData.filter(p => !apiIds.has(p.id))
+        for (const p of missing) {
+          try { await apiCreateRegister(p) } catch {}
+        }
+        setRegProducts([...apiData, ...missing])
+      })
       .catch(() => {
-        // fallback a localStorage si la API falla
-        try {
-          const s = localStorage.getItem('rappi_registers')
-          if (s) setRegProducts(JSON.parse(s))
-        } catch {}
+        // API no disponible: usar localStorage como fallback
+        setRegProducts(localData)
       })
       .finally(() => setRegLoading(false))
   }, [])
+
+  // Sincronizar a localStorage cada vez que cambie la lista (cache local)
+  useEffect(() => {
+    if (regProducts.length > 0)
+      localStorage.setItem('rappi_registers', JSON.stringify(regProducts))
+  }, [regProducts])
 
   const handleAdd = async (p: RegisteredProduct) => {
     setRegProducts(prev => [...prev, p])
