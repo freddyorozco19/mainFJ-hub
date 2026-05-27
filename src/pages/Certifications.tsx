@@ -14,6 +14,7 @@ interface ExamConfig {
   dataFile?: string       // ruta en /public/data/ — undefined = próximamente
   questions?: number      // estimado para mostrar en la card
   level: 'Fundamental' | 'Associate' | 'Expert' | 'Professional' | 'Specialty'
+  examTopicsPath?: string   // ej: 'cdmp/dmf' | 'microsoft/az-900'
 }
 
 interface ProviderConfig {
@@ -33,7 +34,7 @@ const PROVIDERS: ProviderConfig[] = [
     bgGradient: 'from-blue-950 to-slate-900',
     logo: '⊞',
     exams: [
-      { id: 'az-900', code: 'AZ-900', name: 'Azure Fundamentals',         dataFile: '/data/exam_63.json', questions: 472, level: 'Fundamental'  },
+      { id: 'az-900', code: 'AZ-900', name: 'Azure Fundamentals',         dataFile: '/data/exam_63.json', questions: 472, level: 'Fundamental',  examTopicsPath: 'microsoft/az-900' },
       { id: 'az-104', code: 'AZ-104', name: 'Azure Administrator',        level: 'Associate'   },
       { id: 'az-204', code: 'AZ-204', name: 'Azure Developer',            level: 'Associate'   },
       { id: 'az-305', code: 'AZ-305', name: 'Azure Solutions Architect',  level: 'Expert'      },
@@ -80,7 +81,7 @@ const PROVIDERS: ProviderConfig[] = [
     bgGradient: 'from-teal-950 to-slate-900',
     logo: '◭',
     exams: [
-      { id: 'dmf', code: 'DMF', name: 'Data Management Fundamentals', dataFile: '/data/exam_dmf.json', questions: 295, level: 'Fundamental' },
+      { id: 'dmf', code: 'DMF', name: 'Data Management Fundamentals', dataFile: '/data/exam_dmf.json', questions: 295, level: 'Fundamental', examTopicsPath: 'cdmp/dmf' },
     ],
   },
 ]
@@ -333,7 +334,7 @@ function TypeBadge({ type }: { type: ReturnType<typeof getType> }) {
 }
 
 function QuestionCard({
-  q, qEs, index, activeTag, onTagClick, examId,
+  q, qEs, index, activeTag, onTagClick, examId, examTopicsPath,
 }: {
   q: Question
   qEs?: Question
@@ -341,6 +342,7 @@ function QuestionCard({
   activeTag: string | null
   onTagClick: (label: string) => void
   examId: number
+  examTopicsPath?: string
 }) {
   const [open,     setOpen]     = useState(false)
   const [es,       setEs]       = useState(false)
@@ -398,7 +400,7 @@ function QuestionCard({
             )}
             {q.images?.length ? <ImageIcon size={13} className="text-purple-400" /> : null}
             {/* Enlace a examprepper */}
-            {(() => {
+            {examId && (() => {
               const n = parseQuestionNumber(q.number)
               if (!n) return null
               const url = `https://www.examprepper.co/exam/${examId}/${examPage(n)}`
@@ -412,6 +414,25 @@ function QuestionCard({
                   className="flex items-center justify-center w-6 h-6 rounded border bg-slate-800 border-slate-600 text-slate-400 hover:text-sky-400 hover:border-sky-500/60 transition-colors"
                 >
                   <ExternalLink size={11} />
+                </a>
+              )
+            })()}
+            {/* Enlace a ExamTopics */}
+            {examTopicsPath && (() => {
+              const n = parseQuestionNumber(q.number)
+              if (!n) return null
+              const etPage = Math.ceil(n / 5)
+              const url = `https://www.examtopics.com/exams/${examTopicsPath}/view/${etPage}/`
+              return (
+                <a
+                  href={url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  title={`Ver pregunta ${n} en ExamTopics`}
+                  onClick={e => e.stopPropagation()}
+                  className="flex items-center justify-center gap-0.5 px-1.5 h-6 rounded border bg-slate-800 border-slate-600 text-slate-400 hover:text-emerald-400 hover:border-emerald-500/60 transition-colors text-[10px] font-bold"
+                >
+                  ET <ExternalLink size={9} />
                 </a>
               )
             })()}
