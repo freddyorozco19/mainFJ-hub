@@ -719,32 +719,44 @@ interface RegisteredProduct {
   scanHistory?: ScanEntry[]
 }
 
-const DEFAULT_PRODUCTS: RegisteredProduct[] = [
-  { id: 'leche',           name: 'Leche Entera',                         brand: 'Alquería', size: '1L',   searchNames: ['leche entera', 'leche larga vida', 'leche UHT'],               keywords: ['leche entera']            },
-  { id: 'arroz',           name: 'Arroz Blanco',                         brand: 'Roa',      size: '500g', searchNames: ['arroz blanco', 'arroz premium'],                               keywords: ['arroz blanco']            },
-  { id: 'huevos',          name: 'Huevos',                               brand: '',         size: 'x12',  searchNames: ['huevos x12', 'huevos por 12', 'docena huevos'],               keywords: ['huevos x12']              },
-  { id: 'purina-one-gatos',name: 'Purina One Gatos Esterilizados Carne', brand: 'Purina',   size: '85g',  searchNames: ['purina one esterilizados', 'purina gato carne', 'purina one gato'], keywords: ['purina one esterilizados'] },
-]
+// ─── API helpers ──────────────────────────────────────────────────────────────
 
-function loadProducts(): RegisteredProduct[] {
-  try {
-    const s = localStorage.getItem('rappi_registers')
-    if (s) return JSON.parse(s)
-  } catch {}
-  return DEFAULT_PRODUCTS
+async function apiGetRegisters(): Promise<RegisteredProduct[]> {
+  const r = await fetch(`${API_BASE}/rappi/registers`)
+  if (!r.ok) throw new Error('Error cargando registros')
+  return r.json()
 }
-function saveProducts(products: RegisteredProduct[]) {
-  localStorage.setItem('rappi_registers', JSON.stringify(products))
+async function apiCreateRegister(p: RegisteredProduct): Promise<void> {
+  await fetch(`${API_BASE}/rappi/registers`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(p),
+  })
+}
+async function apiUpdateRegister(p: RegisteredProduct): Promise<void> {
+  await fetch(`${API_BASE}/rappi/registers/${p.id}`, {
+    method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(p),
+  })
+}
+async function apiDeleteRegister(id: string): Promise<void> {
+  await fetch(`${API_BASE}/rappi/registers/${id}`, { method: 'DELETE' })
+}
+async function apiAddScan(productId: string, entry: ScanEntry): Promise<void> {
+  await fetch(`${API_BASE}/rappi/registers/${productId}/scans`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(entry),
+  })
 }
 
 // ─── Componente Registers ─────────────────────────────────────────────────────
 
 function Registers({
   products,
-  persist,
+  onAdd,
+  onEdit,
+  onDelete,
 }: {
   products: RegisteredProduct[]
-  persist: (updated: RegisteredProduct[]) => void
+  onAdd:    (p: RegisteredProduct) => void
+  onEdit:   (p: RegisteredProduct) => void
+  onDelete: (id: string) => void
 }) {
   const [editingId, setEditingId]             = useState<string | null>(null)
   const [editName, setEditName]               = useState('')
@@ -776,15 +788,19 @@ function Registers({
 
   const saveEdit = () => {
     if (!editName.trim()) return
-    persist(products.map(p => p.id === editingId
-      ? { ...p, name: editName.trim(), brand: editBrand.trim(), size: editSize.trim(), searchNames: splitComma(editSearchNames), keywords: splitComma(editKeywords) }
-      : p
-    ))
+    const updated = products.find(p => p.id === editingId)
+    if (!updated) return
+    const edited: RegisteredProduct = {
+      ...updated,
+      name: editName.trim(), brand: editBrand.trim(), size: editSize.trim(),
+      searchNames: splitComma(editSearchNames), keywords: splitComma(editKeywords),
+    }
+    onEdit(edited)
     setEditingId(null)
   }
 
   const deleteProduct = (id: string) => {
-    persist(products.filter(p => p.id !== id))
+    onDelete(id)
     setDeleteConfirm(null)
   }
 
@@ -795,7 +811,7 @@ function Registers({
     if (searchNames.length === 0) searchNames.push(newName.trim().toLowerCase())
     const keywords = splitComma(newKeywords)
     if (keywords.length === 0) keywords.push(newName.trim().toLowerCase())
-    persist([...products, { id: `${id}-${Date.now()}`, name: newName.trim(), brand: newBrand.trim(), size: newSize.trim(), searchNames, keywords }])
+    onAdd({ id: `${id}-${Date.now()}`, name: newName.trim(), brand: newBrand.trim(), size: newSize.trim(), searchNames, keywords })
     setNewName(''); setNewBrand(''); setNewSize(''); setNewSearchNames(''); setNewKeywords(''); setAdding(false)
   }
 
@@ -1176,17 +1192,42 @@ export default function RappiPrices() {
   const [tab, setTab] = useState<'scan' | 'registers'>('scan')
 
   // Estado compartido de productos registrados
-  const [regProducts, setRegProducts] = useState<RegisteredProduct[]>(loadProducts)
-  const persistProducts = (updated: RegisteredProduct[]) => {
-    setRegProducts(updated)
-    saveProducts(updated)
+  const [regProducts, setRegProducts]     = useState<RegisteredProduct[]>([])
+  const [regLoading, setRegLoading]       = useState(true)
+
+  // Cargar desde API al montar
+  useEffect(() => {
+    apiGetRegisters()
+      .then(setRegProducts)
+      .catch(() => {
+        // fallback a localStorage si la API falla
+        try {
+          const s = localStorage.getItem('rappi_registers')
+          if (s) setRegProducts(JSON.parse(s))
+        } catch {}
+      })
+      .finally(() => setRegLoading(false))
+  }, [])
+
+  const handleAdd = async (p: RegisteredProduct) => {
+    setRegProducts(prev => [...prev, p])
+    try { await apiCreateRegister(p) } catch (e) { console.error('Error guardando producto:', e) }
   }
-  const handleScanSave = (productId: string, entry: ScanEntry) => {
-    persistProducts(regProducts.map(p =>
+  const handleEdit = async (p: RegisteredProduct) => {
+    setRegProducts(prev => prev.map(r => r.id === p.id ? p : r))
+    try { await apiUpdateRegister(p) } catch (e) { console.error('Error actualizando producto:', e) }
+  }
+  const handleDeleteRegister = async (id: string) => {
+    setRegProducts(prev => prev.filter(r => r.id !== id))
+    try { await apiDeleteRegister(id) } catch (e) { console.error('Error eliminando producto:', e) }
+  }
+  const handleScanSave = async (productId: string, entry: ScanEntry) => {
+    setRegProducts(prev => prev.map(p =>
       p.id === productId
         ? { ...p, scanHistory: [...(p.scanHistory ?? []), entry] }
         : p
     ))
+    try { await apiAddScan(productId, entry) } catch (e) { console.error('Error guardando scan:', e) }
   }
 
   useEffect(() => {
@@ -1280,7 +1321,14 @@ export default function RappiPrices() {
       </div>
 
       {/* ── Tab: REGISTERS ── */}
-      {tab === 'registers' && <Registers products={regProducts} persist={persistProducts} />}
+      {tab === 'registers' && (
+        <Registers
+          products={regProducts}
+          onAdd={handleAdd}
+          onEdit={handleEdit}
+          onDelete={handleDeleteRegister}
+        />
+      )}
 
       {/* ── Tab: SCAN ── */}
       {tab === 'scan' && <>

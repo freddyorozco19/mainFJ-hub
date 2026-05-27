@@ -40,6 +40,31 @@ def init_supabase() -> None:
                 done        BOOLEAN DEFAULT FALSE,
                 created_at  TIMESTAMPTZ DEFAULT NOW()
             );
+            CREATE TABLE IF NOT EXISTS rappi_products (
+                id           TEXT PRIMARY KEY,
+                name         TEXT NOT NULL,
+                brand        TEXT,
+                size         TEXT,
+                search_names JSONB DEFAULT '[]',
+                keywords     JSONB DEFAULT '[]',
+                created_at   TIMESTAMPTZ DEFAULT NOW(),
+                updated_at   TIMESTAMPTZ DEFAULT NOW()
+            );
+            CREATE TABLE IF NOT EXISTS rappi_scans (
+                id                     UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                product_id             TEXT REFERENCES rappi_products(id) ON DELETE CASCADE,
+                date                   TIMESTAMPTZ NOT NULL,
+                scanned_products       INTEGER DEFAULT 0,
+                scanned_stores         INTEGER DEFAULT 0,
+                min_price              NUMERIC,
+                min_price_store        TEXT,
+                min_price_store_count  INTEGER DEFAULT 0,
+                max_price              NUMERIC,
+                max_price_store        TEXT,
+                max_price_store_count  INTEGER DEFAULT 0,
+                promo_detected         BOOLEAN DEFAULT FALSE,
+                created_at             TIMESTAMPTZ DEFAULT NOW()
+            );
         """).execute()
         print("[SUPABASE] Tablas creadas/verificadas")
     except Exception as e:
