@@ -1217,12 +1217,16 @@ export default function RappiPrices() {
 
     apiGetRegisters()
       .then(async (apiData) => {
-        // Una sola vez: migrar items de localStorage que no existan en Supabase
-        if (apiData.length === 0 && localData.length > 0) {
-          for (const p of localData) {
-            try { await apiCreateRegister(p) } catch {}
+        // Migrar items de localStorage que no existan en Supabase (por ID)
+        if (localData.length > 0) {
+          const apiIds = new Set(apiData.map(p => p.id))
+          const missing = localData.filter(p => !apiIds.has(p.id))
+          if (missing.length > 0) {
+            for (const p of missing) {
+              try { await apiCreateRegister(p) } catch {}
+            }
+            return reloadRegisters()
           }
-          return reloadRegisters()
         }
         setRegProducts(apiData)
       })
