@@ -1193,7 +1193,7 @@ export default function RappiPrices() {
 
   // Estado compartido de productos registrados
   const [regProducts, setRegProducts]     = useState<RegisteredProduct[]>([])
-  const [regLoading, setRegLoading]       = useState(true)
+  const [_regLoading, setRegLoading]       = useState(true)
 
   // Cargar desde API al montar
   useEffect(() => {
