@@ -4,7 +4,7 @@ import {
   Bot, MessageSquare, BarChart3, ScrollText, PanelLeftClose, PanelLeft,
   Home, Trophy, Brain, TrendingUp, Heart, Wallet, LogOut, X, Menu,
   User, Network, Activity, Webhook, Building2, Layers, Zap, Cpu,
-  GraduationCap, ShoppingCart,
+  GraduationCap, ShoppingCart, Shield, Eye,
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { getToken } from '../api'
@@ -56,6 +56,9 @@ const SYSTEMS_NAV = [
   { to: '/rappi-prices',   icon: ShoppingCart,  label: 'Rappi Scan'    },
 ]
 
+/** Rutas visibles para usuario de solo lectura */
+const READONLY_SYSTEMS = new Set(['/backlog', '/health', '/certifications', '/rappi-prices'])
+
 interface SidebarProps {
   collapsed: boolean
   onToggle: () => void
@@ -99,7 +102,7 @@ function NavItem({ to, icon: Icon, label, collapsed }: { to: string; icon: React
 
 function SidebarContent({ collapsed, onToggle }: { collapsed: boolean; onToggle: () => void }) {
   const [sseConnected, setSseConnected] = useState(false)
-  const { user, logout } = useAuth()
+  const { user, logout, isReadOnly } = useAuth()
 
   useEffect(() => {
     const token = getToken() ?? ''
@@ -108,6 +111,12 @@ function SidebarContent({ collapsed, onToggle }: { collapsed: boolean; onToggle:
     es.onerror = () => setSseConnected(false)
     return () => { es.close() }
   }, [])
+
+  // Filtrar navegación según rol
+  const orchestratorItems = isReadOnly ? [] : ORCHESTRATOR_NAV
+  const systemsItems = isReadOnly
+    ? SYSTEMS_NAV.filter(item => READONLY_SYSTEMS.has(item.to))
+    : SYSTEMS_NAV
 
   return (
     <div className="flex flex-col h-full">
@@ -143,27 +152,31 @@ function SidebarContent({ collapsed, onToggle }: { collapsed: boolean; onToggle:
       {/* Nav scroll area */}
       <div className="flex-1 overflow-y-auto py-3 space-y-4">
 
-        {/* Orchestrator section */}
-        <div>
-          {!collapsed && (
-            <div className="px-4 mb-1.5">
-              <span className="section-label flex items-center gap-1.5">
-                <Cpu size={9} />
-                Orquestador
-              </span>
+        {/* Orchestrator section — solo superadmin */}
+        {orchestratorItems.length > 0 && (
+          <div>
+            {!collapsed && (
+              <div className="px-4 mb-1.5">
+                <span className="section-label flex items-center gap-1.5">
+                  <Cpu size={9} />
+                  Orquestador
+                </span>
+              </div>
+            )}
+            <div className={`space-y-0.5 ${collapsed ? 'px-2' : 'px-2'}`}>
+              {orchestratorItems.map(item => (
+                <NavItem key={item.to} {...item} collapsed={collapsed} />
+              ))}
             </div>
-          )}
-          <div className={`space-y-0.5 ${collapsed ? 'px-2' : 'px-2'}`}>
-            {ORCHESTRATOR_NAV.map(item => (
-              <NavItem key={item.to} {...item} collapsed={collapsed} />
-            ))}
           </div>
-        </div>
+        )}
 
-        {/* Divider */}
-        <div className="px-4">
-          <div className="divider" />
-        </div>
+        {/* Divider — solo si hay sección orquestador */}
+        {orchestratorItems.length > 0 && (
+          <div className="px-4">
+            <div className="divider" />
+          </div>
+        )}
 
         {/* Systems section */}
         <div>
@@ -173,7 +186,7 @@ function SidebarContent({ collapsed, onToggle }: { collapsed: boolean; onToggle:
             </div>
           )}
           <div className={`space-y-0.5 ${collapsed ? 'px-2' : 'px-2'}`}>
-            {SYSTEMS_NAV.map(item => (
+            {systemsItems.map(item => (
               <NavItem key={item.to} {...item} collapsed={collapsed} />
             ))}
           </div>
@@ -208,7 +221,20 @@ function SidebarContent({ collapsed, onToggle }: { collapsed: boolean; onToggle:
                 {(user.name ? user.name.split(' ').map((w: string) => w[0]).slice(0, 2).join('') : user.email?.[0] ?? 'U').toUpperCase()}
               </div>
               <div className="flex-1 min-w-0">
-                <div className="text-xs font-medium text-slate-300 truncate">{user.name || user.email?.split('@')[0]}</div>
+                <div className="flex items-center gap-1.5">
+                  <div className="text-xs font-medium text-slate-300 truncate">{user.name || user.email?.split('@')[0]}</div>
+                  {isReadOnly ? (
+                    <span className="flex items-center gap-0.5 px-1 py-0.5 rounded text-[9px] font-semibold bg-sky-500/15 border border-sky-500/25 text-sky-400 flex-shrink-0">
+                      <Eye size={8} />
+                      Lectura
+                    </span>
+                  ) : (
+                    <span className="flex items-center gap-0.5 px-1 py-0.5 rounded text-[9px] font-semibold bg-violet-500/15 border border-violet-500/25 text-violet-400 flex-shrink-0">
+                      <Shield size={8} />
+                      Admin
+                    </span>
+                  )}
+                </div>
                 <div className="text-[10px] text-slate-600 truncate">{user.email}</div>
               </div>
             </div>
