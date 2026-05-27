@@ -848,6 +848,7 @@ function ExamViewer({ exam }: { exam: ExamConfig; provider?: ProviderConfig }) {
                 activeTag={activeTag}
                 onTagClick={handleTagClick}
                 examId={data.examId}
+                examTopicsPath={exam.examTopicsPath}
               />
             )
           })}</div>
