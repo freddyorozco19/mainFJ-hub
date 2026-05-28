@@ -779,6 +779,37 @@ function ExamScreen({
   const [timeLeft,    setTimeLeft]    = useState(config.timeLimitMin * 60)
   const [showExit,    setShowExit]    = useState(false)
 
+  // Traducción on-demand
+  const [xlat,        setXlat]        = useState<{ text: string; opts: string[] } | null>(null)
+  const [xlatLoading, setXlatLoading] = useState(false)
+  const [xlatError,   setXlatError]   = useState(false)
+
+  // Reiniciar traducción al cambiar de pregunta
+  useEffect(() => { setXlat(null); setXlatError(false) }, [current])
+
+  const translate = async () => {
+    if (xlat) { setXlat(null); return }
+    if (xlatLoading) return
+    setXlatLoading(true); setXlatError(false)
+    try {
+      const tx = async (str: string) => {
+        const r = await fetch(
+          `https://api.mymemory.translated.net/get?q=${encodeURIComponent(str)}&langpair=en|es`,
+          { signal: AbortSignal.timeout(8000) }
+        )
+        const d = await r.json()
+        return (d.responseData?.translatedText as string) || str
+      }
+      const q = questions[current]
+      const [text, ...opts] = await Promise.all([
+        tx(q.questionText || ''),
+        ...(q.options ?? []).map(o => tx(o)),
+      ])
+      setXlat({ text, opts })
+    } catch { setXlatError(true) }
+    finally { setXlatLoading(false) }
+  }
+
   // Countdown
   useEffect(() => {
     if (config.timeLimitMin === 0) return
@@ -797,6 +828,10 @@ function ExamScreen({
   const progress = (current / total) * 100
   const timerRed = config.timeLimitMin > 0 && timeLeft < 60
   const timerAmb = config.timeLimitMin > 0 && timeLeft < 300 && !timerRed
+
+  // Versión a mostrar: traducida (xlat) o original (q)
+  const displayText = xlat ? xlat.text : (q.questionText ?? '')
+  const displayOpts = xlat ? xlat.opts  : (q.options ?? [])
 
   const selectOpt = (idx: number) => {
     if (ans.confirmed) return
@@ -859,18 +894,43 @@ function ExamScreen({
       <div className="flex-1 overflow-y-auto">
         <div className="max-w-2xl mx-auto px-4 py-8">
 
-          {/* Number + text */}
+          {/* Number + traducción + text */}
           <div className="mb-7">
-            <span className="text-[10px] font-bold text-teal-500/60 uppercase tracking-widest">{q.number}</span>
-            <p className="text-white text-[15px] leading-relaxed mt-2">{q.questionText}</p>
+            <div className="flex items-center gap-3 mb-2">
+              <span className="text-[10px] font-bold text-teal-500/60 uppercase tracking-widest">{q.number}</span>
+              {/* Botón de traducción */}
+              <button
+                onClick={translate}
+                disabled={xlatLoading}
+                title={xlat ? 'Ver original' : 'Traducir al español'}
+                className={`flex items-center gap-1 px-2 py-0.5 rounded-md border text-[10px] font-bold transition-colors disabled:opacity-40 ${
+                  xlat
+                    ? 'bg-amber-500/15 border-amber-500/40 text-amber-300 hover:bg-amber-500/25'
+                    : xlatError
+                      ? 'bg-red-500/10 border-red-500/30 text-red-400 hover:bg-red-500/20'
+                      : 'bg-white/[0.05] border-white/[0.10] text-slate-400 hover:border-slate-500 hover:text-slate-200'
+                }`}
+              >
+                {xlatLoading ? (
+                  <RefreshCw size={9} className="animate-spin" />
+                ) : xlat ? (
+                  <span>🇪🇸 ES</span>
+                ) : xlatError ? (
+                  <span>✕ retry</span>
+                ) : (
+                  <span>🇺🇸→🇪🇸</span>
+                )}
+              </button>
+            </div>
+            <p className="text-white text-[15px] leading-relaxed">{displayText}</p>
           </div>
 
           {/* Options */}
           <div className="space-y-3 mb-8">
-            {(q.options || []).map((opt, idx) => {
+            {displayOpts.map((opt, idx) => {
               const sel       = ans.selected === idx
               const confirmed = ans.confirmed
-              const correct   = isCorrectOpt(opt, q.correctAnswer)
+              const correct   = isCorrectOpt(q.options?.[idx] ?? opt, q.correctAnswer)
               let cls = 'bg-white/[0.03] border-white/[0.08] text-slate-300 hover:bg-white/[0.07] hover:border-slate-600 cursor-pointer'
               if (confirmed) {
                 if (correct)      cls = 'bg-emerald-500/10 border-emerald-500/50 text-emerald-200 cursor-default'
