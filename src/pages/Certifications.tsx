@@ -248,9 +248,13 @@ function getType(q: Question) {
   return 'other'
 }
 
-function isCorrectOpt(opt: string, correctAnswer?: string) {
-  if (!correctAnswer) return false
-  return correctAnswer.toLowerCase().includes(opt.substring(0, 12).toLowerCase().trim())
+function isCorrectOpt(opt: string, correctAnswer?: string): boolean {
+  if (!correctAnswer || !opt) return false
+  const ans = correctAnswer.trim()
+  // Respuesta como letra sola (A-E): comparar primer carácter de la opción
+  if (/^[A-E]$/i.test(ans)) return opt.trim().charAt(0).toUpperCase() === ans.toUpperCase()
+  // Respuesta como texto completo: verificar que la respuesta contiene los primeros 12 chars de la opción
+  return ans.toLowerCase().includes(opt.substring(0, 12).toLowerCase().trim())
 }
 
 const LEVEL_COLOR: Record<string, string> = {
@@ -651,13 +655,6 @@ interface ExamModeCfg {
   onlyWithAnswer: boolean
 }
 interface ExamModeAns { selected: number | null; confirmed: boolean }
-
-// ─── Modo Examen — helper ─────────────────────────────────────────────────────
-
-function isCorrectOpt(opt: string, correctAnswer: string): boolean {
-  if (!correctAnswer || !opt) return false
-  return opt.trim().charAt(0).toUpperCase() === correctAnswer.trim().charAt(0).toUpperCase()
-}
 
 function fmtTime(s: number) {
   return `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`
