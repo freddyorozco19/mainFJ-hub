@@ -6,6 +6,7 @@ import { Chat } from './pages/Chat'
 import { Metrics } from './pages/Metrics'
 import { Logs } from './pages/Logs'
 import { Home } from './pages/Home'
+import { HomeReadonly } from './pages/HomeReadonly'
 import { WinStats } from './pages/WinStats'
 import { ExpertIA } from './pages/ExpertIA'
 import { GrowData } from './pages/GrowData'
@@ -23,12 +24,17 @@ import { Login } from './pages/Login'
 import { ForgotPassword } from './pages/ForgotPassword'
 import { ResetPassword } from './pages/ResetPassword'
 import { ToastProvider } from './components/Toast'
-import { AuthProvider } from './context/AuthContext'
+import { AuthProvider, useAuth } from './context/AuthContext'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import { getToken } from './api'
 import { useDashboard } from './store/dashboardStore'
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:8001'
+
+function HomeRoute() {
+  const { isReadOnly } = useAuth()
+  return isReadOnly ? <HomeReadonly /> : <Home />
+}
 
 function SSEListener() {
   const esRef = useRef<EventSource | null>(null)
@@ -178,7 +184,7 @@ export default function App() {
             <Route path="/chat"    element={<Chat />}    />
             <Route path="/metrics" element={<Metrics />} />
             <Route path="/logs"    element={<Logs />}    />
-            <Route path="/home"     element={<Home />}    />
+            <Route path="/home"     element={<HomeRoute />}    />
             <Route path="/winstats" element={<WinStats />} />
             <Route path="/expertia" element={<ExpertIA />} />
             <Route path="/growdata" element={<GrowData />} />

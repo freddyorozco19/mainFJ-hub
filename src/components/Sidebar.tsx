@@ -57,7 +57,7 @@ const SYSTEMS_NAV = [
 ]
 
 /** Rutas visibles para usuario de solo lectura */
-const READONLY_SYSTEMS = new Set(['/backlog', '/health', '/certifications', '/rappi-prices'])
+const READONLY_SYSTEMS = new Set(['/home', '/backlog', '/health', '/certifications', '/rappi-prices'])
 
 interface SidebarProps {
   collapsed: boolean
