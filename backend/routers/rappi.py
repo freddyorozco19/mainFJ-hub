@@ -3,19 +3,20 @@
 backend/routers/rappi.py
 
 1. Búsqueda de precios via API móvil interna de Rappi.
-2. CRUD de productos registrados y scans (persistidos en Supabase).
+2. CRUD de productos registrados y scans (persistidos en PostgreSQL via get_conn).
 """
 from __future__ import annotations
 
+import json
 import logging
 from typing import Any, Optional, List
-from datetime import datetime
+from datetime import datetime, timezone
 
 import httpx
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 
-from backend.supabase_client import get_supabase
+from backend.db import get_conn
 
 logger = logging.getLogger(__name__)
 
@@ -90,14 +91,16 @@ def _scan_row_to_entry(row: dict) -> dict:
 @router.get("/registers")
 async def get_registers():
     """Retorna todos los productos registrados con su historial de scans."""
-    sb = get_supabase()
     try:
-        prods = sb.table("rappi_products").select("*").order("created_at").execute().data or []
-        scans = sb.table("rappi_scans").select("*").order("date").execute().data or []
+        with get_conn() as conn:
+            cur = conn.cursor()
+            cur.execute("SELECT * FROM rappi_products ORDER BY created_at")
+            prods = [dict(r) for r in cur.fetchall()]
+            cur.execute("SELECT * FROM rappi_scans ORDER BY date")
+            scans = [dict(r) for r in cur.fetchall()]
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error Supabase: {e}")
+        raise HTTPException(status_code=500, detail=f"Error DB: {e}")
 
-    # Agrupar scans por product_id
     scans_by_product: dict[str, list] = {}
     for s in scans:
         pid = s["product_id"]
@@ -115,16 +118,21 @@ async def get_registers():
 @router.post("/registers", status_code=201)
 async def create_register(body: RegisteredProductIn):
     """Crea un producto registrado."""
-    sb = get_supabase()
     try:
-        sb.table("rappi_products").insert({
-            "id":           body.id,
-            "name":         body.name,
-            "brand":        body.brand,
-            "size":         body.size,
-            "search_names": body.searchNames,
-            "keywords":     body.keywords,
-        }).execute()
+        with get_conn() as conn:
+            cur = conn.cursor()
+            cur.execute(
+                """INSERT INTO rappi_products (id, name, brand, size, search_names, keywords)
+                   VALUES (%s, %s, %s, %s, %s::jsonb, %s::jsonb)""",
+                (
+                    body.id,
+                    body.name,
+                    body.brand,
+                    body.size,
+                    json.dumps(body.searchNames),
+                    json.dumps(body.keywords),
+                ),
+            )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error creando producto: {e}")
     return {"ok": True, "id": body.id}
@@ -133,16 +141,24 @@ async def create_register(body: RegisteredProductIn):
 @router.put("/registers/{product_id}")
 async def update_register(product_id: str, body: RegisteredProductIn):
     """Actualiza un producto registrado."""
-    sb = get_supabase()
     try:
-        sb.table("rappi_products").update({
-            "name":         body.name,
-            "brand":        body.brand,
-            "size":         body.size,
-            "search_names": body.searchNames,
-            "keywords":     body.keywords,
-            "updated_at":   datetime.utcnow().isoformat(),
-        }).eq("id", product_id).execute()
+        with get_conn() as conn:
+            cur = conn.cursor()
+            cur.execute(
+                """UPDATE rappi_products
+                   SET name=%s, brand=%s, size=%s,
+                       search_names=%s::jsonb, keywords=%s::jsonb,
+                       updated_at=NOW()::TEXT
+                   WHERE id=%s""",
+                (
+                    body.name,
+                    body.brand,
+                    body.size,
+                    json.dumps(body.searchNames),
+                    json.dumps(body.keywords),
+                    product_id,
+                ),
+            )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error actualizando producto: {e}")
     return {"ok": True}
@@ -151,9 +167,10 @@ async def update_register(product_id: str, body: RegisteredProductIn):
 @router.delete("/registers/{product_id}")
 async def delete_register(product_id: str):
     """Elimina un producto registrado y sus scans."""
-    sb = get_supabase()
     try:
-        sb.table("rappi_products").delete().eq("id", product_id).execute()
+        with get_conn() as conn:
+            cur = conn.cursor()
+            cur.execute("DELETE FROM rappi_products WHERE id=%s", (product_id,))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error eliminando producto: {e}")
     return {"ok": True}
@@ -162,21 +179,30 @@ async def delete_register(product_id: str):
 @router.post("/registers/{product_id}/scans", status_code=201)
 async def add_scan(product_id: str, body: ScanEntryIn):
     """Agrega una entrada de scan al historial de un producto."""
-    sb = get_supabase()
     try:
-        sb.table("rappi_scans").insert({
-            "product_id":            product_id,
-            "date":                  body.date,
-            "scanned_products":      body.scannedProducts,
-            "scanned_stores":        body.scannedStores,
-            "min_price":             body.minPrice,
-            "min_price_store":       body.minPriceStore,
-            "min_price_store_count": body.minPriceStoreCount,
-            "max_price":             body.maxPrice,
-            "max_price_store":       body.maxPriceStore,
-            "max_price_store_count": body.maxPriceStoreCount,
-            "promo_detected":        body.promoDetected,
-        }).execute()
+        with get_conn() as conn:
+            cur = conn.cursor()
+            cur.execute(
+                """INSERT INTO rappi_scans
+                   (product_id, date, scanned_products, scanned_stores,
+                    min_price, min_price_store, min_price_store_count,
+                    max_price, max_price_store, max_price_store_count,
+                    promo_detected)
+                   VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
+                (
+                    product_id,
+                    body.date,
+                    body.scannedProducts,
+                    body.scannedStores,
+                    body.minPrice,
+                    body.minPriceStore,
+                    body.minPriceStoreCount,
+                    body.maxPrice,
+                    body.maxPriceStore,
+                    body.maxPriceStoreCount,
+                    body.promoDetected,
+                ),
+            )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error guardando scan: {e}")
     return {"ok": True}
@@ -201,8 +227,8 @@ def _products_from_stores(stores: list[dict], keyword: str, seen: set[str]) -> l
         for p in store.get("products", []):
             if not isinstance(p, dict):
                 continue
-            name  = p.get("name", "")
-            real_price    = p.get("real_price") or p.get("price")
+            name      = p.get("name", "")
+            real_price = p.get("real_price") or p.get("price")
             if not name or real_price is None:
                 continue
             if not matches(name):
@@ -217,10 +243,10 @@ def _products_from_stores(stores: list[dict], keyword: str, seen: set[str]) -> l
 
             real_price_f    = float(real_price)
             balance_price_f = float(p.get("balance_price") or real_price)
-            # balance_price es el precio con descuento (lo que realmente pagas)
-            # real_price es el precio de lista (va tachado si hay descuento)
-            actual_price    = min(real_price_f, balance_price_f)
-            original_price  = max(real_price_f, balance_price_f)
+            # balance_price = precio con descuento (lo que pagas)
+            # real_price    = precio de lista (va tachado si hay descuento)
+            actual_price   = min(real_price_f, balance_price_f)
+            original_price = max(real_price_f, balance_price_f)
 
             results.append({
                 "id":            product_id,

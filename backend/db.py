@@ -246,6 +246,37 @@ def init_db() -> None:
             )
         """)
 
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS rappi_products (
+                id           TEXT PRIMARY KEY,
+                name         TEXT NOT NULL,
+                brand        TEXT,
+                size         TEXT,
+                search_names JSONB DEFAULT '[]',
+                keywords     JSONB DEFAULT '[]',
+                created_at   TEXT NOT NULL DEFAULT NOW()::TEXT,
+                updated_at   TEXT NOT NULL DEFAULT NOW()::TEXT
+            )
+        """)
+
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS rappi_scans (
+                id                    TEXT PRIMARY KEY DEFAULT gen_random_uuid()::TEXT,
+                product_id            TEXT NOT NULL REFERENCES rappi_products(id) ON DELETE CASCADE,
+                date                  TEXT NOT NULL,
+                scanned_products      INTEGER DEFAULT 0,
+                scanned_stores        INTEGER DEFAULT 0,
+                min_price             DOUBLE PRECISION,
+                min_price_store       TEXT,
+                min_price_store_count INTEGER DEFAULT 0,
+                max_price             DOUBLE PRECISION,
+                max_price_store       TEXT,
+                max_price_store_count INTEGER DEFAULT 0,
+                promo_detected        BOOLEAN DEFAULT FALSE,
+                created_at            TEXT NOT NULL DEFAULT NOW()::TEXT
+            )
+        """)
+
         # ── Indexes ──────────────────────────────────────────────────────
         indexes = [
             ("idx_msg_agent",        "messages(agent_slug)"),
@@ -259,9 +290,12 @@ def init_db() -> None:
             ("idx_backlog_status",   "backlog_tasks(status)"),
             ("idx_backlog_priority", "backlog_tasks(priority)"),
             ("idx_subtasks_task",    "backlog_subtasks(task_id)"),
-            ("idx_extracto_entity", "extracto_imports(entity)"),
-            ("idx_extracto_period", "extracto_imports(period)"),
-            ("idx_extracto_drive",  "extracto_imports(drive_file_id)"),
+            ("idx_extracto_entity",  "extracto_imports(entity)"),
+            ("idx_extracto_period",  "extracto_imports(period)"),
+            ("idx_extracto_drive",   "extracto_imports(drive_file_id)"),
+            ("idx_rappi_prod_name",  "rappi_products(name)"),
+            ("idx_rappi_scan_prod",  "rappi_scans(product_id)"),
+            ("idx_rappi_scan_date",  "rappi_scans(date)"),
         ]
         for idx_name, idx_def in indexes:
             cur.execute(f"CREATE INDEX IF NOT EXISTS {idx_name} ON {idx_def}")
