@@ -202,8 +202,8 @@ def _products_from_stores(stores: list[dict], keyword: str, seen: set[str]) -> l
             if not isinstance(p, dict):
                 continue
             name  = p.get("name", "")
-            price = p.get("real_price") or p.get("price")
-            if not name or price is None:
+            real_price    = p.get("real_price") or p.get("price")
+            if not name or real_price is None:
                 continue
             if not matches(name):
                 continue
@@ -215,12 +215,19 @@ def _products_from_stores(stores: list[dict], keyword: str, seen: set[str]) -> l
 
             product_id = p.get("id") or p.get("master_product_id")
 
+            real_price_f    = float(real_price)
+            balance_price_f = float(p.get("balance_price") or real_price)
+            # balance_price es el precio con descuento (lo que realmente pagas)
+            # real_price es el precio de lista (va tachado si hay descuento)
+            actual_price    = min(real_price_f, balance_price_f)
+            original_price  = max(real_price_f, balance_price_f)
+
             results.append({
                 "id":            product_id,
                 "name":          name,
-                "price":         float(price),
-                "originalPrice": float(p.get("balance_price") or price),
-                "hasDiscount":   float(p.get("balance_price") or price) < float(price),
+                "price":         actual_price,
+                "originalPrice": original_price,
+                "hasDiscount":   actual_price < original_price,
                 "pum":           p.get("pum"),
                 "unitType":      p.get("sale_type"),
                 "inStock":       not p.get("is_discontinued", False),
