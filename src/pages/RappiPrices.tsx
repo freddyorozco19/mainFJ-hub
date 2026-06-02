@@ -43,10 +43,21 @@ interface RappiData {
 
 // ─── Utilidades ───────────────────────────────────────────────────────────────
 
-/** Extrae el tamaño/peso del nombre del producto (ej: "5.9kg", "85g", "1.5L") */
-function extractSize(name: string): string | null {
-  const m = name.match(/\b\d+(?:[.,]\d+)?\s*(?:kg|g|ml|l|lb|oz)\b/i)
-  return m ? m[0].replace(/\s+/g, '') : null
+/** Estima el tamaño/peso del producto a partir del precio y el pum (precio/unidad).
+ *  Ej: precio=$339.340, pum="57.52/g" → 339340/57.52 ≈ 5900g → "5.9kg" */
+function calcSize(price: number, pum: string | null | undefined): string | null {
+  if (!pum) return null
+  const m = pum.match(/^([\d.,]+)\/(kg|g|ml|l|lb|oz)$/i)
+  if (!m) return null
+  const pumVal = parseFloat(m[1].replace(',', '.'))
+  const unit   = m[2].toLowerCase()
+  if (!pumVal || pumVal <= 0) return null
+  const qty = price / pumVal
+  if (unit === 'g')  return qty >= 950 ? `${(qty / 1000).toFixed(1)}kg` : `${Math.round(qty)}g`
+  if (unit === 'ml') return qty >= 950 ? `${(qty / 1000).toFixed(1)}L`  : `${Math.round(qty)}ml`
+  if (unit === 'kg') return `${qty.toFixed(2)}kg`
+  if (unit === 'l')  return `${qty.toFixed(2)}L`
+  return `${qty.toFixed(1)}${unit}`
 }
 
 function formatCOP(n: number | null | undefined) {
@@ -629,7 +640,7 @@ function LiveSearch({
                   <div className="text-xs text-slate-200 truncate">{p.name}</div>
                   <div className="text-[10px] text-slate-500">
                     {p.store || '?'}
-                    {extractSize(p.name) ? ` · ${extractSize(p.name)}` : ''}
+                    {calcSize(p.price, p.pum) ? ` · ${calcSize(p.price, p.pum)}` : ''}
                     {p.pum ? ` · ${p.pum}` : ''}
                   </div>
                 </div>
