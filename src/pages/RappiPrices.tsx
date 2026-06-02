@@ -43,6 +43,12 @@ interface RappiData {
 
 // ─── Utilidades ───────────────────────────────────────────────────────────────
 
+/** Extrae el tamaño/peso del nombre del producto (ej: "5.9kg", "85g", "1.5L") */
+function extractSize(name: string): string | null {
+  const m = name.match(/\b\d+(?:[.,]\d+)?\s*(?:kg|g|ml|l|lb|oz)\b/i)
+  return m ? m[0].replace(/\s+/g, '') : null
+}
+
 function formatCOP(n: number | null | undefined) {
   if (n == null) return '—'
   return `$${n.toLocaleString('es-CO')}`
@@ -621,7 +627,11 @@ function LiveSearch({
                 <Store size={11} className={i === 0 ? 'text-emerald-400 flex-shrink-0' : 'text-slate-500 flex-shrink-0'} />
                 <div className="flex-1 min-w-0">
                   <div className="text-xs text-slate-200 truncate">{p.name}</div>
-                  <div className="text-[10px] text-slate-500">{p.store || '?'} {p.pum ? `· ${p.pum}` : ''}</div>
+                  <div className="text-[10px] text-slate-500">
+                    {p.store || '?'}
+                    {extractSize(p.name) ? ` · ${extractSize(p.name)}` : ''}
+                    {p.pum ? ` · ${p.pum}` : ''}
+                  </div>
                 </div>
                 {p.originalPrice > p.price && (
                   <span className="text-[10px] text-slate-500 line-through">{formatCOP(p.originalPrice)}</span>
