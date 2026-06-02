@@ -286,6 +286,7 @@ interface LiveResult {
   originalPrice: number
   hasDiscount: boolean
   pum: string | null
+  presentation: string | null
   unitType: string | null
   inStock: boolean
   store: string | null
@@ -640,7 +641,9 @@ function LiveSearch({
                   <div className="text-xs text-slate-200 truncate">{p.name}</div>
                   <div className="text-[10px] text-slate-500">
                     {p.store || '?'}
-                    {calcSize(p.price, p.pum) ? ` · ${calcSize(p.price, p.pum)}` : ''}
+                    {(p.presentation || calcSize(p.price, p.pum))
+                      ? ` · ${p.presentation || calcSize(p.price, p.pum)}`
+                      : ''}
                     {p.pum ? ` · ${p.pum}` : ''}
                   </div>
                 </div>

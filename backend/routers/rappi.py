@@ -255,6 +255,7 @@ def _products_from_stores(stores: list[dict], keyword: str, seen: set[str]) -> l
                 "originalPrice": original_price,
                 "hasDiscount":   actual_price < original_price,
                 "pum":           p.get("pum"),
+                "presentation":  p.get("presentation"),
                 "unitType":      p.get("sale_type"),
                 "inStock":       not p.get("is_discontinued", False),
                 "store":         store_name,
