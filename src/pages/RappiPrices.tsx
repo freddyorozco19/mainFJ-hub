@@ -510,9 +510,6 @@ function LiveSearch({
     setSelectedRegId(productId)
   }
 
-  const runMultiSearch = (searchNames: string[], productId: string) =>
-    runMultiSearchWith(searchNames, productId, endpoint)
-
   const onInventorySelect = (id: string) => {
     setSelectedInventoryId(id)
     setQuery('')
