@@ -394,6 +394,23 @@ function LocationPopup({ lastUpdated, onClose }: { lastUpdated: string | null; o
 
 // ─── Panel de búsqueda en vivo ────────────────────────────────────────────────
 
+type SearchSource = 'rappi' | 'ml'
+
+const SOURCE_CONFIG: Record<SearchSource, { label: string; color: string; activeClass: string; endpoint: string }> = {
+  rappi: {
+    label:       'Rappi',
+    color:       'text-orange-400',
+    activeClass: 'bg-orange-500/20 border-orange-500/40 text-orange-300',
+    endpoint:    '/rappi/search',
+  },
+  ml: {
+    label:       'Mercado Libre',
+    color:       'text-yellow-400',
+    activeClass: 'bg-yellow-500/20 border-yellow-500/40 text-yellow-300',
+    endpoint:    '/mercadolibre/search',
+  },
+}
+
 function LiveSearch({
   regProducts,
   onScanSave,
@@ -401,6 +418,7 @@ function LiveSearch({
   regProducts: RegisteredProduct[]
   onScanSave: (productId: string, entry: ScanEntry) => void
 }) {
+  const [source, setSource]           = useState<SearchSource>('rappi')
   const [query, setQuery]             = useState('')
   const [results, setResults]         = useState<LiveSearchResponse | null>(null)
   const [searching, setSearching]     = useState(false)
@@ -411,12 +429,28 @@ function LiveSearch({
   const [progress, setProgress]       = useState<{ current: number; total: number; name: string } | null>(null)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
+  const endpoint = SOURCE_CONFIG[source].endpoint
+
+  // ── Cambio de fuente → re-lanza búsqueda actual ──
+  const handleSourceChange = (s: SearchSource) => {
+    setSource(s)
+    setResults(null)
+    setSaveDone(false)
+    if (selectedInventoryId) {
+      const prod  = regProducts.find(p => p.id === selectedInventoryId)
+      const names = prod?.searchNames?.length ? prod.searchNames : prod ? [prod.name] : []
+      if (names.length) setTimeout(() => runMultiSearchWith(names, selectedInventoryId, SOURCE_CONFIG[s].endpoint), 0)
+    } else if (query.trim().length >= 2) {
+      setTimeout(() => handleSearchWith(query, SOURCE_CONFIG[s].endpoint), 0)
+    }
+  }
+
   // ── Búsqueda libre (texto) ──
-  const handleSearch = async (q: string) => {
+  const handleSearchWith = async (q: string, ep: string) => {
     if (q.trim().length < 2) { setResults(null); return }
     setSearching(true); setLiveError(null); setProgress(null)
     try {
-      const res = await fetch(`${API_BASE}/rappi/search?query=${encodeURIComponent(q)}&limit=30`)
+      const res = await fetch(`${API_BASE}${ep}?query=${encodeURIComponent(q)}&limit=30`)
       if (!res.ok) throw new Error(`Error ${res.status}`)
       setResults(await res.json())
     } catch (e: any) {
@@ -427,8 +461,10 @@ function LiveSearch({
     }
   }
 
+  const handleSearch = (q: string) => handleSearchWith(q, endpoint)
+
   // ── Multi-búsqueda por searchNames del producto del inventario ──
-  const runMultiSearch = async (searchNames: string[], productId: string) => {
+  const runMultiSearchWith = async (searchNames: string[], productId: string, ep: string) => {
     if (searchNames.length === 0) return
     setSearching(true); setLiveError(null); setResults(null); setProgress(null)
     setSaveDone(false)
@@ -442,7 +478,7 @@ function LiveSearch({
       if (!name) continue
       setProgress({ current: i + 1, total: searchNames.length, name })
       try {
-        const res = await fetch(`${API_BASE}/rappi/search?query=${encodeURIComponent(name)}&limit=30`)
+        const res = await fetch(`${API_BASE}${ep}?query=${encodeURIComponent(name)}&limit=30`)
         if (!res.ok) continue
         const data: LiveSearchResponse = await res.json()
         for (const p of data.products) {
@@ -474,6 +510,9 @@ function LiveSearch({
     setSelectedRegId(productId)
   }
 
+  const runMultiSearch = (searchNames: string[], productId: string) =>
+    runMultiSearchWith(searchNames, productId, endpoint)
+
   const onInventorySelect = (id: string) => {
     setSelectedInventoryId(id)
     setQuery('')
@@ -483,7 +522,7 @@ function LiveSearch({
     const prod = regProducts.find(p => p.id === id)
     if (!prod) return
     const names = prod.searchNames?.length ? prod.searchNames : [prod.name]
-    runMultiSearch(names, id)
+    runMultiSearchWith(names, id, endpoint)
   }
 
   const onInput = (val: string) => {
@@ -527,10 +566,27 @@ function LiveSearch({
 
   return (
     <div className="bg-slate-900 border border-slate-700/60 rounded-xl p-4 mb-6">
-      <div className="flex items-center gap-2 mb-3">
-        <Zap size={14} className="text-orange-400" />
-        <span className="text-sm font-medium text-white">Búsqueda en vivo</span>
-        <span className="text-xs text-slate-500">— consulta precios actuales directamente desde Rappi</span>
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <Zap size={14} className="text-orange-400" />
+          <span className="text-sm font-medium text-white">Búsqueda en vivo</span>
+        </div>
+        {/* ── Tabs de fuente ── */}
+        <div className="flex gap-1 p-0.5 bg-slate-800 border border-slate-700/60 rounded-lg">
+          {(Object.keys(SOURCE_CONFIG) as SearchSource[]).map(s => (
+            <button
+              key={s}
+              onClick={() => handleSourceChange(s)}
+              className={`px-2.5 py-1 rounded-md text-[11px] font-medium border transition-all ${
+                source === s
+                  ? SOURCE_CONFIG[s].activeClass
+                  : 'border-transparent text-slate-500 hover:text-slate-300'
+              }`}
+            >
+              {SOURCE_CONFIG[s].label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* ── Selector de inventario ── */}
