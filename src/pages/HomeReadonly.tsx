@@ -37,7 +37,7 @@ const MODULES = [
     text: 'text-emerald-400',
   },
   {
-    name: 'Rappi Scan',
+    name: 'Market Scan',
     desc: 'Rastreo de precios',
     path: '/rappi-prices',
     icon: ShoppingCart,

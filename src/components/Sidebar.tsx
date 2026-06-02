@@ -53,7 +53,7 @@ const SYSTEMS_NAV = [
   { to: '/growdata',       icon: TrendingUp,    label: 'GrowData'       },
   { to: '/webhooks',       icon: Webhook,       label: 'Webhooks'       },
   { to: '/certifications', icon: GraduationCap, label: 'Certificaciones'},
-  { to: '/rappi-prices',   icon: ShoppingCart,  label: 'Rappi Scan'    },
+  { to: '/rappi-prices',   icon: ShoppingCart,  label: 'Market Scan'   },
 ]
 
 /** Rutas visibles para usuario de solo lectura */

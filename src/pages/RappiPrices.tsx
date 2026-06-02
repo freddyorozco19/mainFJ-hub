@@ -1324,7 +1324,7 @@ export default function RappiPrices() {
         <div>
           <div className="flex items-center gap-2 mb-1">
             <ShoppingCart size={20} className="text-orange-400" />
-            <h1 className="text-xl font-bold text-white">Rappi Scan</h1>
+            <h1 className="text-xl font-bold text-white">Market Scan</h1>
           </div>
           <p className="text-slate-400 text-sm">
             Historial de precios mínimos por producto en Colombia
