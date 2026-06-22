@@ -379,7 +379,7 @@ export function Home() {
                       <div className="flex items-center gap-1.5 mb-2">
                         <span className="text-[10px] text-slate-600 uppercase tracking-wide font-medium">Próximos cobros</span>
                       </div>
-                      {upcomingItems.slice(0, 8).map((item, i) => {
+                      {upcomingItems.map((item, i) => {
                         const urgency = item.days <= 3 ? '#EF4444' : item.days <= 7 ? '#F59E0B' : '#4B5563'
                         return (
                           <div key={i}
