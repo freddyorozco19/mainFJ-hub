@@ -871,7 +871,7 @@ async def ocr_invoice(current_user = Depends(get_current_user),
 
 # ── Extractos bancarios (PDF) ────────────────────────────────────────────────
 try:
-    from PyPDF2 import PdfReader
+    from pypdf import PdfReader
     _PDF_AVAILABLE = True
 except ImportError:
     PdfReader = None  # type: ignore
