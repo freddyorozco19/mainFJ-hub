@@ -481,10 +481,15 @@ export function Finance() {
       if (res.ok) {
         const data = await res.json()
         const records = data.records || []
+        const isCuenta = imp.statement_type === 'cuenta'
         const entityLabel = (imp.entity || '').toLowerCase()
         const period = imp.period || ''
         const filtered = records.filter((r: any) => {
-          const matchEntity = (r.ENTIDAD || '').toLowerCase() === entityLabel
+          const entidad = (r.ENTIDAD || '').toLowerCase()
+          // Crédito: ENTIDAD === 'Nubank'; Cuenta: ENTIDAD === 'Nubank Cuenta'
+          const matchEntity = isCuenta
+            ? entidad.includes(entityLabel) && entidad.includes('cuenta')
+            : entidad === entityLabel && !entidad.includes('cuenta')
           if (!matchEntity) return false
           if (!period) return true
           if (r.FECHA_CORTE === period) return true
@@ -1937,7 +1942,60 @@ export function Finance() {
                     <FileText size={28} className="mx-auto text-slate-600" />
                     <p className="text-sm text-slate-500">No se encontraron registros para este periodo</p>
                   </div>
+                ) : extractoDetailImport.statement_type === 'cuenta' ? (
+                  /* ── Vista cuenta: Descripción, Tipo, Valor, Fecha ── */
+                  <div className="overflow-x-auto rounded-lg border border-border">
+                    <table className="w-full text-xs">
+                      <thead>
+                        <tr className="bg-surface/80 text-slate-400">
+                          <th className="px-3 py-2 text-left">Descripción</th>
+                          <th className="px-3 py-2 text-center">Tipo</th>
+                          <th className="px-3 py-2 text-right">Valor</th>
+                          <th className="px-3 py-2 text-left">Fecha</th>
+                          <th className="px-3 py-2 text-center">Estado</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {extractoDetailRecords.map((r, i) => (
+                          <tr key={i} className="border-t border-border/50 hover:bg-white/3">
+                            <td className="px-3 py-2 text-white max-w-[300px] truncate" title={r.PRODUCTO}>{r.PRODUCTO}</td>
+                            <td className="px-3 py-2 text-center">
+                              <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${r.TIPO === 'INGRESO' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-blue-500/20 text-blue-400'}`}>
+                                {r.TIPO || 'EGRESO'}
+                              </span>
+                            </td>
+                            <td className={`px-3 py-2 text-right font-mono ${r.TIPO === 'INGRESO' ? 'text-emerald-400' : 'text-slate-300'}`}>
+                              {r.VALOR_TOTAL ? formatCOPFull(Number(r.VALOR_TOTAL)) : '—'}
+                            </td>
+                            <td className="px-3 py-2 text-slate-400">{r.FECHA_PAGO}</td>
+                            <td className="px-3 py-2 text-center">
+                              <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-green-500/20 text-green-400">
+                                {r.ESTADO}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                      <tfoot>
+                        <tr className="border-t border-border bg-surface/50">
+                          <td colSpan={2} className="px-3 py-2 text-right text-xs text-slate-400 font-medium">Total egresos</td>
+                          <td className="px-3 py-2 text-right text-slate-300 font-mono font-semibold text-xs">
+                            {formatCOPFull(extractoDetailRecords.filter(r => r.TIPO !== 'INGRESO').reduce((s, r) => s + Number(r.VALOR_TOTAL || 0), 0))}
+                          </td>
+                          <td colSpan={2} />
+                        </tr>
+                        <tr className="border-t border-border/40 bg-surface/30">
+                          <td colSpan={2} className="px-3 py-2 text-right text-xs text-slate-400 font-medium">Total ingresos</td>
+                          <td className="px-3 py-2 text-right text-emerald-400 font-mono font-semibold text-xs">
+                            {formatCOPFull(extractoDetailRecords.filter(r => r.TIPO === 'INGRESO').reduce((s, r) => s + Number(r.VALOR_TOTAL || 0), 0))}
+                          </td>
+                          <td colSpan={2} />
+                        </tr>
+                      </tfoot>
+                    </table>
+                  </div>
                 ) : (
+                  /* ── Vista crédito: Cuotas, Interés, etc. ── */
                   <div className="overflow-x-auto rounded-lg border border-border">
                     <table className="w-full text-xs">
                       <thead>
