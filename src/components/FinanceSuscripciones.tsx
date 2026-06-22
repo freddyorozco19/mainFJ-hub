@@ -66,12 +66,11 @@ function nextBillingDate(dia: number): { date: Date; days: number } | null {
 }
 
 function formatPrice(precio: number, moneda: string): string {
-  if (moneda === 'COP') {
-    if (precio >= 1_000_000) return `$${(precio / 1_000_000).toFixed(1)}M`
-    if (precio >= 1_000)     return `$${(precio / 1_000).toFixed(0)}K`
-    return `$${precio}`
-  }
-  return `${moneda} ${precio.toLocaleString()}`
+  const rounded = Math.round(precio)
+  if (moneda === 'COP') return `$${rounded.toLocaleString('es-CO')} (COP)`
+  if (moneda === 'USD') return `$${precio % 1 === 0 ? precio : precio.toFixed(2)} (USD)`
+  if (moneda === 'EUR') return `€${precio % 1 === 0 ? precio : precio.toFixed(2)} (EUR)`
+  return `$${rounded.toLocaleString('es-CO')} (${moneda})`
 }
 
 const MONTH_ES = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic']
