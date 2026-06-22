@@ -328,8 +328,7 @@ def get_summary(current_user = Depends(get_current_user)):
 @router.get("/data/{tab}")
 def get_tab_data(tab: str, current_user = Depends(get_current_user)):
     """Devuelve todos los registros de una pestaña."""
-    valid_tabs = ["essentials", "ahorro", "basket", "shops", "wishlist", "debts", "credito"]
-    if tab not in valid_tabs:
+    if tab not in COLUMNS:
         raise HTTPException(400, f"Tab '{tab}' no válido")
     try:
         records = read_tab(tab)
