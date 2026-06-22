@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { Bot, TrendingUp, PiggyBank, AlertCircle, ShoppingCart, Activity, Wallet, Heart, Layers, ArrowUpRight, Zap } from 'lucide-react'
+import { Bot, TrendingUp, PiggyBank, AlertCircle, ShoppingCart, Activity, Wallet, Heart, Layers, ArrowUpRight, Zap, CreditCard, Repeat2 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { useDashboard } from '../store/dashboardStore'
 import { api, API_BASE, getToken } from '../api'
@@ -63,14 +63,26 @@ export function Home() {
   const [healthData, setHealthData]         = useState<any>(null)
   const [healthLoading, setHealthLoading]   = useState(true)
   const [now, setNow]                       = useState(new Date())
+  const [suscripciones, setSuscripciones]   = useState<any[]>([])
 
   useEffect(() => {
     loadSummary()
     loadBacklog()
     loadHealth()
+    loadSuscripciones()
     const t = setInterval(() => setNow(new Date()), 60000)
     return () => clearInterval(t)
   }, [financeRefreshTick])
+
+  async function loadSuscripciones() {
+    try {
+      const res = await api('/finance/data/suscripciones')
+      if (res.ok) {
+        const data = await res.json()
+        setSuscripciones(data.records || [])
+      }
+    } catch { /* ignore */ }
+  }
 
   async function loadSummary() {
     setSummaryLoading(true)
@@ -169,6 +181,42 @@ export function Home() {
     { label: 'Ahorro',  icon: PiggyBank,    color: '#10B981', amount: summary.ahorro?.total_cop ?? 0, count: summary.ahorro?.count ?? 0 },
     { label: 'Deudas',  icon: AlertCircle,  color: '#EF4444', amount: summary.debts?.total_cop ?? 0,  count: summary.debts?.count ?? 0  },
   ]
+
+  // ── Próximos vencimientos (TCs + Suscripciones) ──────────────────────────
+  const TC_CORTES = [
+    { nombre: 'Nubank',      color: '#820AD1', dia: 15, tipo: 'TC' as const },
+    { nombre: 'Lulo Bank',   color: '#00D26A', dia: 21, tipo: 'TC' as const },
+    { nombre: 'Bancolombia', color: '#FDDA24', dia: 15, tipo: 'TC' as const },
+    { nombre: 'Falabella',   color: '#BDD732', dia: 19, tipo: 'TC' as const },
+  ]
+  const CAT_COLORS: Record<string, string> = {
+    entretenimiento: '#A855F7', trabajo: '#3B82F6', herramientas: '#06B6D4',
+    salud: '#10B981', educacion: '#F59E0B', otros: '#6B7280',
+  }
+  const MONTH_ES_H = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic']
+
+  function nextDays(dia: number): { date: Date; days: number } | null {
+    if (!dia || isNaN(dia)) return null
+    const today = new Date()
+    let c = new Date(today.getFullYear(), today.getMonth(), dia)
+    if (c <= today) c = new Date(today.getFullYear(), today.getMonth() + 1, dia)
+    return { date: c, days: Math.ceil((c.getTime() - today.getTime()) / 86400000) }
+  }
+
+  const upcomingItems = [
+    ...TC_CORTES.map(tc => {
+      const next = nextDays(tc.dia)
+      return next ? { nombre: tc.nombre, tipo: 'TC', color: tc.color, ...next } : null
+    }).filter(Boolean),
+    ...suscripciones
+      .filter(s => (s.ESTADO || '').toLowerCase() === 'activa' && s.DIA_COBRO)
+      .map(s => {
+        const dia = parseInt(String(s.DIA_COBRO))
+        const next = nextDays(dia)
+        const color = CAT_COLORS[(s.CATEGORIA || '').toLowerCase()] ?? '#6B7280'
+        return next ? { nombre: s.NOMBRE, tipo: 'Sus', color, ...next } : null
+      }).filter(Boolean),
+  ].sort((a: any, b: any) => a.days - b.days) as { nombre: string; tipo: string; color: string; date: Date; days: number }[]
 
   const quickLinks = [
     { name: 'Finanzas', desc: 'Control financiero', path: '/finance',  icon: Wallet,     color: '#10B981', bg: 'bg-emerald-500/10', border: 'border-emerald-500/20', text: 'text-emerald-400' },
@@ -277,6 +325,33 @@ export function Home() {
                     <span className="text-xs text-slate-500">Total</span>
                     <span className="text-sm font-bold font-mono gradient-text">{fmt(totalGastos)}</span>
                   </div>
+
+                  {/* ── Próximos vencimientos ─────────────────────────── */}
+                  {upcomingItems.length > 0 && (
+                    <div className="pt-3 mt-1 border-t border-white/[0.05] space-y-1">
+                      <div className="flex items-center gap-1.5 mb-2">
+                        <span className="text-[10px] text-slate-600 uppercase tracking-wide font-medium">Próximos cobros</span>
+                      </div>
+                      {upcomingItems.slice(0, 8).map((item, i) => {
+                        const urgency = item.days <= 3 ? '#EF4444' : item.days <= 7 ? '#F59E0B' : '#4B5563'
+                        return (
+                          <div key={i} className="flex items-center gap-2 py-0.5">
+                            {item.tipo === 'TC'
+                              ? <CreditCard size={9} style={{ color: item.color, flexShrink: 0 }} />
+                              : <Repeat2   size={9} style={{ color: item.color, flexShrink: 0 }} />
+                            }
+                            <span className="text-[11px] text-slate-400 flex-1 truncate">{item.nombre}</span>
+                            <span className="text-[10px] font-mono text-slate-600 shrink-0">
+                              {item.date.getDate()} {MONTH_ES_H[item.date.getMonth()]}
+                            </span>
+                            <span className="text-[10px] font-medium w-8 text-right shrink-0" style={{ color: urgency }}>
+                              {item.days}d
+                            </span>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
                 </div>
               )
             }
