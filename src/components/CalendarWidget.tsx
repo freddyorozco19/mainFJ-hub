@@ -273,7 +273,7 @@ export function CalendarWidget() {
   const [events, setEvents]     = useState<CalEvent[]>([])
   const [loading, setLoading]   = useState(true)
   const [error, setError]       = useState<string | null>(null)
-  const [weekCount, setWeekCount] = useState(0)
+
   const [sources, setSources]   = useState<string[]>([])
   const [selected, setSelected] = useState<CalEvent | null>(null)
 
@@ -287,7 +287,7 @@ export function CalendarWidget() {
       const todayData = await todayRes.json()
       const statsData = statsRes.ok ? await statsRes.json() : {}
       setEvents(todayData.events ?? [])
-      setWeekCount(statsData.week_count ?? 0)
+
       setSources(statsData.sources ?? [])
     } catch (e: any) {
       setError(e.message || 'Error al cargar calendario')
