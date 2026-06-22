@@ -336,9 +336,14 @@ export function Home() {
           {/* Finance */}
           <div className="rounded-2xl border border-white/[0.06] bg-card p-5 space-y-4">
             <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-sm font-semibold text-white">Finanzas</h3>
-                <p className="text-[11px] text-slate-600 mt-0.5">Resumen por categoría</p>
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg bg-violet-500/10 border border-violet-500/20 flex items-center justify-center">
+                  <Wallet size={13} className="text-violet-400" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-semibold text-white leading-none">Finanzas</h3>
+                  <p className="text-[10px] text-slate-600 mt-0.5">Resumen por categoría</p>
+                </div>
               </div>
               <Link to="/finance" className="flex items-center gap-1 text-[11px] text-slate-600 hover:text-primary transition-colors">
                 Ver todo <ArrowUpRight size={11} />
@@ -410,9 +415,14 @@ export function Home() {
           {/* Backlog */}
           <div className="rounded-2xl border border-white/[0.06] bg-card p-5 space-y-4">
             <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-sm font-semibold text-white">Backlog</h3>
-                <p className="text-[11px] text-slate-600 mt-0.5">Tareas pendientes</p>
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg bg-violet-500/10 border border-violet-500/20 flex items-center justify-center">
+                  <Layers size={13} className="text-violet-400" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-semibold text-white leading-none">Backlog</h3>
+                  <p className="text-[10px] text-slate-600 mt-0.5">Tareas pendientes</p>
+                </div>
               </div>
               <Link to="/backlog" className="flex items-center gap-1 text-[11px] text-slate-600 hover:text-primary transition-colors">
                 Ver todo <ArrowUpRight size={11} />
