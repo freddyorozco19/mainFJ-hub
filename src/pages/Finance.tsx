@@ -3,18 +3,20 @@ import {
   DollarSign, ShoppingCart,
   Send, Loader2, Bot, Search, PiggyBank,
   AlertCircle, RefreshCw, Sparkles, ChevronDown,
-  BarChart3, Table2, History, FileText, CreditCard, Building2, Upload, Check,
+  BarChart3, Table2, History, FileText, CreditCard, Building2, Upload, Check, Repeat2,
 } from 'lucide-react'
 
 import { api } from '../api'
 import { FinanceAgentChat, type AgentAction } from '../components/FinanceAgentChat'
 import { FinanceAnalytics } from '../components/FinanceAnalytics'
+import { FinanceSuscripciones } from '../components/FinanceSuscripciones'
 
 const SUBPAGES = [
-  { key: 'dashboard', label: 'Dashboard', hex: '#7C3AED', icon: BarChart3 },
-  { key: 'registros', label: 'Registros',  hex: '#10B981', icon: Table2   },
-  { key: 'extractos', label: 'Extractos',  hex: '#3B82F6', icon: FileText },
-  { key: 'history',   label: 'History',    hex: '#F59E0B', icon: History  },
+  { key: 'dashboard',      label: 'Dashboard',      hex: '#7C3AED', icon: BarChart3 },
+  { key: 'registros',      label: 'Registros',      hex: '#10B981', icon: Table2    },
+  { key: 'extractos',      label: 'Extractos',      hex: '#3B82F6', icon: FileText  },
+  { key: 'suscripciones',  label: 'Suscripciones',  hex: '#EC4899', icon: Repeat2   },
+  { key: 'history',        label: 'History',        hex: '#F59E0B', icon: History   },
 ]
 
 const TABS_CONFIG = [
@@ -37,7 +39,7 @@ const TAB_COLUMNS: Record<TabKey, string[]> = {
   credito:    ['PRODUCTO', 'DESCRIPCION', 'ENTIDAD', 'MONEDA', 'VALOR_TOTAL', 'CUOTAS', 'CUOTA_ACTUAL', 'VALOR_CUOTA', 'PCT_INTERES', 'VALOR_INTERES', 'FECHA_CORTE', 'FECHA_PAGO', 'ESTADO', 'TIPO'],
 }
 
-type SubPageKey = 'dashboard' | 'registros' | 'extractos' | 'history'
+type SubPageKey = 'dashboard' | 'registros' | 'extractos' | 'suscripciones' | 'history'
 type TabKey = 'shops' | 'basket' | 'essentials' | 'ahorro' | 'debts' | 'wishlist' | 'credito'
 type Summary = Record<TabKey, { count: number; total_cop: number; error?: string }>
 type Records = Record<string, string | number>[]
@@ -2569,6 +2571,13 @@ export function Finance() {
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* ── Suscripciones SubPage ───────────────────────────────────────── */}
+      {activeSubPage === 'suscripciones' && (
+        <div className="bg-card border border-border rounded-xl p-5">
+          <FinanceSuscripciones />
         </div>
       )}
 

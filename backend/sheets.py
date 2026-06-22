@@ -22,7 +22,8 @@ TABS = {
     "shops":      "Shops",
     "wishlist":   "Wish List",
     "debts":      "Debts",
-    "credito":    "Crédito",
+    "credito":       "Crédito",
+    "suscripciones": "Suscripciones",
 }
 
 # Columnas por pestaña (orden EXACTO del Google Sheet)
@@ -33,7 +34,8 @@ COLUMNS = {
     "shops":      ["PRODUCT", "DESCRIPTION", "BRAND", "CATEGORY", "STORE", "STORE2", "COIN", "VALUE", "PAYMENT", "ACCOUNT", "CUOTAS", "OFFER", "DATE", "SHOP_ID"],
     "wishlist":   ["PRODUCTO", "DESCRIPCION", "MONEDA", "VALOR", "TIENDA", "MEDIO", "SOURCE"],
     "debts":      ["PRODUCTO", "DESCRIPCION", "MONEDA", "VALOR", "PAGO", "ESTADO", "FECHA"],
-    "credito":    ["PRODUCTO", "DESCRIPCION", "ENTIDAD", "MONEDA", "VALOR_TOTAL", "CUOTAS", "CUOTA_ACTUAL", "VALOR_CUOTA", "PCT_INTERES", "VALOR_INTERES", "FECHA_CORTE", "FECHA_PAGO", "ESTADO", "TIPO"],
+    "credito":       ["PRODUCTO", "DESCRIPCION", "ENTIDAD", "MONEDA", "VALOR_TOTAL", "CUOTAS", "CUOTA_ACTUAL", "VALOR_CUOTA", "PCT_INTERES", "VALOR_INTERES", "FECHA_CORTE", "FECHA_PAGO", "ESTADO", "TIPO"],
+    "suscripciones": ["NOMBRE", "DESCRIPCION", "PRECIO", "MONEDA", "CICLO", "DIA_COBRO", "FECHA_INICIO", "ESTADO", "TARJETA", "CATEGORIA", "URL"],
 }
 
 # ── Simple in-memory cache with TTL ─────────────────────────────────────────
