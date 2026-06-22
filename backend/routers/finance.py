@@ -1283,6 +1283,108 @@ def _build_lulo_tx(match: re.Match, months: dict) -> dict | None:
     }
 
 
+def _parse_falabella_credit(text: str) -> list[dict]:
+    """Parsea extracto de tarjeta CMR Falabella.
+
+    Formato (pypdf extrae columnas como líneas separadas):
+      04/04/2026
+      CAC*DROGUERIA ESPECIAL CL 9
+      T
+      $6.200,00
+      2 de 24
+      26,74%
+      $258,33  $5.683,34
+    """
+    # Cortar antes de la sección de cuenta de ahorros
+    for marker in ('ESTADO CUENTA', 'INGRESO POR INTERESES'):
+        idx = text.find(marker)
+        if idx > 0:
+            text = text[:idx]
+            break
+
+    date_pat   = re.compile(r'^\d{2}/\d{2}/\d{4}$')
+    value_pat  = re.compile(r'^-?\$[\d.,]+$')
+    cuotas_pat = re.compile(r'^(\d+)\s+de\s+(\d+)$')
+    tasa_pat   = re.compile(r'^[\d,]+%$')
+
+    SKIP_DESC = {
+        'pago tarjeta cmr', 'gmf gravamen', 'pago de tarjeta de credito desde',
+        'ingreso por intereses', 'saldo en mora', 'intereses mora',
+    }
+
+    lines = [l.strip() for l in text.split('\n')]
+    date_idxs = [i for i, l in enumerate(lines) if date_pat.match(l)]
+
+    transactions: list[dict] = []
+    for n, pos in enumerate(date_idxs):
+        end = date_idxs[n + 1] if n + 1 < len(date_idxs) else len(lines)
+        block = [l for l in lines[pos:end] if l and l not in ('T', 'A')]
+
+        if len(block) < 2:
+            continue
+
+        day, month, year = block[0].split('/')
+        fecha = f"{day}/{month}/{year}"
+
+        # Descripción: líneas antes del primer valor monetario (sin duplicados)
+        desc_lines: list[str] = []
+        seen: set[str] = set()
+        for l in block[1:]:
+            if value_pat.match(l) or cuotas_pat.match(l) or tasa_pat.match(l):
+                break
+            if l not in seen:
+                desc_lines.append(l)
+                seen.add(l)
+
+        # Eliminar sufijo "CAMBIO CUOTAS N EN COM" que agrega el PDF
+        raw_desc = ' '.join(desc_lines).strip()
+        descripcion = re.sub(r'\s+CAMBIO CUOTAS\s+\d+\s+EN\s+COM', '', raw_desc, flags=re.IGNORECASE).strip()
+        desc_lower = descripcion.lower()
+
+        if any(s in desc_lower for s in SKIP_DESC):
+            continue
+
+        # Primer valor monetario → monto de la transacción
+        valor_raw = next((l for l in block[1:] if value_pat.match(l)), None)
+        if not valor_raw:
+            continue
+
+        is_negative = valor_raw.startswith('-')
+        try:
+            # Formato colombiano: $6.200,00 → eliminar no-dígitos excepto coma → 6200,00 → 6200.00
+            valor = abs(float(re.sub(r'[^0-9,]', '', valor_raw).replace(',', '.')))
+        except ValueError:
+            continue
+
+        if valor == 0:
+            continue
+
+        # Cuotas (ej: "2 de 24")
+        cuotas_str = ''
+        for l in block[1:]:
+            m = cuotas_pat.match(l)
+            if m:
+                cuotas_str = f"{m.group(1)}/{m.group(2)}"
+                break
+
+        # Tasa efectiva anual
+        tasa = next((l for l in block[1:] if tasa_pat.match(l)), '')
+
+        transactions.append({
+            'FECHA': fecha,
+            'DESCRIPCION': descripcion,
+            'VALOR': valor,
+            'VALOR_CUOTA': valor,
+            'PCT_INTERES': tasa,
+            'VALOR_INTERES': 0.0,
+            'CUOTAS': cuotas_str,
+            'TIPO': 'INGRESO' if is_negative else 'EGRESO',
+            'ENTIDAD': 'Falabella',
+        })
+
+    return transactions
+
+
 def _parse_bancolombia_credit(text: str) -> list[dict]:
     """Parsea extracto de tarjeta de crédito Bancolombia (AMEX u otra).
 
@@ -1506,6 +1608,8 @@ async def extract_statement(
             transactions = _parse_lulobank_credit(full_text)
         elif entity_lower == "bancolombia":
             transactions = _parse_bancolombia_credit(full_text)
+        elif entity_lower == "falabella":
+            transactions = _parse_falabella_credit(full_text)
         else:
             transactions = _parse_generic_statement(full_text, entity)
     except RuntimeError as e:
@@ -1622,6 +1726,8 @@ def drive_parse(
             transactions = _parse_lulobank_credit(full_text)
         elif entity_lower == "bancolombia":
             transactions = _parse_bancolombia_credit(full_text)
+        elif entity_lower == "falabella":
+            transactions = _parse_falabella_credit(full_text)
         else:
             transactions = _parse_generic_statement(full_text, entity)
     except RuntimeError as e:

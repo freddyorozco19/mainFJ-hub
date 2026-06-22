@@ -437,7 +437,7 @@ export function Finance() {
     nubank:       { label: 'Nubank',       color: '#820AD1', card: { last4: '8126', type: 'Mastercard', expires: '04/34', since: '01/05/2026', corte: '15' }, cuenta: { number: '82940918', type: 'Cuenta Corriente', since: '01/05/2026', placa: 'FOR084' } },
     lulobank:     { label: 'Lulo Bank',    color: '#00D26A', card: { last4: '••••', type: 'Mastercard', expires: '—',     since: '—',          corte: '21' } },
     bancolombia:  { label: 'Bancolombia',  color: '#FDDA24', card: { last4: '••••', type: '—',          expires: '—',     since: '—',          corte: '' } },
-    falabella:    { label: 'Falabella',    color: '#BDD732', card: { last4: '••••', type: '—',          expires: '—',     since: '—',          corte: '' } },
+    falabella:    { label: 'Falabella',    color: '#BDD732', card: { last4: '6518', type: 'CMR Mastercard', expires: '—', since: '—',          corte: '19' } },
   }
 
   async function loadDriveStatus() {
