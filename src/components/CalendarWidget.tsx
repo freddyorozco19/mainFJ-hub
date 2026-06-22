@@ -306,16 +306,16 @@ export function CalendarWidget() {
     <>
       <div className="rounded-2xl border border-white/[0.06] bg-card p-5 space-y-4">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
-              <Calendar size={13} className="text-blue-400" />
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
+              <Calendar size={14} className="text-blue-400" />
             </div>
             <div>
               <h3 className="text-sm font-semibold text-white leading-none">Calendario</h3>
-              <p className="text-[10px] text-slate-600 mt-0.5">{headerSrc} — {todayLabel}</p>
+              <p className="text-[10px] text-slate-500 mt-0.5">{todayLabel}</p>
             </div>
           </div>
-          {weekCount > 0 && <span className="badge badge-primary text-[10px]">{weekCount} esta semana</span>}
+          <span className="text-[10px] text-slate-600">{headerSrc}</span>
         </div>
         <div className="h-px bg-white/[0.05]" />
 
