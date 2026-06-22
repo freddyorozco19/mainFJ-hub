@@ -485,9 +485,6 @@ export function Home() {
               style={{ background: 'var(--card)' }}
               onClick={e => e.stopPropagation()}
             >
-              {/* Accent top bar */}
-              <div className="absolute top-0 left-0 right-0 h-0.5" style={{ background: item.color }} />
-
               {/* Header */}
               <div className="flex items-start justify-between p-5 pb-4">
                 <div className="flex items-center gap-3">
@@ -559,12 +556,6 @@ export function Home() {
                         style={{ background: `${catColor}20`, color: catColor }}>
                         <Tag size={9} className="inline mr-1" />
                         {CAT_LABEL[s.categoria.toLowerCase()] ?? s.categoria}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between py-1">
-                      <span className="text-[11px] text-slate-600">Estado</span>
-                      <span className={`text-[11px] font-medium ${s.estado.toLowerCase() === 'activa' ? 'text-emerald-400' : 'text-slate-500'}`}>
-                        {s.estado}
                       </span>
                     </div>
                     {s.url && (
