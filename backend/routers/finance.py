@@ -1430,8 +1430,9 @@ def _parse_bancolombia_credit(text: str) -> list[dict]:
         if raw_desc.upper().startswith('ABONO') or raw_desc.upper().startswith('INTERESES'):
             continue
 
-        # Clean description: remove trailing auth number (6 digits at end)
-        desc_clean = re.sub(r'\d{6}$', '', raw_desc).strip()
+        # Clean description: remove trailing auth number (space-separated or concatenated)
+        desc_clean = re.sub(r'\s+\d{5,}$', '', raw_desc).strip()   # "K TRONIX 94499404"
+        desc_clean = re.sub(r'\d{6,}$', '', desc_clean).strip()     # "EXITO FLORESTA959922"
         if not desc_clean:
             desc_clean = raw_desc
 
