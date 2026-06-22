@@ -428,8 +428,12 @@ export function Finance() {
   const [extractoDetailRecords, setExtractoDetailRecords] = useState<any[]>([])
   const [extractoDetailLoading, setExtractoDetailLoading] = useState(false)
 
-  const EXTRACTO_ENTITIES: Record<string, { label: string; color: string; card: { last4: string; type: string; expires: string; since: string; corte: string } }> = {
-    nubank:       { label: 'Nubank',       color: '#820AD1', card: { last4: '8126', type: 'Mastercard', expires: '04/34', since: '01/05/2026', corte: '15/mes' } },
+  const EXTRACTO_ENTITIES: Record<string, {
+    label: string; color: string;
+    card: { last4: string; type: string; expires: string; since: string; corte: string };
+    cuenta?: { number: string; type: string; since: string; placa: string };
+  }> = {
+    nubank:       { label: 'Nubank',       color: '#820AD1', card: { last4: '8126', type: 'Mastercard', expires: '04/34', since: '01/05/2026', corte: '15/mes' }, cuenta: { number: '82940918', type: 'Cuenta Corriente', since: '01/05/2026', placa: 'FOR084' } },
     lulobank:     { label: 'Lulo Bank',    color: '#00D26A', card: { last4: '••••', type: '—',          expires: '—',     since: '—',          corte: '—' } },
     bancolombia:  { label: 'Bancolombia',  color: '#FDDA24', card: { last4: '••••', type: '—',          expires: '—',     since: '—',          corte: '—' } },
     falabella:    { label: 'Falabella',    color: '#BDD732', card: { last4: '••••', type: '—',          expires: '—',     since: '—',          corte: '—' } },
@@ -1716,40 +1720,63 @@ export function Finance() {
               </div>
             </div>
 
-            {/* Card info widget */}
+            {/* Card / Cuenta info widget */}
             {(() => {
               const ent = EXTRACTO_ENTITIES[extractoEntity]
               if (!ent) return null
-              const { card } = ent
+              const isCuentaTab = extractoTab === 'cuentas'
+              const cuentaInfo = ent.cuenta
               return (
                 <div
                   className="flex items-center gap-4 rounded-lg border px-4 py-3"
                   style={{ borderColor: ent.color + '30', backgroundColor: ent.color + '08' }}
                 >
                   <div className="flex items-center gap-2 min-w-0">
-                    <CreditCard size={18} style={{ color: ent.color }} />
+                    {isCuentaTab
+                      ? <Building2 size={18} style={{ color: ent.color }} />
+                      : <CreditCard size={18} style={{ color: ent.color }} />
+                    }
                     <span className="text-sm font-semibold text-white">{ent.label}</span>
-                    <span className="text-xs font-mono text-slate-400">•••• {card.last4}</span>
+                    <span className="text-xs font-mono text-slate-400">
+                      {isCuentaTab && cuentaInfo ? cuentaInfo.number : `•••• ${ent.card.last4}`}
+                    </span>
                   </div>
                   <div className="h-4 w-px bg-white/10" />
-                  <div className="flex items-center gap-5 text-xs">
-                    <div>
-                      <span className="text-slate-500">Tipo </span>
-                      <span className="text-slate-200 font-medium">{card.type}</span>
+                  {isCuentaTab && cuentaInfo ? (
+                    <div className="flex items-center gap-5 text-xs">
+                      <div>
+                        <span className="text-slate-500">Tipo </span>
+                        <span className="text-slate-200 font-medium">{cuentaInfo.type}</span>
+                      </div>
+                      <div>
+                        <span className="text-slate-500">Placa </span>
+                        <span className="text-slate-200 font-medium">{cuentaInfo.placa}</span>
+                      </div>
+                      <div>
+                        <span className="text-slate-500">Desde </span>
+                        <span className="text-slate-200 font-medium">{cuentaInfo.since}</span>
+                      </div>
                     </div>
-                    <div>
-                      <span className="text-slate-500">Vence </span>
-                      <span className="text-slate-200 font-medium">{card.expires}</span>
+                  ) : (
+                    <div className="flex items-center gap-5 text-xs">
+                      <div>
+                        <span className="text-slate-500">Tipo </span>
+                        <span className="text-slate-200 font-medium">{ent.card.type}</span>
+                      </div>
+                      <div>
+                        <span className="text-slate-500">Vence </span>
+                        <span className="text-slate-200 font-medium">{ent.card.expires}</span>
+                      </div>
+                      <div>
+                        <span className="text-slate-500">Desde </span>
+                        <span className="text-slate-200 font-medium">{ent.card.since}</span>
+                      </div>
+                      <div>
+                        <span className="text-slate-500">Corte </span>
+                        <span className="text-slate-200 font-medium">{ent.card.corte}</span>
+                      </div>
                     </div>
-                    <div>
-                      <span className="text-slate-500">Desde </span>
-                      <span className="text-slate-200 font-medium">{card.since}</span>
-                    </div>
-                    <div>
-                      <span className="text-slate-500">Corte </span>
-                      <span className="text-slate-200 font-medium">{card.corte}</span>
-                    </div>
-                  </div>
+                  )}
                 </div>
               )
             })()}
@@ -1779,13 +1806,17 @@ export function Finance() {
               </div>
             </div>
 
-            {/* Filter by selected entity */}
+            {/* Filter by selected entity + statement_type */}
             {(() => {
               const entityLabel = EXTRACTO_ENTITIES[extractoEntity]?.label || extractoEntity
-              const filtered = extractoImports.filter(imp =>
-                imp.entity?.toLowerCase() === entityLabel.toLowerCase() ||
-                imp.entity?.toLowerCase() === extractoEntity.toLowerCase()
-              )
+              const expectedType = extractoTab === 'creditos' ? 'credito' : 'cuenta'
+              const filtered = extractoImports.filter(imp => {
+                const matchEntity = imp.entity?.toLowerCase() === entityLabel.toLowerCase() ||
+                  imp.entity?.toLowerCase() === extractoEntity.toLowerCase()
+                const matchType = imp.statement_type === expectedType ||
+                  (expectedType === 'credito' && !imp.statement_type)
+                return matchEntity && matchType
+              })
               return filtered.length === 0 ? (
                 <div className="text-center py-8 space-y-2">
                   <FileText size={28} className="mx-auto text-slate-600" />
@@ -1829,44 +1860,51 @@ export function Finance() {
               )
             })()}
 
-            {/* All entities summary */}
-            {extractoImports.length > 0 && (
-              <details className="group">
-                <summary className="text-xs text-slate-500 cursor-pointer hover:text-slate-300 transition-colors">
-                  Ver todas las entidades ({extractoImports.length} importaciones totales)
-                </summary>
-                <div className="overflow-x-auto rounded-lg border border-border mt-2">
-                  <table className="w-full text-xs">
-                    <thead>
-                      <tr className="bg-surface/80 text-slate-400">
-                        <th className="px-3 py-2 text-left">Entidad</th>
-                        <th className="px-3 py-2 text-left">Periodo</th>
-                        <th className="px-3 py-2 text-left">Archivo</th>
-                        <th className="px-3 py-2 text-center">Txns</th>
-                        <th className="px-3 py-2 text-right">Total</th>
-                        <th className="px-3 py-2 text-left">Fecha</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {extractoImports.map((imp, i) => (
-                        <tr key={imp.id || i} className="border-t border-border/50 hover:bg-white/3">
-                          <td className="px-3 py-2 text-white font-medium">{imp.entity}</td>
-                          <td className="px-3 py-2 text-slate-300">{imp.period}</td>
-                          <td className="px-3 py-2 text-slate-300 max-w-[200px] truncate">{imp.file_name}</td>
-                          <td className="px-3 py-2 text-center text-slate-400">{imp.transactions}</td>
-                          <td className="px-3 py-2 text-right text-emerald-400 font-mono">
-                            {formatCOPFull(imp.total_amount || 0)}
-                          </td>
-                          <td className="px-3 py-2 text-slate-500">
-                            {imp.created_at ? new Date(imp.created_at).toLocaleDateString('es-CO') : ''}
-                          </td>
+            {/* All entities summary — filtered by current tab type */}
+            {(() => {
+              const expectedType = extractoTab === 'creditos' ? 'credito' : 'cuenta'
+              const allOfType = extractoImports.filter(imp =>
+                imp.statement_type === expectedType ||
+                (expectedType === 'credito' && !imp.statement_type)
+              )
+              return allOfType.length > 0 ? (
+                <details className="group">
+                  <summary className="text-xs text-slate-500 cursor-pointer hover:text-slate-300 transition-colors">
+                    Ver todas las entidades ({allOfType.length} importaciones)
+                  </summary>
+                  <div className="overflow-x-auto rounded-lg border border-border mt-2">
+                    <table className="w-full text-xs">
+                      <thead>
+                        <tr className="bg-surface/80 text-slate-400">
+                          <th className="px-3 py-2 text-left">Entidad</th>
+                          <th className="px-3 py-2 text-left">Periodo</th>
+                          <th className="px-3 py-2 text-left">Archivo</th>
+                          <th className="px-3 py-2 text-center">Txns</th>
+                          <th className="px-3 py-2 text-right">Total</th>
+                          <th className="px-3 py-2 text-left">Fecha</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </details>
-            )}
+                      </thead>
+                      <tbody>
+                        {allOfType.map((imp, i) => (
+                          <tr key={imp.id || i} className="border-t border-border/50 hover:bg-white/3">
+                            <td className="px-3 py-2 text-white font-medium">{imp.entity}</td>
+                            <td className="px-3 py-2 text-slate-300">{imp.period}</td>
+                            <td className="px-3 py-2 text-slate-300 max-w-[200px] truncate">{imp.file_name}</td>
+                            <td className="px-3 py-2 text-center text-slate-400">{imp.transactions}</td>
+                            <td className="px-3 py-2 text-right text-emerald-400 font-mono">
+                              {formatCOPFull(imp.total_amount || 0)}
+                            </td>
+                            <td className="px-3 py-2 text-slate-500">
+                              {imp.created_at ? new Date(imp.created_at).toLocaleDateString('es-CO') : ''}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </details>
+              ) : null
+            })()}
           </div>
 
           {/* ═══ Modal de detalle de extracto ═══ */}
