@@ -434,10 +434,10 @@ export function Finance() {
     card: { last4: string; type: string; expires: string; since: string; corte: string };
     cuenta?: { number: string; type: string; since: string; placa: string };
   }> = {
-    nubank:       { label: 'Nubank',       color: '#820AD1', card: { last4: '8126', type: 'Mastercard', expires: '04/34', since: '01/05/2026', corte: '15/mes' }, cuenta: { number: '82940918', type: 'Cuenta Corriente', since: '01/05/2026', placa: 'FOR084' } },
-    lulobank:     { label: 'Lulo Bank',    color: '#00D26A', card: { last4: '••••', type: '—',          expires: '—',     since: '—',          corte: '—' } },
-    bancolombia:  { label: 'Bancolombia',  color: '#FDDA24', card: { last4: '••••', type: '—',          expires: '—',     since: '—',          corte: '—' } },
-    falabella:    { label: 'Falabella',    color: '#BDD732', card: { last4: '••••', type: '—',          expires: '—',     since: '—',          corte: '—' } },
+    nubank:       { label: 'Nubank',       color: '#820AD1', card: { last4: '8126', type: 'Mastercard', expires: '04/34', since: '01/05/2026', corte: '15' }, cuenta: { number: '82940918', type: 'Cuenta Corriente', since: '01/05/2026', placa: 'FOR084' } },
+    lulobank:     { label: 'Lulo Bank',    color: '#00D26A', card: { last4: '••••', type: 'Mastercard', expires: '—',     since: '—',          corte: '21' } },
+    bancolombia:  { label: 'Bancolombia',  color: '#FDDA24', card: { last4: '••••', type: '—',          expires: '—',     since: '—',          corte: '' } },
+    falabella:    { label: 'Falabella',    color: '#BDD732', card: { last4: '••••', type: '—',          expires: '—',     since: '—',          corte: '' } },
   }
 
   async function loadDriveStatus() {
@@ -1162,6 +1162,76 @@ export function Finance() {
           )
         })}
       </div>
+
+      {/* ── Credit Cards Widget ─────────────────────────────────────────────── */}
+      {(() => {
+        const today = new Date()
+        function nextCutDate(diaCorte: string): { date: Date; days: number } | null {
+          const dia = parseInt(diaCorte, 10)
+          if (!dia || isNaN(dia)) return null
+          let candidate = new Date(today.getFullYear(), today.getMonth(), dia)
+          if (candidate <= today) {
+            candidate = new Date(today.getFullYear(), today.getMonth() + 1, dia)
+          }
+          const days = Math.ceil((candidate.getTime() - today.getTime()) / 86400000)
+          return { date: candidate, days }
+        }
+        const MONTH_ES = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic']
+        return (
+          <div className="bg-card border border-border rounded-xl p-5">
+            <div className="flex items-center gap-2 mb-4">
+              <CreditCard size={15} className="text-primary" />
+              <span className="text-sm font-semibold text-white">Tarjetas de crédito</span>
+              <span className="text-xs text-slate-500">— fechas de corte</span>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              {Object.entries(EXTRACTO_ENTITIES).map(([key, ent]) => {
+                const { corte } = ent.card
+                const next = nextCutDate(corte)
+                const urgency = next
+                  ? next.days <= 3 ? 'text-red-400' : next.days <= 7 ? 'text-amber-400' : 'text-emerald-400'
+                  : 'text-slate-500'
+                return (
+                  <div
+                    key={key}
+                    className="relative rounded-xl p-4 overflow-hidden"
+                    style={{ background: `${ent.color}10`, border: `1px solid ${ent.color}30` }}
+                  >
+                    {/* color bar top */}
+                    <div className="absolute top-0 left-0 right-0 h-0.5" style={{ background: ent.color }} />
+
+                    <div className="flex items-start justify-between mb-3">
+                      <div>
+                        <p className="text-xs font-semibold text-white">{ent.label}</p>
+                        <p className="text-[10px] text-slate-500 mt-0.5">{ent.card.type}</p>
+                      </div>
+                      <span className="text-[10px] font-mono text-slate-500">•••• {ent.card.last4}</span>
+                    </div>
+
+                    <div className="space-y-1">
+                      <p className="text-[10px] text-slate-500 uppercase tracking-wide">Corte</p>
+                      {corte ? (
+                        <>
+                          <p className="text-sm font-bold" style={{ color: ent.color }}>
+                            Día {corte}
+                          </p>
+                          {next && (
+                            <p className={`text-[10px] font-medium ${urgency}`}>
+                              {next.date.getDate()} {MONTH_ES[next.date.getMonth()]} · en {next.days}d
+                            </p>
+                          )}
+                        </>
+                      ) : (
+                        <p className="text-sm text-slate-600">—</p>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )
+      })()}
 
       {/* ── Bar Chart — Gastos por categoría ────────────────────────────────── */}
       <div className="bg-card border border-border rounded-xl p-5">
