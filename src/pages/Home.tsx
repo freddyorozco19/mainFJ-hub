@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { Bot, TrendingUp, PiggyBank, AlertCircle, ShoppingCart, Activity, Wallet, Heart, Layers, ArrowUpRight, Zap, CreditCard, Repeat2 } from 'lucide-react'
+import { Bot, TrendingUp, PiggyBank, AlertCircle, ShoppingCart, Activity, Wallet, Heart, Layers, ArrowUpRight, Zap, CreditCard, Repeat2, X, ExternalLink, CalendarDays, Tag } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { useDashboard } from '../store/dashboardStore'
 import { api, API_BASE, getToken } from '../api'
@@ -8,6 +8,16 @@ import { SkeletonCard, SkeletonRow } from '../components/Skeleton'
 import { EmptyState } from '../components/EmptyState'
 import { CalendarWidget } from '../components/CalendarWidget'
 import { EmailWidget } from '../components/EmailWidget'
+
+type UpcomingItem = {
+  nombre: string
+  tipo: 'TC' | 'Sus'
+  color: string
+  date: Date
+  days: number
+  tcDetails?: { cardType: string; last4: string; dia: number }
+  susDetails?: { descripcion: string; precio: number; moneda: string; ciclo: string; tarjeta: string; url: string; estado: string; categoria: string; dia: number }
+}
 
 interface FinanceSummary {
   essentials: { count: number; total_cop: number }
@@ -64,6 +74,7 @@ export function Home() {
   const [healthLoading, setHealthLoading]   = useState(true)
   const [now, setNow]                       = useState(new Date())
   const [suscripciones, setSuscripciones]   = useState<any[]>([])
+  const [selectedUpcoming, setSelectedUpcoming] = useState<UpcomingItem | null>(null)
 
   useEffect(() => {
     loadSummary()
@@ -184,10 +195,10 @@ export function Home() {
 
   // ── Próximos vencimientos (TCs + Suscripciones) ──────────────────────────
   const TC_CORTES = [
-    { nombre: 'Nubank',      color: '#820AD1', dia: 15, tipo: 'TC' as const },
-    { nombre: 'Lulo Bank',   color: '#00D26A', dia: 21, tipo: 'TC' as const },
-    { nombre: 'Bancolombia', color: '#FDDA24', dia: 15, tipo: 'TC' as const },
-    { nombre: 'Falabella',   color: '#BDD732', dia: 19, tipo: 'TC' as const },
+    { nombre: 'Nubank',      color: '#820AD1', dia: 15, cardType: 'Mastercard',     last4: '8126' },
+    { nombre: 'Lulo Bank',   color: '#00D26A', dia: 21, cardType: 'Mastercard',     last4: '••••' },
+    { nombre: 'Bancolombia', color: '#FDDA24', dia: 15, cardType: 'Amex',           last4: '4928' },
+    { nombre: 'Falabella',   color: '#BDD732', dia: 19, cardType: 'CMR Mastercard', last4: '6518' },
   ]
   const CAT_COLORS: Record<string, string> = {
     entretenimiento: '#A855F7', trabajo: '#3B82F6', herramientas: '#06B6D4',
@@ -203,20 +214,36 @@ export function Home() {
     return { date: c, days: Math.ceil((c.getTime() - today.getTime()) / 86400000) }
   }
 
-  const upcomingItems = [
+  const upcomingItems: UpcomingItem[] = [
     ...TC_CORTES.map(tc => {
       const next = nextDays(tc.dia)
-      return next ? { nombre: tc.nombre, tipo: 'TC', color: tc.color, ...next } : null
-    }).filter(Boolean),
+      return next ? {
+        nombre: tc.nombre, tipo: 'TC' as const, color: tc.color, ...next,
+        tcDetails: { cardType: tc.cardType, last4: tc.last4, dia: tc.dia },
+      } : null
+    }).filter(Boolean) as UpcomingItem[],
     ...suscripciones
       .filter(s => (s.ESTADO || '').toLowerCase() === 'activa' && s.DIA_COBRO)
       .map(s => {
         const dia = parseInt(String(s.DIA_COBRO))
         const next = nextDays(dia)
         const color = CAT_COLORS[(s.CATEGORIA || '').toLowerCase()] ?? '#6B7280'
-        return next ? { nombre: s.NOMBRE, tipo: 'Sus', color, ...next } : null
-      }).filter(Boolean),
-  ].sort((a: any, b: any) => a.days - b.days) as { nombre: string; tipo: string; color: string; date: Date; days: number }[]
+        return next ? {
+          nombre: s.NOMBRE, tipo: 'Sus' as const, color, ...next,
+          susDetails: {
+            descripcion: s.DESCRIPCION || '',
+            precio: parseFloat(String(s.PRECIO)) || 0,
+            moneda: s.MONEDA || 'COP',
+            ciclo: s.CICLO || 'mensual',
+            tarjeta: s.TARJETA || '',
+            url: s.URL || '',
+            estado: s.ESTADO || '',
+            categoria: s.CATEGORIA || '',
+            dia,
+          },
+        } : null
+      }).filter(Boolean) as UpcomingItem[],
+  ].sort((a, b) => a.days - b.days)
 
   const quickLinks = [
     { name: 'Finanzas', desc: 'Control financiero', path: '/finance',  icon: Wallet,     color: '#10B981', bg: 'bg-emerald-500/10', border: 'border-emerald-500/20', text: 'text-emerald-400' },
@@ -224,6 +251,16 @@ export function Home() {
     { name: 'Backlog',  desc: 'Tareas pendientes',  path: '/backlog',  icon: Layers,     color: '#8B5CF6', bg: 'bg-violet-500/10', border: 'border-violet-500/20',  text: 'text-violet-400'  },
     { name: 'GrowData', desc: 'Datos de negocio',   path: '/growdata', icon: TrendingUp, color: '#06B6D4', bg: 'bg-cyan-500/10',   border: 'border-cyan-500/20',    text: 'text-cyan-400'    },
   ]
+
+  // ── Helpers para el modal ────────────────────────────────────────────────
+  function fmtPrice(precio: number, moneda: string): string {
+    if (moneda === 'COP') return `${Math.round(precio).toLocaleString('es-CO')} (COP)`
+    if (moneda === 'USD') return `${precio % 1 === 0 ? precio : precio.toFixed(2)} (USD)`
+    if (moneda === 'EUR') return `€${precio % 1 === 0 ? precio : precio.toFixed(2)} (EUR)`
+    return `${Math.round(precio).toLocaleString('es-CO')} (${moneda})`
+  }
+  const CICLO_LABEL: Record<string, string> = { mensual: 'Mensual', anual: 'Anual', trimestral: 'Trimestral', semanal: 'Semanal' }
+  const CAT_LABEL: Record<string, string>   = { entretenimiento: 'Entretenimiento', trabajo: 'Trabajo', herramientas: 'Herramientas', salud: 'Salud', educacion: 'Educación', otros: 'Otros' }
 
   return (
     <div className="flex-1 overflow-auto" style={{ background: 'var(--bg)' }}>
@@ -335,7 +372,10 @@ export function Home() {
                       {upcomingItems.slice(0, 8).map((item, i) => {
                         const urgency = item.days <= 3 ? '#EF4444' : item.days <= 7 ? '#F59E0B' : '#4B5563'
                         return (
-                          <div key={i} className="flex items-center gap-2 py-0.5">
+                          <div key={i}
+                            className="flex items-center gap-2 py-1 px-1.5 -mx-1.5 rounded-lg cursor-pointer hover:bg-white/[0.04] transition-colors"
+                            onClick={() => setSelectedUpcoming(item)}
+                          >
                             {item.tipo === 'TC'
                               ? <CreditCard size={9} style={{ color: item.color, flexShrink: 0 }} />
                               : <Repeat2   size={9} style={{ color: item.color, flexShrink: 0 }} />
@@ -431,6 +471,126 @@ export function Home() {
         </div>
 
       </div>
+
+      {/* ── Modal detalle próximo cobro ──────────────────────────────────────── */}
+      {selectedUpcoming && (() => {
+        const item = selectedUpcoming
+        const urgency = item.days <= 3 ? '#EF4444' : item.days <= 7 ? '#F59E0B' : '#10B981'
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            style={{ background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(6px)' }}
+            onClick={() => setSelectedUpcoming(null)}
+          >
+            <div className="relative w-full max-w-sm rounded-2xl border border-white/[0.08] overflow-hidden shadow-2xl"
+              style={{ background: 'var(--card)' }}
+              onClick={e => e.stopPropagation()}
+            >
+              {/* Accent top bar */}
+              <div className="absolute top-0 left-0 right-0 h-0.5" style={{ background: item.color }} />
+
+              {/* Header */}
+              <div className="flex items-start justify-between p-5 pb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center"
+                    style={{ background: `${item.color}18`, border: `1px solid ${item.color}30` }}>
+                    {item.tipo === 'TC'
+                      ? <CreditCard size={18} style={{ color: item.color }} />
+                      : <Repeat2   size={18} style={{ color: item.color }} />
+                    }
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-semibold text-white leading-tight">{item.nombre}</h3>
+                    <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium"
+                      style={{ background: `${item.color}20`, color: item.color }}>
+                      {item.tipo === 'TC' ? 'Tarjeta de crédito' : 'Suscripción'}
+                    </span>
+                  </div>
+                </div>
+                <button onClick={() => setSelectedUpcoming(null)}
+                  className="text-slate-600 hover:text-slate-300 transition-colors mt-0.5">
+                  <X size={16} />
+                </button>
+              </div>
+
+              {/* Countdown banner */}
+              <div className="mx-5 mb-4 rounded-xl p-3 flex items-center justify-between"
+                style={{ background: `${urgency}10`, border: `1px solid ${urgency}25` }}>
+                <div className="flex items-center gap-2">
+                  <CalendarDays size={14} style={{ color: urgency }} />
+                  <span className="text-xs text-slate-300">
+                    {item.date.getDate()} {MONTH_ES_H[item.date.getMonth()]} {item.date.getFullYear()}
+                  </span>
+                </div>
+                <span className="text-sm font-bold" style={{ color: urgency }}>
+                  {item.days === 0 ? 'Hoy' : item.days === 1 ? 'Mañana' : `${item.days} días`}
+                </span>
+              </div>
+
+              {/* TC details */}
+              {item.tipo === 'TC' && item.tcDetails && (
+                <div className="px-5 pb-5 space-y-2">
+                  <Row label="Tipo de tarjeta" value={item.tcDetails.cardType} />
+                  <Row label="Últimos 4 dígitos" value={`•••• ${item.tcDetails.last4}`} />
+                  <Row label="Día de corte" value={`Día ${item.tcDetails.dia} de cada mes`} />
+                  <div className="pt-3 mt-1 border-t border-white/[0.05]">
+                    <Link to="/finance?tab=credito"
+                      onClick={() => setSelectedUpcoming(null)}
+                      className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-primary transition-colors">
+                      <ExternalLink size={11} /> Ver extractos en Finance
+                    </Link>
+                  </div>
+                </div>
+              )}
+
+              {/* Subscription details */}
+              {item.tipo === 'Sus' && item.susDetails && (() => {
+                const s = item.susDetails
+                const catColor = CAT_COLORS[s.categoria.toLowerCase()] ?? '#6B7280'
+                return (
+                  <div className="px-5 pb-5 space-y-2">
+                    {s.descripcion && <p className="text-xs text-slate-500 mb-3">{s.descripcion}</p>}
+                    <Row label="Precio" value={fmtPrice(s.precio, s.moneda)} />
+                    <Row label="Ciclo" value={CICLO_LABEL[s.ciclo] ?? s.ciclo} />
+                    <Row label="Día de cobro" value={`Día ${s.dia} de cada mes`} />
+                    {s.tarjeta && <Row label="Tarjeta" value={s.tarjeta} />}
+                    <div className="flex items-center justify-between py-1">
+                      <span className="text-[11px] text-slate-600">Categoría</span>
+                      <span className="text-[11px] px-2 py-0.5 rounded-full"
+                        style={{ background: `${catColor}20`, color: catColor }}>
+                        <Tag size={9} className="inline mr-1" />
+                        {CAT_LABEL[s.categoria.toLowerCase()] ?? s.categoria}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between py-1">
+                      <span className="text-[11px] text-slate-600">Estado</span>
+                      <span className={`text-[11px] font-medium ${s.estado.toLowerCase() === 'activa' ? 'text-emerald-400' : 'text-slate-500'}`}>
+                        {s.estado}
+                      </span>
+                    </div>
+                    {s.url && (
+                      <div className="pt-3 mt-1 border-t border-white/[0.05]">
+                        <a href={s.url} target="_blank" rel="noopener noreferrer"
+                          className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-primary transition-colors">
+                          <ExternalLink size={11} /> Abrir sitio web
+                        </a>
+                      </div>
+                    )}
+                  </div>
+                )
+              })()}
+            </div>
+          </div>
+        )
+      })()}
+    </div>
+  )
+}
+
+function Row({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-center justify-between py-1 border-b border-white/[0.04] last:border-0">
+      <span className="text-[11px] text-slate-600">{label}</span>
+      <span className="text-[11px] text-slate-300 font-medium">{value}</span>
     </div>
   )
 }
