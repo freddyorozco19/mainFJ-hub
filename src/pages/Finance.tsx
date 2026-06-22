@@ -427,6 +427,7 @@ export function Finance() {
   const [extractoDetailImport, setExtractoDetailImport] = useState<any | null>(null)
   const [extractoDetailRecords, setExtractoDetailRecords] = useState<any[]>([])
   const [extractoDetailLoading, setExtractoDetailLoading] = useState(false)
+  const [detailSelected, setDetailSelected] = useState<Set<number>>(new Set())
 
   const EXTRACTO_ENTITIES: Record<string, {
     label: string; color: string;
@@ -502,6 +503,7 @@ export function Finance() {
           return false
         })
         setExtractoDetailRecords(filtered)
+        setDetailSelected(new Set(filtered.map((_: any, i: number) => i)))
       }
     } catch { /* ignore */ }
     setExtractoDetailLoading(false)
@@ -670,6 +672,21 @@ export function Finance() {
     } finally {
       setExtractoSaving(false)
     }
+  }
+
+  function goToRegistrosFromDetail() {
+    if (!extractoDetailImport) return
+    const entityLabel = EXTRACTO_ENTITIES[extractoEntity]?.label || extractoEntity
+    const isCuenta = extractoDetailImport.statement_type === 'cuenta'
+    const entidadFiltro = isCuenta ? `${entityLabel} Cuenta` : entityLabel
+    setExtractoDetailImport(null)
+    setExtractoDetailRecords([])
+    setDetailSelected(new Set())
+    setCrudTab('credito')
+    setColumnFilters({ ENTIDAD: entidadFiltro })
+    setSearch('')
+    setActiveSubPage('registros')
+    loadRecords('credito')
   }
 
   useEffect(() => { loadSummary() }, [])
@@ -1917,7 +1934,7 @@ export function Finance() {
             <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
               <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => { setExtractoDetailImport(null); setExtractoDetailRecords([]) }} />
               <div className="relative bg-card border border-blue-500/20 rounded-xl p-5 space-y-4 w-full max-w-4xl max-h-[85vh] overflow-y-auto">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between gap-3">
                   <div>
                     <h3 className="text-sm font-semibold text-white">
                       {extractoDetailImport.entity} — {extractoDetailImport.period}
@@ -1926,10 +1943,21 @@ export function Finance() {
                       {extractoDetailImport.file_name} · {extractoDetailImport.transactions} transacciones · {formatCOPFull(extractoDetailImport.total_amount || 0)}
                     </p>
                   </div>
-                  <button
-                    onClick={() => { setExtractoDetailImport(null); setExtractoDetailRecords([]) }}
-                    className="text-slate-400 hover:text-white transition-colors p-1"
-                  >✕</button>
+                  <div className="flex items-center gap-2 shrink-0">
+                    {detailSelected.size > 0 && !extractoDetailLoading && (
+                      <button
+                        onClick={goToRegistrosFromDetail}
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium rounded-lg transition-colors"
+                      >
+                        <Check size={12} />
+                        Ver {detailSelected.size} en Registros
+                      </button>
+                    )}
+                    <button
+                      onClick={() => { setExtractoDetailImport(null); setExtractoDetailRecords([]); setDetailSelected(new Set()) }}
+                      className="text-slate-400 hover:text-white transition-colors p-1"
+                    >✕</button>
+                  </div>
                 </div>
 
                 {extractoDetailLoading ? (
@@ -1948,6 +1976,20 @@ export function Finance() {
                     <table className="w-full text-xs">
                       <thead>
                         <tr className="bg-surface/80 text-slate-400">
+                          <th className="px-3 py-2 text-center w-8">
+                            <input
+                              type="checkbox"
+                              className="rounded"
+                              checked={detailSelected.size === extractoDetailRecords.length && extractoDetailRecords.length > 0}
+                              onChange={() => {
+                                if (detailSelected.size === extractoDetailRecords.length) {
+                                  setDetailSelected(new Set())
+                                } else {
+                                  setDetailSelected(new Set(extractoDetailRecords.map((_, i) => i)))
+                                }
+                              }}
+                            />
+                          </th>
                           <th className="px-3 py-2 text-left">Descripción</th>
                           <th className="px-3 py-2 text-center">Tipo</th>
                           <th className="px-3 py-2 text-right">Valor</th>
@@ -1957,8 +1999,28 @@ export function Finance() {
                       </thead>
                       <tbody>
                         {extractoDetailRecords.map((r, i) => (
-                          <tr key={i} className="border-t border-border/50 hover:bg-white/3">
-                            <td className="px-3 py-2 text-white max-w-[300px] truncate" title={r.PRODUCTO}>{r.PRODUCTO}</td>
+                          <tr
+                            key={i}
+                            className={`border-t border-border/50 cursor-pointer transition-colors ${detailSelected.has(i) ? 'bg-emerald-500/5' : 'hover:bg-white/3'}`}
+                            onClick={() => setDetailSelected(prev => {
+                              const next = new Set(prev)
+                              next.has(i) ? next.delete(i) : next.add(i)
+                              return next
+                            })}
+                          >
+                            <td className="px-3 py-2 text-center" onClick={e => e.stopPropagation()}>
+                              <input
+                                type="checkbox"
+                                className="rounded"
+                                checked={detailSelected.has(i)}
+                                onChange={() => setDetailSelected(prev => {
+                                  const next = new Set(prev)
+                                  next.has(i) ? next.delete(i) : next.add(i)
+                                  return next
+                                })}
+                              />
+                            </td>
+                            <td className="px-3 py-2 text-white max-w-[280px] truncate" title={r.PRODUCTO}>{r.PRODUCTO}</td>
                             <td className="px-3 py-2 text-center">
                               <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${r.TIPO === 'INGRESO' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-blue-500/20 text-blue-400'}`}>
                                 {r.TIPO || 'EGRESO'}
@@ -1978,14 +2040,14 @@ export function Finance() {
                       </tbody>
                       <tfoot>
                         <tr className="border-t border-border bg-surface/50">
-                          <td colSpan={2} className="px-3 py-2 text-right text-xs text-slate-400 font-medium">Total egresos</td>
+                          <td colSpan={3} className="px-3 py-2 text-right text-xs text-slate-400 font-medium">Total egresos</td>
                           <td className="px-3 py-2 text-right text-slate-300 font-mono font-semibold text-xs">
                             {formatCOPFull(extractoDetailRecords.filter(r => r.TIPO !== 'INGRESO').reduce((s, r) => s + Number(r.VALOR_TOTAL || 0), 0))}
                           </td>
                           <td colSpan={2} />
                         </tr>
                         <tr className="border-t border-border/40 bg-surface/30">
-                          <td colSpan={2} className="px-3 py-2 text-right text-xs text-slate-400 font-medium">Total ingresos</td>
+                          <td colSpan={3} className="px-3 py-2 text-right text-xs text-slate-400 font-medium">Total ingresos</td>
                           <td className="px-3 py-2 text-right text-emerald-400 font-mono font-semibold text-xs">
                             {formatCOPFull(extractoDetailRecords.filter(r => r.TIPO === 'INGRESO').reduce((s, r) => s + Number(r.VALOR_TOTAL || 0), 0))}
                           </td>
@@ -2000,6 +2062,20 @@ export function Finance() {
                     <table className="w-full text-xs">
                       <thead>
                         <tr className="bg-surface/80 text-slate-400">
+                          <th className="px-3 py-2 text-center w-8">
+                            <input
+                              type="checkbox"
+                              className="rounded"
+                              checked={detailSelected.size === extractoDetailRecords.length && extractoDetailRecords.length > 0}
+                              onChange={() => {
+                                if (detailSelected.size === extractoDetailRecords.length) {
+                                  setDetailSelected(new Set())
+                                } else {
+                                  setDetailSelected(new Set(extractoDetailRecords.map((_, i) => i)))
+                                }
+                              }}
+                            />
+                          </th>
                           <th className="px-3 py-2 text-left">Producto</th>
                           <th className="px-3 py-2 text-left">Entidad</th>
                           <th className="px-3 py-2 text-center">Cuotas</th>
@@ -2013,7 +2089,27 @@ export function Finance() {
                       </thead>
                       <tbody>
                         {extractoDetailRecords.map((r, i) => (
-                          <tr key={i} className="border-t border-border/50 hover:bg-white/3">
+                          <tr
+                            key={i}
+                            className={`border-t border-border/50 cursor-pointer transition-colors ${detailSelected.has(i) ? 'bg-emerald-500/5' : 'hover:bg-white/3'}`}
+                            onClick={() => setDetailSelected(prev => {
+                              const next = new Set(prev)
+                              next.has(i) ? next.delete(i) : next.add(i)
+                              return next
+                            })}
+                          >
+                            <td className="px-3 py-2 text-center" onClick={e => e.stopPropagation()}>
+                              <input
+                                type="checkbox"
+                                className="rounded"
+                                checked={detailSelected.has(i)}
+                                onChange={() => setDetailSelected(prev => {
+                                  const next = new Set(prev)
+                                  next.has(i) ? next.delete(i) : next.add(i)
+                                  return next
+                                })}
+                              />
+                            </td>
                             <td className="px-3 py-2 text-white max-w-[200px] truncate" title={r.PRODUCTO}>{r.PRODUCTO}</td>
                             <td className="px-3 py-2 text-slate-400">{r.ENTIDAD}</td>
                             <td className="px-3 py-2 text-center text-slate-300">{r.CUOTA_ACTUAL}/{r.CUOTAS}</td>
