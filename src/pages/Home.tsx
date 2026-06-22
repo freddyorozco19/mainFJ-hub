@@ -65,60 +65,69 @@ const STATUS_LABEL: Record<string, { label: string; color: string }> = {
 
 export function Home() {
   const { user } = useAuth()
-  const { agents, logs, financeRefreshTick } = useDashboard()
-  const [summary, setSummary]               = useState<Partial<FinanceSummary>>({})
-  const [summaryLoading, setSummaryLoading] = useState(true)
-  const [backlogTasks, setBacklogTasks]     = useState<any[]>([])
-  const [backlogLoading, setBacklogLoading] = useState(true)
-  const [healthData, setHealthData]         = useState<any>(null)
-  const [healthLoading, setHealthLoading]   = useState(true)
+  const { agents, logs, financeRefreshTick, homeCache, setHomeCache } = useDashboard()
+
+  const CACHE_TTL = 5 * 60 * 1000 // 5 minutos
+  const cacheValid = homeCache.fetchedAt !== null && (Date.now() - homeCache.fetchedAt) < CACHE_TTL
+
+  const [summary, setSummary]               = useState<Partial<FinanceSummary>>(homeCache.summary ?? {})
+  const [summaryLoading, setSummaryLoading] = useState(!cacheValid)
+  const [backlogTasks, setBacklogTasks]     = useState<any[]>(homeCache.backlog ?? [])
+  const [backlogLoading, setBacklogLoading] = useState(!cacheValid)
+  const [healthData, setHealthData]         = useState<any>(homeCache.health ?? null)
+  const [healthLoading, setHealthLoading]   = useState(!cacheValid)
   const [now, setNow]                       = useState(new Date())
-  const [suscripciones, setSuscripciones]   = useState<any[]>([])
+  const [suscripciones, setSuscripciones]   = useState<any[]>(homeCache.suscripciones ?? [])
   const [selectedUpcoming, setSelectedUpcoming] = useState<UpcomingItem | null>(null)
 
   useEffect(() => {
-    loadSummary()
-    loadBacklog()
-    loadHealth()
-    loadSuscripciones()
+    if (!cacheValid || financeRefreshTick > 0) {
+      fetchAll()
+    }
     const t = setInterval(() => setNow(new Date()), 60000)
     return () => clearInterval(t)
   }, [financeRefreshTick])
 
-  async function loadSuscripciones() {
-    try {
-      const res = await api('/finance/data/suscripciones')
-      if (res.ok) {
-        const data = await res.json()
-        setSuscripciones(data.records || [])
-      }
-    } catch { /* ignore */ }
-  }
+  async function fetchAll() {
+    // Lanza todas las peticiones en paralelo
+    const [summaryRes, backlogRes, healthRes, susRes] = await Promise.allSettled([
+      api('/finance/summary'),
+      api('/backlog/tasks?limit=6'),
+      fetch(`${API_BASE}/health/summary`, { headers: { Authorization: `Bearer ${getToken() ?? ''}` } }),
+      api('/finance/data/suscripciones'),
+    ])
 
-  async function loadSummary() {
-    setSummaryLoading(true)
-    try { const res = await api('/finance/summary'); setSummary(await res.json()) }
-    catch { /* ignore */ } finally { setSummaryLoading(false) }
-  }
+    let newSummary = homeCache.summary ?? {}
+    let newBacklog = homeCache.backlog ?? []
+    let newHealth  = homeCache.health  ?? null
+    let newSus     = homeCache.suscripciones ?? []
 
-  async function loadBacklog() {
-    setBacklogLoading(true)
-    try {
-      const res = await api('/backlog/tasks?limit=6')
-      const data = await res.json()
-      setBacklogTasks((data ?? []).filter((t: any) => t.status !== 'done').slice(0, 6))
-    } catch { /* ignore */ } finally { setBacklogLoading(false) }
-  }
+    if (summaryRes.status === 'fulfilled' && summaryRes.value.ok) {
+      newSummary = await summaryRes.value.json()
+      setSummary(newSummary)
+    }
+    setSummaryLoading(false)
 
-  async function loadHealth() {
-    setHealthLoading(true)
-    try {
-      const t = getToken()
-      const res = await fetch(`${API_BASE}/health/summary`, {
-        headers: t ? { Authorization: `Bearer ${t}` } : {},
-      })
-      if (res.ok) setHealthData(await res.json())
-    } catch { /* ignore */ } finally { setHealthLoading(false) }
+    if (backlogRes.status === 'fulfilled' && backlogRes.value.ok) {
+      const data = await backlogRes.value.json()
+      newBacklog = (data ?? []).filter((t: any) => t.status !== 'done').slice(0, 6)
+      setBacklogTasks(newBacklog)
+    }
+    setBacklogLoading(false)
+
+    if (healthRes.status === 'fulfilled' && healthRes.value.ok) {
+      newHealth = await healthRes.value.json()
+      setHealthData(newHealth)
+    }
+    setHealthLoading(false)
+
+    if (susRes.status === 'fulfilled' && susRes.value.ok) {
+      const data = await susRes.value.json()
+      newSus = data.records || []
+      setSuscripciones(newSus)
+    }
+
+    setHomeCache({ summary: newSummary, backlog: newBacklog, health: newHealth, suscripciones: newSus, fetchedAt: Date.now() })
   }
 
   const totalGastos    = Object.values(summary).reduce((acc, s) => acc + (s?.total_cop ?? 0), 0)

@@ -83,6 +83,17 @@ interface DashboardState {
 
   financeRefreshTick: number
   tickFinanceRefresh: () => void
+
+  // Caché de Home con TTL
+  homeCache: {
+    summary: Record<string, { count: number; total_cop: number }> | null
+    suscripciones: any[]
+    backlog: any[]
+    health: any | null
+    fetchedAt: number | null
+  }
+  setHomeCache: (data: Partial<DashboardState['homeCache']>) => void
+  clearHomeCache: () => void
 }
 
 export const useDashboard = create<DashboardState>((set) => ({
@@ -140,4 +151,8 @@ export const useDashboard = create<DashboardState>((set) => ({
 
   financeRefreshTick: 0,
   tickFinanceRefresh: () => set(s => ({ financeRefreshTick: s.financeRefreshTick + 1 })),
+
+  homeCache: { summary: null, suscripciones: [], backlog: [], health: null, fetchedAt: null },
+  setHomeCache: (data) => set(s => ({ homeCache: { ...s.homeCache, ...data } })),
+  clearHomeCache: () => set({ homeCache: { summary: null, suscripciones: [], backlog: [], health: null, fetchedAt: null } }),
 }))

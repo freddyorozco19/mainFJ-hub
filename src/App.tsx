@@ -36,6 +36,12 @@ function HomeRoute() {
   return isReadOnly ? <HomeReadonly /> : <Home />
 }
 
+// Despierta el backend de Render en cuanto carga la app
+function BackendWakeup() {
+  useEffect(() => { fetch(`${API}/health`).catch(() => {}) }, [])
+  return null
+}
+
 function SSEListener() {
   const esRef = useRef<EventSource | null>(null)
   const { updateAgentStatus, addMessage, setTyping, pushLog, pushNotification } = useDashboard()
@@ -170,6 +176,7 @@ function SSEListener() {
 export default function App() {
   return (
     <AuthProvider>
+      <BackendWakeup />
       <SSEListener />
       <ToastProvider />
       <Routes>
