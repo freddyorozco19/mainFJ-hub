@@ -605,9 +605,10 @@ export function Finance() {
     setExtractoSaving(true)
     setExtractoError('')
     try {
+      const isCuenta = extractoTab === 'cuentas'
       const rows = selected.map(t => ({
         PRODUCTO: t.DESCRIPCION,
-        DESCRIPCION: `Extracto ${EXTRACTO_ENTITIES[extractoEntity]?.label || extractoEntity}`,
+        DESCRIPCION: `Extracto ${EXTRACTO_ENTITIES[extractoEntity]?.label || extractoEntity}${isCuenta ? ' Cuenta' : ''}`,
         ENTIDAD: t.ENTIDAD || extractoEntity,
         MONEDA: 'COP',
         VALOR_TOTAL: Math.round(t.VALOR || 0),
@@ -617,8 +618,8 @@ export function Finance() {
         PCT_INTERES: t.PCT_INTERES || '',
         VALOR_INTERES: Math.round(t.VALOR_INTERES || 0),
         FECHA_PAGO: t.FECHA,
-        ESTADO: 'PENDIENTE',
-        TIPO: 'EGRESO',
+        ESTADO: isCuenta ? 'PAGADO' : 'PENDIENTE',
+        TIPO: t.TIPO || 'EGRESO',
       }))
 
       // Calcular periodo antes de insertar para usarlo en FECHA_CORTE

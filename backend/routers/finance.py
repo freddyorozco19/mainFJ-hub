@@ -1361,6 +1361,82 @@ def _parse_bancolombia_credit(text: str) -> list[dict]:
     return transactions
 
 
+def _parse_nubank_cuenta(text: str) -> list[dict]:
+    """Parsea extracto de cuenta Nu (ahorro/corriente Nubank).
+
+    Formato por línea:
+      DD mes DESCRIPCION [+-]$X.XXX,XX
+    Siguiente línea optativa:
+      Impuesto del 4x1000 -$X,XX   (se omite)
+    El año se extrae del encabezado 'Período DD - DD MES YYYY'.
+    """
+    MONTHS = {
+        'ene': '01', 'feb': '02', 'mar': '03', 'abr': '04',
+        'may': '05', 'jun': '06', 'jul': '07', 'ago': '08',
+        'sep': '09', 'oct': '10', 'nov': '11', 'dic': '12',
+    }
+
+    year = str(datetime.now().year)
+    period_m = re.search(r'\d{1,2}\s*-\s*\d{1,2}\s+\w+\s+(\d{4})', text)
+    if period_m:
+        year = period_m.group(1)
+
+    tx_pattern = re.compile(
+        r'^(\d{1,2})\s+(ene|feb|mar|abr|may|jun|jul|ago|sep|oct|nov|dic)\s+'
+        r'(.+?)\s+([+-]?\$[\d.,]+)$',
+        re.IGNORECASE,
+    )
+
+    SKIP = (
+        'impuesto del 4x1000', 'rendimiento total', 'nu financiera',
+        'nu colombia', 'los rendimientos', 'bogot', 'nit ',
+        'puedes contactar', 'defensor del consumidor', 'correo',
+        'por correo', 'por tel', 'ayuda@', '/ 8', '/ 7',
+    )
+
+    transactions: list[dict] = []
+    for line in text.split('\n'):
+        line = line.strip()
+        if not line:
+            continue
+        ll = line.lower()
+        if any(kw in ll for kw in SKIP):
+            continue
+
+        m = tx_pattern.match(line)
+        if not m:
+            continue
+
+        day = m.group(1).zfill(2)
+        month = MONTHS.get(m.group(2).lower(), '01')
+        desc = m.group(3).strip()
+        amount_raw = m.group(4)
+
+        sign = -1.0 if amount_raw.startswith('-') else 1.0
+        clean = re.sub(r'[+\-$\s]', '', amount_raw).replace('.', '').replace(',', '.')
+        try:
+            valor = abs(float(clean))
+        except ValueError:
+            continue
+
+        fecha = f"{day}/{month}/{year}"
+        tipo = 'EGRESO' if sign < 0 else 'INGRESO'
+
+        transactions.append({
+            'FECHA': fecha,
+            'DESCRIPCION': desc,
+            'VALOR': valor,
+            'VALOR_CUOTA': valor,
+            'PCT_INTERES': '',
+            'VALOR_INTERES': 0.0,
+            'CUOTAS': '',
+            'TIPO': tipo,
+            'ENTIDAD': 'Nubank Cuenta',
+        })
+
+    return transactions
+
+
 def _parse_generic_statement(text: str, entity: str) -> list[dict]:
     """Parseo genérico regex para extractos no soportados."""
     transactions: list[dict] = []
@@ -1420,8 +1496,11 @@ async def extract_statement(
         raise HTTPException(500, f"Error leyendo PDF: {e}")
 
     entity_lower = entity.lower()
+    statement_type_lower = statement_type.lower()
     try:
-        if entity_lower == "nubank":
+        if entity_lower == "nubank" and statement_type_lower == "cuenta":
+            transactions = _parse_nubank_cuenta(full_text)
+        elif entity_lower == "nubank":
             transactions = _parse_nubank_credit(full_text)
         elif entity_lower == "lulobank":
             transactions = _parse_lulobank_credit(full_text)
@@ -1533,8 +1612,11 @@ def drive_parse(
         raise HTTPException(500, f"Error leyendo PDF: {e}")
 
     entity_lower = entity.lower()
+    statement_type_lower = statement_type.lower()
     try:
-        if entity_lower == "nubank":
+        if entity_lower == "nubank" and statement_type_lower == "cuenta":
+            transactions = _parse_nubank_cuenta(full_text)
+        elif entity_lower == "nubank":
             transactions = _parse_nubank_credit(full_text)
         elif entity_lower == "lulobank":
             transactions = _parse_lulobank_credit(full_text)
