@@ -169,6 +169,7 @@ export function EmailWidget() {
             <RefreshCw size={13} />
           </button>
         </div>
+        <div className="h-px bg-white/[0.05]" />
 
         {/* Loading */}
         {loading && (

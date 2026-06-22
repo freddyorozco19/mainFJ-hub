@@ -335,6 +335,7 @@ export function Home() {
                 Ver todo <ArrowUpRight size={11} />
               </Link>
             </div>
+            <div className="h-px bg-white/[0.05]" />
             {summaryLoading
               ? <div className="space-y-3"><SkeletonRow /><SkeletonRow /><SkeletonRow /><SkeletonRow /></div>
               : (
@@ -408,6 +409,7 @@ export function Home() {
                 Ver todo <ArrowUpRight size={11} />
               </Link>
             </div>
+            <div className="h-px bg-white/[0.05]" />
             {backlogLoading
               ? <div className="space-y-2"><SkeletonRow /><SkeletonRow /><SkeletonRow /></div>
               : backlogTasks.length === 0

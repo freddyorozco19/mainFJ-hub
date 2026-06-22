@@ -317,6 +317,7 @@ export function CalendarWidget() {
           </div>
           {weekCount > 0 && <span className="badge badge-primary text-[10px]">{weekCount} esta semana</span>}
         </div>
+        <div className="h-px bg-white/[0.05]" />
 
         {loading && (
           <div className="space-y-3">
