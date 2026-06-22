@@ -143,9 +143,9 @@ export function FinanceSuscripciones() {
         DIA_COBRO: parseInt(String(form.DIA_COBRO)) || 0,
       }
       if (modal === 'add') {
-        await api('/finance/records', { method: 'POST', body: JSON.stringify({ tab: 'suscripciones', data }) })
-      } else if (editTarget !== undefined && editTarget !== null) {
-        await api('/finance/records', { method: 'PUT', body: JSON.stringify({ tab: 'suscripciones', row_index: editTarget._index, data }) })
+        await api('/finance/records', { method: 'POST', body: { tab: 'suscripciones', data } })
+      } else if (editTarget !== null) {
+        await api('/finance/records', { method: 'PUT', body: { tab: 'suscripciones', row_index: editTarget._index, data } })
       }
       setModal(null)
       await load()
@@ -157,7 +157,7 @@ export function FinanceSuscripciones() {
     if (!confirm(`¿Eliminar "${sub.NOMBRE}"?`)) return
     setDeleting(sub._index)
     try {
-      await api('/finance/records', { method: 'DELETE', body: JSON.stringify({ tab: 'suscripciones', row_index: sub._index }) })
+      await api('/finance/records', { method: 'DELETE', body: { tab: 'suscripciones', row_index: sub._index } })
       await load()
     } catch { /* ignore */ }
     setDeleting(null)
