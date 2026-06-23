@@ -484,9 +484,9 @@ export function FinanceSuscripciones() {
 
               {/* Tarjeta */}
               <div>
-                <label className="block text-[10px] text-slate-500 uppercase tracking-wide mb-1">Tarjeta / Cuenta</label>
+                <label className="block text-[10px] text-slate-500 uppercase tracking-wide mb-1">Número Cuenta o Contrato</label>
                 <input value={form.TARJETA} onChange={e => setForm(f => ({ ...f, TARJETA: e.target.value }))}
-                  placeholder="Nubank 8126, Bancolombia AMEX…"
+                  placeholder="Ej: 4928, 170-45231, Contrato #001…"
                   className="w-full bg-surface border border-border rounded-lg px-3 py-2 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-primary/50" />
               </div>
 
