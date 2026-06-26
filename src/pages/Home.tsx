@@ -223,6 +223,48 @@ export function Home() {
     return { date: c, days: Math.ceil((c.getTime() - today.getTime()) / 86400000) }
   }
 
+  function parseFechaInicio(str?: string): Date | null {
+    if (!str) return null
+    const m = str.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/)
+    if (m) {
+      const [, d, mo, y] = m
+      const dt = new Date(parseInt(y), parseInt(mo) - 1, parseInt(d))
+      return isNaN(dt.getTime()) ? null : dt
+    }
+    const dt = new Date(str)
+    return isNaN(dt.getTime()) ? null : dt
+  }
+
+  function addCycle(date: Date, ciclo: string): Date {
+    const d = new Date(date)
+    switch ((ciclo || '').toLowerCase()) {
+      case 'semanal':    d.setDate(d.getDate() + 7); break
+      case 'trimestral': d.setMonth(d.getMonth() + 3); break
+      case 'anual':      d.setFullYear(d.getFullYear() + 1); break
+      default:           d.setMonth(d.getMonth() + 1) // mensual
+    }
+    return d
+  }
+
+  function nextCycleDate(fechaInicio: string | undefined, ciclo: string, dia: number): { date: Date; days: number } | null {
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    let anchor = parseFechaInicio(fechaInicio)
+    if (!anchor) {
+      if (!dia || isNaN(dia)) return null
+      anchor = new Date(today.getFullYear(), today.getMonth(), dia)
+    }
+    anchor.setHours(0, 0, 0, 0)
+    let candidate = new Date(anchor)
+    let guard = 0
+    while (candidate <= today && guard < 1000) {
+      candidate = addCycle(candidate, ciclo)
+      guard++
+    }
+    const days = Math.ceil((candidate.getTime() - today.getTime()) / 86400000)
+    return { date: candidate, days }
+  }
+
   const upcomingItems: UpcomingItem[] = [
     ...TC_CORTES.map(tc => {
       const next = nextDays(tc.dia)
@@ -235,7 +277,7 @@ export function Home() {
       .filter(s => (s.ESTADO || '').toLowerCase() === 'activa' && s.DIA_COBRO)
       .map(s => {
         const dia = parseInt(String(s.DIA_COBRO))
-        const next = nextDays(dia)
+        const next = nextCycleDate(s.FECHA_INICIO, s.CICLO || 'mensual', dia)
         const color = CAT_COLORS[(s.CATEGORIA || '').toLowerCase()] ?? '#6B7280'
         return next ? {
           nombre: s.NOMBRE, tipo: 'Sus' as const, color, ...next,
