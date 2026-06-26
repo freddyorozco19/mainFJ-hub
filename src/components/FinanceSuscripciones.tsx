@@ -54,12 +54,43 @@ function toCOP(precio: number, moneda: string, ciclo: string): number {
   return mensual
 }
 
-function nextBillingDate(dia: number): { date: Date; days: number } | null {
-  if (!dia || isNaN(dia)) return null
+function parseFechaInicio(str?: string): Date | null {
+  if (!str) return null
+  const m = str.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/)
+  if (m) {
+    const [, d, mo, y] = m
+    const dt = new Date(parseInt(y), parseInt(mo) - 1, parseInt(d))
+    return isNaN(dt.getTime()) ? null : dt
+  }
+  const dt = new Date(str)
+  return isNaN(dt.getTime()) ? null : dt
+}
+
+function addCycle(date: Date, ciclo: string): Date {
+  const d = new Date(date)
+  switch ((ciclo || '').toLowerCase()) {
+    case 'semanal':    d.setDate(d.getDate() + 7); break
+    case 'trimestral': d.setMonth(d.getMonth() + 3); break
+    case 'anual':      d.setFullYear(d.getFullYear() + 1); break
+    default:           d.setMonth(d.getMonth() + 1) // mensual
+  }
+  return d
+}
+
+function nextBillingDate(dia: number, ciclo: string = 'mensual', fechaInicio?: string): { date: Date; days: number } | null {
   const today = new Date()
-  let candidate = new Date(today.getFullYear(), today.getMonth(), dia)
-  if (candidate <= today) {
-    candidate = new Date(today.getFullYear(), today.getMonth() + 1, dia)
+  today.setHours(0, 0, 0, 0)
+  let anchor = parseFechaInicio(fechaInicio)
+  if (!anchor) {
+    if (!dia || isNaN(dia)) return null
+    anchor = new Date(today.getFullYear(), today.getMonth(), dia)
+  }
+  anchor.setHours(0, 0, 0, 0)
+  let candidate = new Date(anchor)
+  let guard = 0
+  while (candidate <= today && guard < 1000) {
+    candidate = addCycle(candidate, ciclo)
+    guard++
   }
   const days = Math.ceil((candidate.getTime() - today.getTime()) / 86400000)
   return { date: candidate, days }
@@ -300,7 +331,7 @@ export function FinanceSuscripciones() {
             const precio = parseFloat(String(sub.PRECIO)) || 0
             const estado = (sub.ESTADO || 'activa').toLowerCase()
             const dia = parseInt(String(sub.DIA_COBRO)) || 0
-            const next = nextBillingDate(dia)
+            const next = nextBillingDate(dia, sub.CICLO || 'mensual', sub.FECHA_INICIO)
             const cicloLabel = CICLOS[sub.CICLO?.toLowerCase()]?.label || sub.CICLO || ''
             const mensualCOP = toCOP(precio, sub.MONEDA || 'COP', sub.CICLO || 'mensual')
 
